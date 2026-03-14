@@ -1,74 +1,131 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>FMC-AM-6F V6 PRO</title>
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1,
+maximum-scale=1,
+user-scalable=no,
+viewport-fit=cover">
+
+<title>FMC-AM-6F V2</title>
 
 <style>
 
 body{
 margin:0;
 background:#050505;
-color:white;
-font-family:Arial;
+color:#00ff9c;
+font-family:monospace;
 overflow:hidden;
-}
-
-#ui{
-position:absolute;
-top:40px;
-left:50%;
-transform:translateX(-50%);
 text-align:center;
-z-index:10;
 }
 
-#title{
-color:#00ffd0;
-font-size:20px;
+#screen{
+
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+
+height:100vh;
+width:100vw;
+
 }
 
 #display{
-font-size:60px;
-letter-spacing:5px;
-margin-top:10px;
+
+font-size:clamp(50px,9vw,90px);
+margin:20px;
+
 }
 
 #mode{
-opacity:0.6;
-font-size:14px;
+
+opacity:.7;
+margin-bottom:10px;
+
 }
 
-#foots{
-position:absolute;
-bottom:50px;
-width:100%;
+#bpm{
+
+margin-bottom:20px;
+
+}
+
+#grid{
+
 display:flex;
-justify-content:space-evenly;
-z-index:10;
+flex-wrap:wrap;
+justify-content:center;
+
+}
+
+.switch{
+
+width:clamp(80px,12vw,130px);
+height:clamp(80px,12vw,130px);
+
+margin:10px;
+
+background:#111;
+
+border-radius:14px;
+
+border:3px solid #00ff9c;
+
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+
 }
 
 button{
-width:90px;
-height:90px;
+
+all:unset;
+cursor:pointer;
+width:100%;
+height:100%;
+
+}
+
+.led{
+
+width:18px;
+height:18px;
 border-radius:50%;
-background:#111;
-border:none;
-box-shadow:0 0 10px #000,inset 0 0 6px #000;
+margin-bottom:6px;
+background:#021;
+
 }
 
-button.active{
-background:#00ffd0;
-box-shadow:0 0 20px #00ffd0;
+.on{
+
+background:#00ff9c;
+box-shadow:0 0 12px #00ff9c;
+
 }
 
-canvas{
+#monitor{
+
 position:fixed;
-top:0;
+bottom:0;
 left:0;
+
+width:100%;
+
+max-height:120px;
+
+overflow:auto;
+
+background:#000;
+font-size:12px;
+
 }
 
 </style>
@@ -77,34 +134,54 @@ left:0;
 
 <body oncontextmenu="return false">
 
-<div id="ui">
-
-<div id="title">FMC-AM-6F</div>
+<div id="screen">
 
 <div id="display">A0</div>
 
 <div id="mode">NORMAL</div>
 
+<div id="bpm">BPM 120</div>
+
+<div id="grid">
+
+<div class="switch"><div id="led1" class="led"></div><button id="fs1">FS1</button></div>
+<div class="switch"><div id="led2" class="led"></div><button id="fs2">FS2</button></div>
+<div class="switch"><div id="led3" class="led"></div><button id="fs3">FS3</button></div>
+<div class="switch"><div id="led4" class="led"></div><button id="fs4">FS4</button></div>
+<div class="switch"><div id="led5" class="led"></div><button id="fs5">FS5</button></div>
+
+<div class="switch"><div id="led6" class="led"></div><button id="fs6">BANK</button></div>
+<div class="switch"><div id="ledtap" class="led"></div><button id="tap">TAP</button></div>
+
 </div>
 
-<div id="foots">
-
-<button id="fs1"></button>
-<button id="fs2"></button>
-<button id="fs3"></button>
-<button id="fs4"></button>
-<button id="fs5"></button>
-<button id="fs6"></button>
-
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div id="monitor"></div>
 
 <script>
 
-/* ======================
-MIDI
-======================*/
+/* BLOQUEIO ZOOM */
+
+document.addEventListener("gesturestart",e=>e.preventDefault())
+document.addEventListener("dblclick",e=>e.preventDefault())
+
+/* EEPROM SIMULADA */
+
+let memory=JSON.parse(localStorage.getItem("fmcmem"))||{
+
+bank:0,
+patch:0
+
+}
+
+function saveMemory(){
+
+localStorage.setItem("fmcmem",JSON.stringify(memory))
+
+}
+
+/* MIDI */
 
 let midiOut=null
 
@@ -112,41 +189,44 @@ async function initMIDI(){
 
 try{
 
-const midi=await navigator.requestMIDIAccess()
+const access=await navigator.requestMIDIAccess()
 
-for(let output of midi.outputs.values()){
+for(let o of access.outputs.values()){
 
-midiOut=output
-console.log("MIDI:",output.name)
-
-}
-
-}catch(e){
-
-console.log("WebMIDI bloqueado")
+midiOut=o
 
 }
 
-}
-
-function sendPC(pc){
-
-if(!midiOut)return
-
-midiOut.send([0xC0,pc])
-
-console.log("PC",pc)
+}catch{}
 
 }
 
-/* ======================
-CONTROLADORA
-======================*/
+function midiSend(data){
+
+if(midiOut)midiOut.send(data)
+
+log("MIDI "+data)
+
+}
+
+/* MONITOR */
+
+function log(txt){
+
+let m=document.getElementById("monitor")
+
+m.innerHTML=txt+"<br>"+m.innerHTML
+
+}
+
+/* CONTROLADORA */
 
 const banks=["A","B","C","D","E","F","G","H","I","J"]
 
-let bank=0
-let patch=0
+let bank=memory.bank
+let patch=memory.patch
+
+let bankGroup=0
 
 let preselect=false
 let preBank=0
@@ -160,13 +240,23 @@ display.innerText=banks[bank]+patch
 
 }
 
-function sendMidi(){
+/* LED */
 
-let pc=(bank*10)+patch
+function clearLED(){
 
-sendPC(pc)
+for(let i=1;i<=5;i++)
+document.getElementById("led"+i).classList.remove("on")
 
 }
+
+function setLED(p){
+
+clearLED()
+document.getElementById("led"+(p+1)).classList.add("on")
+
+}
+
+/* PATCH */
 
 function selectPatch(p){
 
@@ -176,6 +266,7 @@ bank=preBank
 patch=p
 
 preselect=false
+
 mode.innerText="CONFIRM"
 
 }else{
@@ -184,110 +275,147 @@ patch=p
 
 }
 
+memory.bank=bank
+memory.patch=patch
+
+saveMemory()
+
+setLED(p)
+
 updateDisplay()
-sendMidi()
+
+let pc=(bank*10)+patch
+
+midiSend([0xC0,pc])
 
 }
 
-function nextBank(){
+/* BANK */
 
-if(!preselect)return
+function bankTap(){
 
-preBank++
+bankGroup = bankGroup?0:1
 
-if(preBank>9)preBank=0
+mode.innerText=bankGroup?"BANK F-J":"BANK A-E"
+
+}
+
+function bankHold(){
+
+preselect=true
+
+preBank = bankGroup?5:0
 
 display.innerText=banks[preBank]+"?"
 
-}
-
-function holdBank(){
-
-preselect=true
-preBank=bank
-
-mode.innerText="BANK SELECT"
+mode.innerText="SELECT BANK"
 
 }
 
-/* footswitch */
+/* TAP TEMPO */
 
-fs1.onclick=()=>selectPatch(0)
-fs2.onclick=()=>selectPatch(1)
-fs3.onclick=()=>selectPatch(2)
-fs4.onclick=()=>selectPatch(3)
-fs5.onclick=()=>selectPatch(4)
+let taps=[]
 
-fs6.onclick=nextBank
-fs6.oncontextmenu=holdBank
+function tapTempo(){
+
+let now=Date.now()
+
+taps.push(now)
+
+if(taps.length>5)taps.shift()
+
+if(taps.length>=2){
+
+let intervals=[]
+
+for(let i=1;i<taps.length;i++){
+
+intervals.push(taps[i]-taps[i-1])
+
+}
+
+let avg=intervals.reduce((a,b)=>a+b)/intervals.length
+
+let bpm=Math.round(60000/avg)
+
+document.getElementById("bpm").innerText="BPM "+bpm
+
+midiSend([0xB0,64,bpm])
+
+blink(bpm)
+
+}
+
+}
+
+let blinkTimer
+
+function blink(bpm){
+
+clearInterval(blinkTimer)
+
+blinkTimer=setInterval(()=>{
+
+let led=document.getElementById("ledtap")
+
+led.classList.toggle("on")
+
+},60000/bpm)
+
+}
+
+/* DEBOUNCE */
+
+function debounce(fn){
+
+let last=0
+
+return function(){
+
+let now=Date.now()
+
+if(now-last>20){
+
+last=now
+fn()
+
+}
+
+}
+
+}
+
+/* FOOTSWITCH */
+
+fs1.onclick=debounce(()=>selectPatch(0))
+fs2.onclick=debounce(()=>selectPatch(1))
+fs3.onclick=debounce(()=>selectPatch(2))
+fs4.onclick=debounce(()=>selectPatch(3))
+fs5.onclick=debounce(()=>selectPatch(4))
+
+let holdTimer
+
+fs6.onmousedown=()=>{
+
+holdTimer=setTimeout(bankHold,500)
+
+}
+
+fs6.onmouseup=()=>{
+
+clearTimeout(holdTimer)
+
+bankTap()
+
+}
+
+tap.onclick=debounce(tapTempo)
+
+/* INIT */
 
 updateDisplay()
 
 document.body.onclick=initMIDI
-
-/* ======================
-RIG 3D
-======================*/
-
-const scene=new THREE.Scene()
-
-const camera=new THREE.PerspectiveCamera(
-70,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-)
-
-const renderer=new THREE.WebGLRenderer({antialias:true})
-
-renderer.setSize(window.innerWidth,window.innerHeight)
-
-document.body.appendChild(renderer.domElement)
-
-const light=new THREE.PointLight(0xffffff,1)
-
-light.position.set(5,10,5)
-
-scene.add(light)
-
-const geo=new THREE.BoxGeometry(10,1,5)
-
-const mat=new THREE.MeshStandardMaterial({
-
-color:0x111111,
-metalness:0.9,
-roughness:0.2
-
-})
-
-const board=new THREE.Mesh(geo,mat)
-
-scene.add(board)
-
-camera.position.z=9
-camera.position.y=4
-camera.rotation.x=-0.4
-
-function animate(){
-
-requestAnimationFrame(animate)
-
-board.rotation.y+=0.0015
-
-renderer.render(scene,camera)
-
-}
-
-animate()
-
-window.addEventListener("resize",()=>{
-
-camera.aspect=window.innerWidth/window.innerHeight
-camera.updateProjectionMatrix()
-
-renderer.setSize(window.innerWidth,window.innerHeight)
-
-})
 
 </script>
 
