@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>FMC-AM-6F V6 PRO</title>
+
+<style>
+
+body{
+margin:0;
+background:#050505;
+color:white;
+font-family:Arial;
+overflow:hidden;
+}
+
+#ui{
+position:absolute;
+top:40px;
+left:50%;
+transform:translateX(-50%);
+text-align:center;
+z-index:10;
+}
+
+#title{
+color:#00ffd0;
+font-size:20px;
+}
+
+#display{
+font-size:60px;
+letter-spacing:5px;
+margin-top:10px;
+}
+
+#mode{
+opacity:0.6;
+font-size:14px;
+}
+
+#foots{
+position:absolute;
+bottom:50px;
+width:100%;
+display:flex;
+justify-content:space-evenly;
+z-index:10;
+}
+
+button{
+width:90px;
+height:90px;
+border-radius:50%;
+background:#111;
+border:none;
+box-shadow:0 0 10px #000,inset 0 0 6px #000;
+}
+
+button.active{
+background:#00ffd0;
+box-shadow:0 0 20px #00ffd0;
+}
+
+canvas{
+position:fixed;
+top:0;
+left:0;
+}
+
+</style>
+
+</head>
+
+<body oncontextmenu="return false">
+
+<div id="ui">
+
+<div id="title">FMC-AM-6F</div>
+
+<div id="display">A0</div>
+
+<div id="mode">NORMAL</div>
+
+</div>
+
+<div id="foots">
+
+<button id="fs1"></button>
+<button id="fs2"></button>
+<button id="fs3"></button>
+<button id="fs4"></button>
+<button id="fs5"></button>
+<button id="fs6"></button>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+
+/* ======================
+MIDI
+======================*/
+
+let midiOut=null
+
+async function initMIDI(){
+
+try{
+
+const midi=await navigator.requestMIDIAccess()
+
+for(let output of midi.outputs.values()){
+
+midiOut=output
+console.log("MIDI:",output.name)
+
+}
+
+}catch(e){
+
+console.log("WebMIDI bloqueado")
+
+}
+
+}
+
+function sendPC(pc){
+
+if(!midiOut)return
+
+midiOut.send([0xC0,pc])
+
+console.log("PC",pc)
+
+}
+
+/* ======================
+CONTROLADORA
+======================*/
+
+const banks=["A","B","C","D","E","F","G","H","I","J"]
+
+let bank=0
+let patch=0
+
+let preselect=false
+let preBank=0
+
+const display=document.getElementById("display")
+const mode=document.getElementById("mode")
+
+function updateDisplay(){
+
+display.innerText=banks[bank]+patch
+
+}
+
+function sendMidi(){
+
+let pc=(bank*10)+patch
+
+sendPC(pc)
+
+}
+
+function selectPatch(p){
+
+if(preselect){
+
+bank=preBank
+patch=p
+
+preselect=false
+mode.innerText="CONFIRM"
+
+}else{
+
+patch=p
+
+}
+
+updateDisplay()
+sendMidi()
+
+}
+
+function nextBank(){
+
+if(!preselect)return
+
+preBank++
+
+if(preBank>9)preBank=0
+
+display.innerText=banks[preBank]+"?"
+
+}
+
+function holdBank(){
+
+preselect=true
+preBank=bank
+
+mode.innerText="BANK SELECT"
+
+}
+
+/* footswitch */
+
+fs1.onclick=()=>selectPatch(0)
+fs2.onclick=()=>selectPatch(1)
+fs3.onclick=()=>selectPatch(2)
+fs4.onclick=()=>selectPatch(3)
+fs5.onclick=()=>selectPatch(4)
+
+fs6.onclick=nextBank
+fs6.oncontextmenu=holdBank
+
+updateDisplay()
+
+document.body.onclick=initMIDI
+
+/* ======================
+RIG 3D
+======================*/
+
+const scene=new THREE.Scene()
+
+const camera=new THREE.PerspectiveCamera(
+70,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+)
+
+const renderer=new THREE.WebGLRenderer({antialias:true})
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+document.body.appendChild(renderer.domElement)
+
+const light=new THREE.PointLight(0xffffff,1)
+
+light.position.set(5,10,5)
+
+scene.add(light)
+
+const geo=new THREE.BoxGeometry(10,1,5)
+
+const mat=new THREE.MeshStandardMaterial({
+
+color:0x111111,
+metalness:0.9,
+roughness:0.2
+
+})
+
+const board=new THREE.Mesh(geo,mat)
+
+scene.add(board)
+
+camera.position.z=9
+camera.position.y=4
+camera.rotation.x=-0.4
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+board.rotation.y+=0.0015
+
+renderer.render(scene,camera)
+
+}
+
+animate()
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight
+camera.updateProjectionMatrix()
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+})
+
+</script>
+
+</body>
+</html>
