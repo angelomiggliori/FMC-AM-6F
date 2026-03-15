@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FMC-AM 6F</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  /* ── Paleta por banco (manual §2.2) ───────────────────────────────
+     A=#00ff66 verde   B=#ffaa00 laranja  C=#ff0000 vermelho
+     D=#00ffff ciano   E=#ffffff branco   F–J espelham A–E
+     Azul proibido na interface primária (manual §2)                  */
+  :root {
+    --bg:        #0a0a0c;
+    --panel:     #111114;
+    --border:    #2a2a35;
+    --accent:    #e8e8e8;          /* branco quente — sem azul primário */
+    --accent2:   #ff6b00;
+    --dim:       #3a3a50;
+    --text:      #e0e0f0;
+    --text-dim:  #6a6a88;
+    --led-off:   #1a1a22;
+    --tap-color: #ff6b00;
+
+    /* Cores de banco */
+    --bank-A: #00ff66;
+    --bank-B: #ffaa00;
+    --bank-C: #ff0000;
+    --bank-D: #00ffff;
+    --bank-E: #ffffff;
+
+    --fs-h: 90px;
+    --fs-w: 90px;
+
+    /* Glow neutro */
+    --glow: 0 0 10px rgba(232,232,232,0.4), 0 0 30px rgba(232,232,232,0.1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Textura de ruído */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Chassis ──────────────────────────────── */
+  .chassis {
+    position: relative; z-index: 1;
+    width: min(98vw, 800px);
+    background: linear-gradient(160deg, #1c1c24 0%, #0e0e14 60%, #14141c 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow:
+      0 0 0 1px #2a2a3a,
+      0 4px 40px rgba(0,0,0,0.9),
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      inset 0 -1px 0 rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .chassis::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    border-radius: 14px;
+    pointer-events: none; z-index: 10;
+  }
+
+  /* Parafusos */
+  .screw {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3a3a4a, #1a1a22);
+    border: 1px solid #2a2a36;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .screw::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(45deg);
+    width: 60%; height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+  .screw.tl { top:8px; left:8px; } .screw.tr { top:8px; right:8px; }
+  .screw.bl { bottom:8px; left:8px; } .screw.br { bottom:8px; right:8px; }
+
+  /* ── Top bar ──────────────────────────────── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(13px, 2.5vw, 18px);
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent2); }
+
+  /* ── Display principal ────────────────────── */
+  .display {
+    flex: 1;
+    background: #060608;
+    border: 1px solid #1e1e2e;
+    border-radius: 8px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.7);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Barra colorida de banco na borda esquerda do display */
+  .display::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--bank-color, #333);
+    border-radius: 8px 0 0 8px;
+    transition: background 0.3s;
+  }
+
+  .display-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .patch-id {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(20px, 5vw, 36px);
+    font-weight: 900;
+    color: var(--bank-color, var(--accent));
+    text-shadow: 0 0 14px var(--bank-color, transparent), 0 0 40px var(--bank-color, transparent);
+    letter-spacing: 0.1em;
+    line-height: 1;
+    transition: color 0.2s, text-shadow 0.2s;
+  }
+  .patch-id.blink { animation: blink-patch 0.45s linear infinite; }
+  @keyframes blink-patch { 50% { opacity: 0.08; } }
+
+  .patch-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(9px, 1.6vw, 12px);
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .bpm-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(10px, 1.8vw, 13px);
+    color: var(--accent2);
+    white-space: nowrap;
+    border-left: 1px solid var(--border);
+    padding-left: 12px;
+    line-height: 1.4;
+    text-align: center;
+  }
+  .bpm-val { font-size: clamp(14px, 2.5vw, 20px); font-weight: 700; display: block; }
+
+  /* ── Middle ───────────────────────────────── */
+  .middle {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Grid 3×2 ─────────────────────────────── */
+  .fs-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, auto);
+    gap: 10px 12px;
+    align-content: center;
+    justify-items: center;
+    padding: 6px;
+  }
+  .fs-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+  }
+
+  /* ── Botão footswitch ─────────────────────── */
+  .fs-btn {
+    width: var(--fs-w);
+    height: var(--fs-h);
+    background: radial-gradient(ellipse at 40% 35%, #2a2a36 0%, #161620 70%);
+    border: 2px solid #2e2e3e;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(9px, 1.5vw, 11px);
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    position: relative;
+    transition: border-color 0.12s, box-shadow 0.12s, background 0.12s, transform 0.08s;
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      inset 0 -3px 8px rgba(0,0,0,0.5);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .fs-btn:active, .fs-btn.pressed {
+    transform: scale(0.93);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.8), inset 0 3px 10px rgba(0,0,0,0.6);
+  }
+
+  /* Iluminação de borda superior (patch par) */
+  .fs-btn.lit-top {
+    border-top-color: var(--bank-color, #00ff66);
+    border-top-width: 3px;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.5),
+      0 -8px 18px -4px var(--bank-color, #00ff66),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  /* Iluminação de borda inferior (patch ímpar) */
+  .fs-btn.lit-bottom {
+    border-bottom-color: var(--bank-color, #00ff66);
+    border-bottom-width: 3px;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.5),
+      0 8px 18px -4px var(--bank-color, #00ff66),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  /* Background sutil quando qualquer patch do FS está ativo */
+  .fs-btn.lit-top, .fs-btn.lit-bottom {
+    background: radial-gradient(ellipse at 50% 50%, #1e1e28 0%, #0e0e14 70%);
+    color: #cccccc;
+  }
+
+  /* Modo pré-seleção de banco */
+  .fs-btn.preselect-mode {
+    animation: preselect-pulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes preselect-pulse { from { opacity: 0.65; } to { opacity: 1; } }
+
+  /* FS6 — Tap */
+  .fs-btn.tap-btn { border-color: var(--dim); }
+  .fs-btn.tap-btn.tap-beat {
+    background: radial-gradient(ellipse at 40% 35%, #2a1a0a 0%, #160e04 70%);
+    border-color: var(--tap-color);
+    color: var(--tap-color);
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.6),
+      0 0 20px rgba(255,107,0,0.65),
+      0 0 50px rgba(255,107,0,0.2),
+      inset 0 1px 0 rgba(255,107,0,0.1);
+  }
+  .fs-btn.tap-btn.tap-off {
+    border-color: #1e1e2a;
+    background: radial-gradient(ellipse at 40% 35%, #141414 0%, #0c0c10 70%);
+    color: #2a2a36;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.8), inset 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  .fs-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(7px, 1.1vw, 9px);
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    text-align: center;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Painel lateral MIDI ──────────────────── */
+  .side-panel {
+    width: 130px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .midi-monitor {
+    height: 150px;
+    flex-shrink: 0;
+    background: #060608;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .midi-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--accent2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+    flex-shrink: 0;
+  }
+  .midi-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+  .midi-log::-webkit-scrollbar { width: 2px; }
+  .midi-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+  .midi-entry {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    padding: 1px 2px;
+    border-radius: 2px;
+    animation: fadeIn 0.2s ease;
+  }
+  .midi-entry.pc  { color: #00ff66; }
+  .midi-entry.cc  { color: var(--accent2); }
+  .midi-entry.sx  { color: #888; font-style: italic; }
+  .midi-entry.new { background: rgba(255,107,0,0.07); color: var(--text); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── Status bar ───────────────────────────── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: #08080c;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    gap: 6px;
+  }
+  .status-item {
+    display: flex; align-items: center; gap: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+  .status-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .status-dot.on   { background: #00ff66; box-shadow: 0 0 5px #00ff66; }
+  .status-dot.warn { background: #ffd600; box-shadow: 0 0 5px #ffd600; }
+
+  .mode-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+  .mode-badge.normal    { background: rgba(232,232,232,0.08); color: #aaa; border: 1px solid #333; }
+  .mode-badge.banksel   { background: rgba(255,107,0,0.15); color: var(--accent2); border: 1px solid rgba(255,107,0,0.4); animation: preselect-pulse 0.5s ease-in-out infinite alternate; }
+  .mode-badge.confirming{ background: rgba(255,214,0,0.15); color: #ffd600; border: 1px solid rgba(255,214,0,0.4); animation: preselect-pulse 0.45s ease-in-out infinite alternate; }
+
+  /* ── Confirm ring ─────────────────────────── */
+  .confirm-ring {
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 2px solid #ffffff44;
+    animation: confirmRing 0.4s ease forwards;
+    pointer-events: none;
+  }
+  @keyframes confirmRing { 0%{opacity:1;transform:scale(1);} 100%{opacity:0;transform:scale(1.4);} }
+
+  /* ── Toast ────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(20,20,28,0.92);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 6px 16px; border-radius: 20px;
+    letter-spacing: 0.1em;
+    opacity: 0; transition: all 0.3s;
+    pointer-events: none; z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Responsivo ───────────────────────────── */
+  @media (max-width: 600px) {
+    :root { --fs-w: 62px; --fs-h: 62px; }
+    .side-panel { width: 90px; }
+    .logo { font-size: 11px; }
+    .patch-id { font-size: 26px; }
+  }
+  @media (max-width: 400px) {
+    :root { --fs-w: 52px; --fs-h: 52px; }
+    .side-panel { display: none; }
+  }
+  @media (max-height: 500px) and (orientation: landscape) {
+    :root { --fs-w: 58px; --fs-h: 58px; }
+    .chassis { padding: 8px 12px; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chassis" id="chassis">
+  <div class="screw tl"></div><div class="screw tr"></div>
+  <div class="screw bl"></div><div class="screw br"></div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo">FMC<span>·</span>AM<span style="font-size:0.7em;opacity:0.6"> 6F</span></div>
+
+    <div class="display" id="mainDisplay">
+      <div class="display-main">
+        <div class="patch-id" id="patchId">A0</div>
+        <div class="patch-name" id="patchName">CLEAN BOOST</div>
+      </div>
+      <div class="bpm-display">
+        <span class="bpm-val" id="bpmVal">120</span>
+        <span>BPM</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footswitches + MIDI monitor -->
+  <div class="middle">
+    <div class="fs-grid" id="fsGrid"></div>
+
+    <div class="side-panel">
+      <div class="midi-monitor">
+        <div class="midi-title">⬡ MIDI OUT</div>
+        <div class="midi-log" id="midiLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot on" id="midiDot"></div>
+      <span id="midiStatusText">SIM</span>
+    </div>
+    <div class="mode-badge normal" id="modeBadge">EXECUÇÃO</div>
+    <div class="status-item">
+      <div class="status-dot on"></div>
+      <span id="memStatus">MEM OK</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════════════════
+// FMC-AM 6F  —  Motor de Controle  v3
+// Referência: Documentação Técnica Oficial FMC-AM 6F
+// ══════════════════════════════════════════════════════════════════
+
+// ── §3.1 / §4.1 — Constantes operacionais ─────────────────────
+const DEBOUNCE_MS   = 30;          // §1.2 — 30 ms de estabilização
+const HOLD_MS       = 900;         // §3.1 — acionamento longo = 900 ms
+const TAP_AVG_N     = 4;           // §4.1 — média dos últimos 4 acionamentos
+const TAP_TIMEOUT   = 2000;        // §4.1 — zera se intervalo > 2 s
+const BPM_MIN       = 30;          // §4.1
+const BPM_MAX       = 240;         // §4.1
+const SYSEX_IDLE_MS = 600;         // §4.2 — aguarda 600 ms de inatividade
+const SYSEX_DELAY   = 40;          // §4.2 — pausa entre bytes SysEx
+const MEM_CHECK_MS  = 5000;        // §5   — monitor a cada 5 s
+const MIDI_CH       = 0;           // canal MIDI (0 = CH 1)
+
+const BANKS_ALL = ['A','B','C','D','E','F','G','H','I','J'];
+
+// §2.2 — Paleta de cores (A–E; F–J espelham A–E)
+const BANK_COLOR = {
+  A:'#00ff66', B:'#ffaa00', C:'#ff0000', D:'#00ffff', E:'#ffffff',
+  F:'#00ff66', G:'#ffaa00', H:'#ff0000', I:'#00ffff', J:'#ffffff',
+};
+
+// Nomes dos patches por banco
+const PATCH_NAMES = {
+  A:['CLEAN BOOST','TUBE DRIVE','OCTO VERB','SHIMMER PAD','TAPE ECHO','HEAVY GATE','DUAL CHORUS','POLY DETUNE','PITCH SHIFT','DIRT BOX'],
+  B:['BLUES JR','TWEED 4X10','AC SPANK','VOX CLEAN','BRIT CRUNCH','PLEXI ROAR','MESA TIGHT','SOLDANO HI','FRIEDMAN BE','BOGNER ECST'],
+  C:['SMALL ROOM','LARGE HALL','PLATE VERB','SPRING TANK','SHIMMER 1','SHIMMER 2','CAVE ECHO','MOD DELAY','TAPE SLAP','PING PONG'],
+  D:['WAH CRYBABY','OCTAVE FUZ','RING MOD','TREMOLO','VIBRATO','PHASER 4ST','FLANGER JET','CHORUS 2V','ROTARY','UNIVIBE'],
+  E:['LOOPER 1','LOOPER 2','PHRASE 1','PHRASE 2','MIDI CLK','SYNC BEAT','POLY LOOP','HALF SPEED','REVERSE','REBUILD'],
+};
+for(const b of ['F','G','H','I','J'])
+  PATCH_NAMES[b] = PATCH_NAMES[BANKS_ALL[BANKS_ALL.indexOf(b)-5]].map(n=>n+' II');
+
+// ══════════════════════════════════════════════════════════════════
+// §5 — SISTEMA DE REDUNDÂNCIA (4 camadas + monitor)
+// ══════════════════════════════════════════════════════════════════
+function criarEstadoPadrao(){
+  return { bank:'A', patch:0, bpm:120, bankGroup:0 };
+}
+
+// Camada 0 — Memória volátil (estado imediato em RAM)
+let cam0 = criarEstadoPadrao();
+
+// Camadas 1, 2, 3 — localStorage
+function salvarCamada(n, dados){
+  try { localStorage.setItem(`fmc_cam${n}`, JSON.stringify(dados)); } catch(e){}
+}
+function lerCamada(n){
+  try {
+    const s = localStorage.getItem(`fmc_cam${n}`);
+    return s ? JSON.parse(s) : null;
+  } catch(e){ return null; }
+}
+
+// Gravação imediata em todas as camadas persistentes
+function gravarEstado(){
+  const snap = { bank:cam0.bank, patch:cam0.patch, bpm:cam0.bpm, bankGroup:cam0.bankGroup };
+  salvarCamada(1, snap);
+  salvarCamada(2, snap);
+  salvarCamada(3, snap);
+}
+
+// Carregamento com fallback em cascata
+function carregarEstado(){
+  for(let n=1; n<=3; n++){
+    const d = lerCamada(n);
+    if(d && d.bank && BANKS_ALL.includes(d.bank)){
+      cam0 = { ...criarEstadoPadrao(), ...d };
+      logMIDI({ type:'sx', label:`MEM CARGADA CAM${n}` });
+      return;
+    }
+  }
+  cam0 = criarEstadoPadrao();
+}
+
+// Monitor §5 — compara cam0 vs cam1 a cada 5 s, força gravação se divergir
+setInterval(()=>{
+  const cam1 = lerCamada(1);
+  if(!cam1) { gravarEstado(); return; }
+  const diverge = cam1.bank!==cam0.bank || cam1.patch!==cam0.patch
+               || cam1.bpm!==cam0.bpm   || cam1.bankGroup!==cam0.bankGroup;
+  if(diverge){
+    gravarEstado();
+    document.getElementById('memStatus').textContent = 'SYNC!';
+    setTimeout(()=>{ document.getElementById('memStatus').textContent = 'MEM OK'; }, 800);
+  }
+}, MEM_CHECK_MS);
+
+// ══════════════════════════════════════════════════════════════════
+// Estado de navegação (não persistido — volátil por design)
+// ══════════════════════════════════════════════════════════════════
+let bankSelect    = false;  // Modo de seleção de banco
+let preselectBank = null;   // Banco pré-selecionado aguardando confirmação
+let preselectGrp  = 0;      // Grupo do banco pré-selecionado
+let lastFsIdx     = null;   // Último FS1–5 acionado
+let fsToggle      = false;  // false=par, true=ímpar
+
+// ══════════════════════════════════════════════════════════════════
+// §4 — MIDI Buffer + SysEx Tap Tempo
+// ══════════════════════════════════════════════════════════════════
+let midiBuffer     = [];
+let midiFlushTimer = null;
+let sysexIdleTimer = null;   // §4.2 — aguarda 600 ms antes de enviar SysEx
+
+function enqueueMIDI(msg){
+  midiBuffer.push(msg);
+  if(!midiFlushTimer) midiFlushTimer = setTimeout(flushMIDI, 0);
+}
+function flushMIDI(){
+  midiFlushTimer = null;
+  while(midiBuffer.length) logMIDI(midiBuffer.shift());
+}
+
+// §4.2 — Conversão BPM → ms → 2 bytes 7-bit + protocolo SysEx
+function enviarSysExTapTempo(bpm){
+  if(sysexIdleTimer) clearTimeout(sysexIdleTimer);
+  sysexIdleTimer = setTimeout(()=>{
+    const ms  = Math.round(60000 / bpm);
+    const lsb = ms & 0x7F;           // 7 bits menos significativos
+    const msb = (ms >> 7) & 0x7F;    // 7 bits mais significativos
+    // Protocolo: abrir canal (0x50) → transferir (0x31) → fechar (0x51)
+    enqueueMIDI({ type:'sx', label:`SX 50 OPEN` });
+    setTimeout(()=> enqueueMIDI({ type:'sx', label:`SX 31 ${msb.toString(16).padStart(2,'0')} ${lsb.toString(16).padStart(2,'0')} (${ms}ms=${bpm}bpm)` }), SYSEX_DELAY);
+    setTimeout(()=> enqueueMIDI({ type:'sx', label:`SX 51 CLOSE` }), SYSEX_DELAY * 2);
+    // CC MIDI Clock (CC64) como fallback simultâneo
+    enqueueMIDI({ type:'cc', label:`CC64 ${Math.min(127,Math.round(bpm))} BPM→${bpm}` });
+  }, SYSEX_IDLE_MS);
+}
+
+function logMIDI(msg){
+  const $log = document.getElementById('midiLog');
+  const entry = document.createElement('div');
+  entry.className = `midi-entry ${(msg.type||'').toLowerCase()} new`;
+  const ts = new Date().toLocaleTimeString('pt',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  entry.textContent = `${ts} ${msg.label}`;
+  $log.appendChild(entry);
+  setTimeout(()=> entry.classList.remove('new'), 300);
+  while($log.children.length > 40) $log.removeChild($log.firstChild);
+  // Pisca status dot
+  const dot = document.getElementById('midiDot');
+  if(dot){ dot.classList.remove('on'); setTimeout(()=>dot.classList.add('on'), 60); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// §4.1 — Tap Tempo
+// ══════════════════════════════════════════════════════════════════
+let tapTimes     = [];
+let tapTimer     = null;
+let tapLedTimer  = null;
+let tapBeatTimer = null;
+
+function registrarTap(){
+  const now = Date.now();
+  if(tapTimer) clearTimeout(tapTimer);
+  tapTimer = setTimeout(resetarTap, TAP_TIMEOUT);
+
+  if(tapTimes.length > 0 && (now - tapTimes[tapTimes.length-1]) < TAP_TIMEOUT){
+    tapTimes.push(now);
+    if(tapTimes.length > TAP_AVG_N + 1) tapTimes.shift();
+    if(tapTimes.length >= 2){
+      const intervals = [];
+      for(let i=1; i<tapTimes.length; i++) intervals.push(tapTimes[i]-tapTimes[i-1]);
+      const avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+      cam0.bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(60000/avg)));
+      iniciarPiscarBeat(Math.round(60000/cam0.bpm));
+      enviarSysExTapTempo(cam0.bpm);
+      renderizar();
+    }
+  } else {
+    tapTimes = [now];
+  }
+  piscarBeatManual();
+}
+
+function piscarBeatManual(){
+  const btn = fsEls[5];
+  btn.classList.add('tap-beat'); btn.classList.remove('tap-off');
+  if(tapLedTimer) clearTimeout(tapLedTimer);
+  tapLedTimer = setTimeout(()=>{ btn.classList.remove('tap-beat'); btn.classList.add('tap-off'); }, 80);
+}
+
+function iniciarPiscarBeat(intervalMs){
+  if(tapBeatTimer) clearInterval(tapBeatTimer);
+  const onMs = Math.min(80, intervalMs * 0.15);
+  tapBeatTimer = setInterval(()=>{
+    if(bankSelect) return;
+    const btn = fsEls[5];
+    btn.classList.add('tap-beat'); btn.classList.remove('tap-off');
+    setTimeout(()=>{ btn.classList.remove('tap-beat'); btn.classList.add('tap-off'); }, onMs);
+  }, intervalMs);
+}
+
+function resetarTap(){
+  tapTimes = [];
+  if(tapBeatTimer){ clearInterval(tapBeatTimer); tapBeatTimer = null; }
+  iniciarPiscarBeat(Math.round(60000/cam0.bpm));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DOM refs
+// ══════════════════════════════════════════════════════════════════
+const $patchId   = document.getElementById('patchId');
+const $patchName = document.getElementById('patchName');
+const $bpmVal    = document.getElementById('bpmVal');
+const $midiLog   = document.getElementById('midiLog');
+const $modeBadge = document.getElementById('modeBadge');
+const $toast     = document.getElementById('toast');
+const $display   = document.getElementById('mainDisplay');
+
+// ══════════════════════════════════════════════════════════════════
+// Render — aplica cor de banco, iluminação de borda, labels
+// ══════════════════════════════════════════════════════════════════
+function corDoBanco(bank){
+  return BANK_COLOR[bank] || '#888888';
+}
+
+function renderizar(){
+  const cor  = corDoBanco(bankSelect && preselectBank ? preselectBank : cam0.bank);
+  const bank = cam0.bank;
+
+  // ── Display ──────────────────────────────────
+  $bpmVal.textContent = Math.round(cam0.bpm);
+
+  if(bankSelect && preselectBank){
+    // Banco pré-selecionado piscando — §3.2 "visor principal exibe letra piscando"
+    $patchId.textContent = preselectBank + '?';
+    $patchId.className   = 'patch-id blink';
+    $patchId.style.setProperty('--bank-color', corDoBanco(preselectBank));
+    $patchName.textContent = 'AGUARDANDO CONFIRMAÇÃO';
+    $display.style.setProperty('--bank-color', corDoBanco(preselectBank));
+  } else if(bankSelect){
+    $patchId.textContent = '??';
+    $patchId.className   = 'patch-id blink';
+    $patchName.textContent = 'SELECIONE O BANCO';
+    $display.style.setProperty('--bank-color', '#ff6b00');
+  } else {
+    $patchId.textContent = bank + cam0.patch;
+    $patchId.className   = 'patch-id';
+    $patchId.style.setProperty('--bank-color', cor);
+    $patchName.textContent = PATCH_NAMES[bank]?.[cam0.patch] || `PATCH ${cam0.patch+1}`;
+    $display.style.setProperty('--bank-color', cor);
+  }
+
+  // ── Botões FS1–5 ─────────────────────────────
+  const visGroup  = BANKS_ALL.slice(cam0.bankGroup*5, cam0.bankGroup*5+5);
+  const bankInView = visGroup.includes(cam0.bank);
+
+  if(bankSelect){
+    // Modo de seleção: FS1–5 mostram bancos do grupo
+    const grp = BANKS_ALL.slice(preselectGrp*5, preselectGrp*5+5);
+    for(let i=0; i<5; i++){
+      const b   = grp[i];
+      const bc  = corDoBanco(b);
+      const btn = fsEls[i];
+      const isPresel = preselectBank === b;
+
+      btn.style.setProperty('--bank-color', bc);
+      btn.classList.remove('lit-top','lit-bottom');
+      btn.classList.toggle('preselect-mode', true);
+      if(isPresel){
+        btn.style.borderColor = bc;
+        btn.style.boxShadow   = `0 0 16px ${bc}88, 0 0 40px ${bc}33`;
+        btn.style.color       = bc;
+      } else {
+        btn.style.borderColor = '';
+        btn.style.boxShadow   = '';
+        btn.style.color       = '';
+      }
+
+      // Label: nome do banco ou "CONFIRMAR"
+      if(fsToggle && isPresel){
+        labelEls[i].textContent = 'ÍMPARES';
+      } else if(isPresel){
+        labelEls[i].textContent = 'CONFIRMAR';
+      } else {
+        labelEls[i].textContent = b;
+      }
+      // Texto dentro do botão
+      btn.childNodes[0].textContent = b;
+    }
+    labelEls[5].textContent = 'TAP=LAYER HOLD=SAIR';
+    $modeBadge.className = preselectBank ? 'mode-badge confirming' : 'mode-badge banksel';
+    $modeBadge.textContent = preselectBank ? `CONF ${preselectBank}?` : 'BANK SEL';
+
+  } else {
+    // Modo de execução normal
+    for(let i=0; i<5; i++){
+      const base   = i * 2;
+      const isTopActive    = bankInView && cam0.patch === base;
+      const isBottomActive = bankInView && cam0.patch === base + 1;
+      const isAnyActive    = isTopActive || isBottomActive;
+
+      const btn = fsEls[i];
+      btn.style.setProperty('--bank-color', cor);
+      btn.classList.remove('preselect-mode');
+      btn.style.borderColor = '';
+      btn.style.boxShadow   = '';
+      btn.style.color       = '';
+
+      // §2.1 — Iluminação superior (par) ou inferior (ímpar)
+      btn.classList.toggle('lit-top',    isTopActive);
+      btn.classList.toggle('lit-bottom', isBottomActive);
+
+      // Texto do botão
+      btn.childNodes[0].textContent = `FS${i+1}`;
+
+      // Label: patch que será chamado no próximo toque
+      if(bankInView){
+        const nextPatch = (lastFsIdx === i && fsToggle) ? base+1 : base;
+        const show      = isAnyActive ? cam0.patch : nextPatch;
+        labelEls[i].textContent = (PATCH_NAMES[cam0.bank]?.[show] || `P${show+1}`).substring(0,9);
+      } else {
+        labelEls[i].textContent = '· · ·';
+      }
+    }
+    labelEls[5].textContent = 'TAP · HOLD';
+    $modeBadge.className = 'mode-badge normal';
+    $modeBadge.textContent = 'EXECUÇÃO';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Construção dos 6 footswitches
+// ══════════════════════════════════════════════════════════════════
+const fsGrid   = document.getElementById('fsGrid');
+const fsEls    = [];
+const labelEls = [];
+
+for(let i=0; i<6; i++){
+  const col = document.createElement('div');
+  col.className = 'fs-col';
+
+  const btn = document.createElement('div');
+  btn.className = 'fs-btn';
+  btn.setAttribute('role','button');
+  btn.setAttribute('tabindex','0');
+  // Nó de texto separado para o label interno
+  btn.appendChild(document.createTextNode(i<5 ? `FS${i+1}` : 'FS6'));
+  if(i===5){
+    const sub = document.createElement('span');
+    sub.style.cssText = 'font-size:7px;opacity:0.6;display:block;margin-top:1px';
+    sub.textContent = 'TAP';
+    btn.appendChild(sub);
+    btn.classList.add('tap-btn');
+  }
+
+  const lbl = document.createElement('div');
+  lbl.className = 'fs-label';
+
+  col.appendChild(btn);
+  col.appendChild(lbl);
+  fsGrid.appendChild(col);
+  fsEls.push(btn);
+  labelEls.push(lbl);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Handlers de footswitch (debounce §1.2)
+// ══════════════════════════════════════════════════════════════════
+const debounceTimers = {};
+const holdTimers     = {};
+const pressTimes     = {};
+
+function attachFS(idx, el){
+  function onPress(){
+    if(debounceTimers[idx]) return;
+    debounceTimers[idx] = setTimeout(()=>{ debounceTimers[idx]=null; }, DEBOUNCE_MS);
+    el.classList.add('pressed');
+    pressTimes[idx] = Date.now();
+    if(idx===5) holdTimers[idx] = setTimeout(onFS6Hold, HOLD_MS);
+  }
+  function onRelease(){
+    el.classList.remove('pressed');
+    const held = Date.now() - (pressTimes[idx]||0);
+    if(idx===5){
+      clearTimeout(holdTimers[idx]);
+      if(held < HOLD_MS) onFS6Tap();
+    } else {
+      onFSPatch(idx);
+    }
+  }
+  el.addEventListener('mousedown',  e=>{ e.preventDefault(); onPress(); });
+  el.addEventListener('mouseup',    e=>{ e.preventDefault(); onRelease(); });
+  el.addEventListener('mouseleave', ()=>{ el.classList.remove('pressed'); clearTimeout(holdTimers[idx]); });
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); onPress(); }, {passive:false});
+  el.addEventListener('touchend',   e=>{ e.preventDefault(); onRelease(); }, {passive:false});
+  el.addEventListener('touchcancel',()=>{ el.classList.remove('pressed'); clearTimeout(holdTimers[idx]); });
+}
+fsEls.forEach((el,i)=> attachFS(i,el));
+
+// ══════════════════════════════════════════════════════════════════
+// §3 — Lógica de navegação FS1–5
+// ══════════════════════════════════════════════════════════════════
+function onFSPatch(idx){
+
+  // ── Modo bank select com banco pré-selecionado ──
+  if(bankSelect && preselectBank){
+    const patchIdx = idx * 2 + (fsToggle ? 1 : 0);
+    cam0.bank      = preselectBank;
+    cam0.patch     = patchIdx;
+    cam0.bankGroup = preselectGrp;
+    bankSelect     = false;
+    preselectBank  = null;
+    lastFsIdx      = idx;
+    // fsToggle mantido para consistência
+    const pc = BANKS_ALL.indexOf(cam0.bank)*10 + patchIdx;
+    enqueueMIDI({ type:'pc', label:`PC ${pc} [${cam0.bank}${patchIdx+1}] ${PATCH_NAMES[cam0.bank]?.[patchIdx]||''}` });
+    flashConfirmRing(fsEls[idx]);
+    showToast(`${cam0.bank}${patchIdx+1} — ${PATCH_NAMES[cam0.bank]?.[patchIdx]||''}`);
+    gravarEstado();
+    renderizar();
+    return;
+  }
+
+  // ── Modo bank select sem banco confirmado ──
+  if(bankSelect){
+    const grp        = BANKS_ALL.slice(preselectGrp*5, preselectGrp*5+5);
+    const escolhido  = grp[idx];
+    if(!escolhido) return;
+    // §3.2 "estado de prontidão" — primeiro toque pré-seleciona
+    preselectBank = escolhido;
+    fsToggle      = false;   // reset: começa em patches pares
+    showToast(`BANCO ${escolhido} · CONFIRME COM FS1–5`);
+    renderizar();
+    return;
+  }
+
+  // ── Modo de execução — §3.1 toggle par/ímpar ──
+  const visGroup = BANKS_ALL.slice(cam0.bankGroup*5, cam0.bankGroup*5+5);
+  if(!visGroup.includes(cam0.bank)) return;
+
+  const base = idx * 2;
+
+  if(lastFsIdx !== idx){
+    lastFsIdx = idx;
+    // Se já está no par deste FS → vai pro ímpar imediatamente
+    fsToggle = (cam0.patch === base) ? true : false;
+  } else {
+    fsToggle = !fsToggle;
+  }
+
+  cam0.patch = base + (fsToggle ? 1 : 0);
+  const pc = BANKS_ALL.indexOf(cam0.bank)*10 + cam0.patch;
+  enqueueMIDI({ type:'pc', label:`PC ${pc} [${cam0.bank}${cam0.patch+1}] ${PATCH_NAMES[cam0.bank]?.[cam0.patch]||''}` });
+  flashConfirmRing(fsEls[idx]);
+  gravarEstado();
+  renderizar();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// §3.1 / §3.2 — FS6: Tap e Hold
+// ══════════════════════════════════════════════════════════════════
+function onFS6Tap(){
+  if(bankSelect){
+    if(preselectBank){
+      // Banco pré-selecionado: tap alterna layer par/ímpar
+      fsToggle = !fsToggle;
+      showToast(`${preselectBank} · LAYER ${fsToggle ? 'ÍMPAR (1,3,5,7,9)' : 'PAR (0,2,4,6,8)'}`);
+    } else {
+      // Sem banco: tap alterna grupo A–E / F–J
+      preselectGrp = preselectGrp === 0 ? 1 : 0;
+      const g = BANKS_ALL.slice(preselectGrp*5, preselectGrp*5+5);
+      showToast(`GRUPO ${g[0]}–${g[4]}`);
+    }
+    renderizar();
+    return;
+  }
+  // Modo normal: tap tempo §4.1
+  registrarTap();
+}
+
+function onFS6Hold(){
+  if(bankSelect){
+    // Cancela bank select
+    bankSelect    = false;
+    preselectBank = null;
+    showToast('BANK SELECT CANCELADO');
+  } else {
+    // Entra em bank select — §3.1
+    bankSelect    = true;
+    preselectBank = null;
+    preselectGrp  = cam0.bankGroup;
+    fsToggle      = false;
+    const g = BANKS_ALL.slice(preselectGrp*5, preselectGrp*5+5);
+    showToast(`BANK SELECT · ${g[0]}–${g[4]} · TAP=GRUPO/LAYER`);
+  }
+  renderizar();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Efeitos visuais
+// ══════════════════════════════════════════════════════════════════
+function flashConfirmRing(el){
+  const ring = document.createElement('div');
+  ring.className = 'confirm-ring';
+  el.appendChild(ring);
+  setTimeout(()=> ring.remove(), 400);
+}
+
+let toastTimer = null;
+function showToast(msg){
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> $toast.classList.remove('show'), 2200);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Bloqueios de interface
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('contextmenu', e=> e.preventDefault());
+document.addEventListener('gesturestart', e=> e.preventDefault());
+document.addEventListener('gesturechange', e=> e.preventDefault());
+document.addEventListener('gestureend', e=> e.preventDefault());
+document.addEventListener('touchmove', e=>{ if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+
+// ══════════════════════════════════════════════════════════════════
+// Inicialização
+// ══════════════════════════════════════════════════════════════════
+carregarEstado();
+// Corrige bankGroup conforme banco carregado
+cam0.bankGroup = BANKS_ALL.indexOf(cam0.bank) >= 5 ? 1 : 0;
+renderizar();
+// Inicia metrônomo visual no BPM carregado
+iniciarPiscarBeat(Math.round(60000 / cam0.bpm));
+showToast('FMC-AM 6F · PRONTO');
+</script>
+</body>
+</html>
