@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FMC · Auto Dump G1On</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+
+:root {
+  --bg:     #080810;
+  --surf:   #0e0e18;
+  --border: #2a2a3a;
+  --green:  #00ff66;
+  --cyan:   #00ffcc;
+  --orange: #ff6b00;
+  --red:    #ff2244;
+  --amber:  #ffb930;
+  --text:   #ccccdd;
+  --dim:    #555566;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body {
+  width:100%; min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Share Tech Mono', monospace;
+}
+body { display:flex; flex-direction:column; align-items:center; padding:20px 16px 40px; gap:16px; }
+
+/* ── Título ── */
+.title {
+  font-family:'Orbitron', sans-serif;
+  font-size:clamp(16px, 4vw, 22px);
+  font-weight:900; letter-spacing:.1em;
+  color:#fff; text-align:center;
+}
+.title span { color:var(--cyan); }
+.subtitle { font-size:10px; color:var(--dim); letter-spacing:.15em; text-align:center; margin-top:4px; }
+
+/* ── Cards ── */
+.card {
+  width:100%; max-width:600px;
+  background:var(--surf);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.card-title {
+  font-size:9px; letter-spacing:.18em; color:var(--dim);
+  text-transform:uppercase; border-bottom:1px solid var(--border); padding-bottom:8px;
+}
+
+/* ── Status de conexão ── */
+.conn-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.dot {
+  width:10px; height:10px; border-radius:50%;
+  background:var(--border); flex-shrink:0;
+  transition:background .3s, box-shadow .3s;
+}
+.dot.off      { background:#222; }
+.dot.waiting  { background:var(--amber); box-shadow:0 0 8px var(--amber); animation:blink .7s ease-in-out infinite alternate; }
+.dot.ok       { background:var(--green); box-shadow:0 0 8px var(--green); }
+.dot.g1on     { background:var(--cyan);  box-shadow:0 0 12px var(--cyan); animation:blink 1s ease-in-out infinite alternate; }
+.dot.err      { background:var(--red);   box-shadow:0 0 8px var(--red); }
+@keyframes blink { from{opacity:.4;} to{opacity:1;} }
+
+.conn-txt { font-size:12px; color:var(--text); flex:1; }
+.conn-txt.err { color:var(--red); }
+.conn-txt.g1on { color:var(--cyan); }
+
+/* ── Botões ── */
+.btn {
+  font-family:'Share Tech Mono', monospace;
+  font-size:12px; letter-spacing:.08em;
+  padding:10px 20px; border-radius:7px;
+  border:1px solid var(--border);
+  background:transparent; color:var(--dim);
+  cursor:pointer; transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  width:100%;
+}
+.btn.primary { border-color:var(--cyan); color:var(--cyan); background:rgba(0,255,204,.05); }
+.btn.go      { border-color:var(--green); color:var(--green); background:rgba(0,255,102,.06); font-size:14px; font-weight:700; }
+.btn.go:disabled { border-color:var(--border); color:var(--dim); background:transparent; cursor:not-allowed; }
+.btn.save    { border-color:var(--amber); color:var(--amber); background:rgba(255,185,48,.05); }
+.btn.save:disabled { border-color:var(--border); color:var(--dim); background:transparent; cursor:not-allowed; }
+.btn.danger  { border-color:var(--red); color:var(--red); background:rgba(255,34,68,.04); }
+
+/* ── Progresso ── */
+.progress-wrap {
+  width:100%;
+  background:#111120;
+  border-radius:4px;
+  height:8px;
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+.progress-bar {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, var(--cyan), var(--green));
+  border-radius:4px;
+  transition:width .4s ease;
+}
+
+.step-grid {
+  display:grid;
+  grid-template-columns:repeat(10, 1fr);
+  gap:4px;
+}
+.step {
+  aspect-ratio:1;
+  border-radius:4px;
+  border:1px solid var(--border);
+  background:#111120;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:var(--dim);
+  transition:all .3s;
+}
+.step.active  { border-color:var(--amber); color:var(--amber); background:rgba(255,185,48,.08); animation:blink .5s ease-in-out infinite alternate; }
+.step.done    { border-color:var(--green); color:var(--green); background:rgba(0,255,102,.06); }
+.step.failed  { border-color:var(--red);   color:var(--red);   background:rgba(255,34,68,.06); }
+
+.status-linha {
+  font-size:11px; color:var(--dim); text-align:center; min-height:18px;
+}
+.status-linha.ativo { color:var(--amber); }
+.status-linha.ok    { color:var(--green); }
+.status-linha.err   { color:var(--red); }
+
+/* ── Log ── */
+.log-box {
+  width:100%; max-width:600px;
+  background:var(--surf);
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+}
+.log-header {
+  padding:8px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.log-header span { font-size:9px; color:var(--dim); letter-spacing:.15em; }
+.log-body {
+  height:220px;
+  overflow-y:auto; overflow-x:hidden;
+  padding:8px 12px;
+  display:flex; flex-direction:column; gap:3px;
+}
+.log-body::-webkit-scrollbar { width:3px; }
+.log-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.log-entry { font-size:10px; line-height:1.5; word-break:break-all; }
+.log-entry.sys  { color:var(--dim); font-style:italic; }
+.log-entry.rx   { color:var(--cyan); }
+.log-entry.pc   { color:var(--green); }
+.log-entry.ok   { color:var(--green); }
+.log-entry.warn { color:var(--amber); }
+.log-entry.err  { color:var(--red); }
+
+/* ── Resultados ── */
+.results-grid {
+  display:flex; flex-direction:column; gap:8px;
+  width:100%; max-width:600px;
+}
+.result-card {
+  background:var(--surf);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:12px 14px;
+}
+.result-patch {
+  font-size:13px; color:var(--green); font-weight:700; margin-bottom:6px;
+}
+.result-patch span { color:var(--dim); font-size:10px; font-weight:400; margin-left:8px; }
+.result-body { font-size:10px; color:var(--text); line-height:1.8; }
+.result-bytes { font-size:9px; color:var(--dim); margin-top:4px; word-break:break-all; }
+.result-nodata { font-size:10px; color:var(--red); font-style:italic; }
+.fx-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+.fx-chip {
+  font-size:9px; padding:2px 7px; border-radius:3px; border:1px solid;
+}
+.fx-chip.delay    { color:#00ffcc; border-color:#00ffcc33; background:rgba(0,255,204,.06); }
+.fx-chip.mod      { color:#aa88ff; border-color:#aa88ff33; background:rgba(170,136,255,.06); }
+.fx-chip.reverb   { color:#6688ff; border-color:#6688ff33; background:rgba(102,136,255,.06); }
+.fx-chip.drive    { color:#ff8844; border-color:#ff884433; background:rgba(255,136,68,.06); }
+.fx-chip.dynamics { color:#ffdd44; border-color:#ffdd4433; background:rgba(255,221,68,.06); }
+.fx-chip.off { opacity:.3; filter:grayscale(1); }
+</style>
+</head>
+<body>
+
+<div class="title">FMC · <span>AUTO DUMP</span></div>
+<div class="subtitle">CAPTURA AUTOMÁTICA DE PATCHES · ZOOM G1On</div>
+
+<!-- Conexão -->
+<div class="card">
+  <div class="card-title">⬡ Conexão MIDI</div>
+  <div class="conn-row">
+    <div class="dot off" id="dot"></div>
+    <div class="conn-txt" id="connTxt">Aguardando conexão</div>
+  </div>
+  <button class="btn primary" id="btnConn" onclick="conectar()">CONECTAR MIDI</button>
+</div>
+
+<!-- Controle do scan -->
+<div class="card">
+  <div class="card-title">⬡ Varredura Automática A0 → A9</div>
+
+  <div class="step-grid" id="stepGrid"></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="status-linha" id="statusLinha">Aguardando conexão…</div>
+
+  <button class="btn go" id="btnGo" onclick="iniciarScan()" disabled>
+    ▶ INICIAR VARREDURA
+  </button>
+  <button class="btn danger" id="btnStop" onclick="pararScan()" style="display:none">
+    ■ PARAR
+  </button>
+</div>
+
+<!-- Salvar -->
+<div class="card">
+  <div class="card-title">⬡ Exportar Resultados</div>
+  <button class="btn save" id="btnSaveJson" onclick="salvarJSON()" disabled>⬇ SALVAR JSON COMPLETO</button>
+  <button class="btn save" id="btnSaveTxt"  onclick="salvarTXT()"  disabled>⬇ SALVAR LOG LEGÍVEL</button>
+</div>
+
+<!-- Log de eventos -->
+<div class="log-box">
+  <div class="log-header">
+    <span>LOG DE EVENTOS</span>
+    <button class="btn" style="width:auto;padding:2px 10px;font-size:9px;" onclick="limparLog()">LIMPAR</button>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<!-- Resultados -->
+<div class="results-grid" id="resultsGrid"></div>
+
+<script>
+'use strict';
+
+// ── Banco de efeitos (para identificar nos dumps) ─────────────────
+const ZOOM_FX_DB = {
+  0x0001:{name:'Comp',cat:'dynamics',tap:null},0x0002:{name:'RackComp',cat:'dynamics',tap:null},
+  0x0003:{name:'SlowATTCK',cat:'dynamics',tap:null},0x0004:{name:'ZNR',cat:'dynamics',tap:null},
+  0x0005:{name:'NoiseGate',cat:'dynamics',tap:null},0x0008:{name:'GraphicEQ',cat:'filter',tap:null},
+  0x0009:{name:'ParaEQ',cat:'filter',tap:null},0x000A:{name:'AutoWah',cat:'filter',tap:'Rate'},
+  0x000B:{name:'Resonance',cat:'filter',tap:null},0x000C:{name:'Cry',cat:'filter',tap:null},
+  0x0010:{name:'OverDrive',cat:'drive',tap:null},0x0011:{name:'Distortion',cat:'drive',tap:null},
+  0x0012:{name:'TS Drive',cat:'drive',tap:null},0x0013:{name:'Guvnor',cat:'drive',tap:null},
+  0x0014:{name:'MetalWRLD',cat:'drive',tap:null},0x0015:{name:'FuzzSmile',cat:'drive',tap:null},
+  0x0016:{name:'GreatMuff',cat:'drive',tap:null},0x0020:{name:'FD Combo',cat:'amp',tap:null},
+  0x0021:{name:'VX Combo',cat:'amp',tap:null},0x0022:{name:'US Blues',cat:'amp',tap:null},
+  0x0023:{name:'BG Crunch',cat:'amp',tap:null},0x0024:{name:'HW Stack',cat:'amp',tap:null},
+  0x0025:{name:'MS Crunch',cat:'amp',tap:null},0x0026:{name:'Rectifier',cat:'amp',tap:null},
+  0x0030:{name:'Chorus',cat:'mod',tap:'Rate'},0x0031:{name:'StereoChorus',cat:'mod',tap:'Rate'},
+  0x0032:{name:'SuperChorus',cat:'mod',tap:'Rate'},0x0033:{name:'Flanger',cat:'mod',tap:'Rate'},
+  0x0034:{name:'Vibrato',cat:'mod',tap:'Rate'},0x0035:{name:'Phaser',cat:'mod',tap:'Rate'},
+  0x0036:{name:'Step',cat:'mod',tap:'Rate'},0x0037:{name:'Tremolo',cat:'mod',tap:'Rate'},
+  0x0038:{name:'AutoPan',cat:'mod',tap:'Rate'},0x0039:{name:'RingMod',cat:'mod',tap:'Rate'},
+  0x003A:{name:'Detune',cat:'mod',tap:null},0x003B:{name:'PitchShift',cat:'mod',tap:null},
+  0x0040:{name:'MonoPitch',cat:'pitch',tap:null},0x0041:{name:'HPS',cat:'pitch',tap:null},
+  0x0042:{name:'Octave',cat:'pitch',tap:null},0x0050:{name:'Delay',cat:'delay',tap:'Time'},
+  0x0051:{name:'AnalogDelay',cat:'delay',tap:'Time'},0x0052:{name:'TapeEcho',cat:'delay',tap:'Time'},
+  0x0053:{name:'ModDelay',cat:'delay',tap:'Time'},0x0054:{name:'FilterDelay',cat:'delay',tap:'Time'},
+  0x0055:{name:'PingPongDly',cat:'delay',tap:'Time'},0x0056:{name:'ReverseDelay',cat:'delay',tap:'Time'},
+  0x0060:{name:'Hall',cat:'reverb',tap:null},0x0061:{name:'Room',cat:'reverb',tap:null},
+  0x0062:{name:'Spring',cat:'reverb',tap:null},0x0063:{name:'Arena',cat:'reverb',tap:null},
+  0x0064:{name:'EarlyRef',cat:'reverb',tap:null},0x0070:{name:'Air',cat:'ambience',tap:null},
+};
+
+// ── Estado ────────────────────────────────────────────────────────
+let midiAccess  = null;
+let midiOut     = null;
+let midiIn      = null;
+let midiReady   = false;
+let scanAtivo   = false;
+let stepAtual   = -1;
+let resultados  = [];   // [{patch, rawBytes, parseado, timestamp}]
+let pendingDump = null; // resolve da Promise esperando dump
+
+const TOTAL_PATCHES = 10; // A0 a A9
+const PC_WAIT_MS    = 600;  // espera após Program Change
+const EDIT_WAIT_MS  = 80;   // pausa entre bytes do handshake
+const DUMP_WAIT_MS  = 2000; // timeout esperando resposta do dump
+const ZOOM_KEYWORDS = ['zoom','g1on','g1xon','g1'];
+
+// Mensagens SysEx do protocolo Zoom — model ID 0x63 confirmado
+const SX = {
+  IDENTITY:    [0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7],          // Universal identity request
+  EDIT_ON:     [0xF0, 0x52, 0x00, 0x63, 0x50, 0xF7],           // Edit ON
+  PING:        [0xF0, 0x52, 0x00, 0x63, 0x33, 0xF7],           // Editor ping
+  DUMP_REQ:    [0xF0, 0x52, 0x00, 0x63, 0x29, 0xF7],           // Dump request
+  EDIT_OFF:    [0xF0, 0x52, 0x00, 0x63, 0x51, 0xF7],           // Edit OFF
+};
+
+// Model ID confirmado via Identity Response: 0x63 (firmware 1.21)
+let modelId = 0x63;
+let allSysexLog = [];
+
+// ── Constrói grade de steps ───────────────────────────────────────
+(function buildSteps(){
+  const grid = document.getElementById('stepGrid');
+  for(let i=0;i<TOTAL_PATCHES;i++){
+    const s = document.createElement('div');
+    s.className = 'step';
+    s.id = `step${i}`;
+    s.textContent = `A${i}`;
+    grid.appendChild(s);
+  }
+})();
+
+// ── Conexão MIDI ──────────────────────────────────────────────────
+async function conectar(){
+  setDot('waiting'); setConn('Solicitando permissão MIDI…');
+  document.getElementById('btnConn').textContent = 'AGUARDANDO…';
+
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+  } catch(e1) {
+    try {
+      midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+      log('Conectado sem SysEx — dump 0x28 pode não funcionar', 'warn');
+    } catch(e2) {
+      setDot('err'); setConn('Permissão negada: ' + e2.message, true);
+      document.getElementById('btnConn').textContent = 'TENTAR NOVAMENTE';
+      return;
+    }
+  }
+
+  midiReady = true;
+  midiAccess.onstatechange = onStateChange;
+  detectarDispositivos();
+  document.getElementById('btnConn').textContent = 'RECONECTAR';
+}
+
+function detectarDispositivos(){
+  const outputs = [...midiAccess.outputs.values()];
+  const inputs  = [...midiAccess.inputs.values()];
+
+  // Detecta G1On
+  midiOut = outputs.find(o => ZOOM_KEYWORDS.some(k => o.name.toLowerCase().includes(k)))
+            || (outputs.length ? outputs[0] : null);
+  midiIn  = inputs.find(i  => ZOOM_KEYWORDS.some(k => i.name.toLowerCase().includes(k)))
+            || (inputs.length ? inputs[0] : null);
+
+  // Conecta listener em todas as entradas
+  for(const input of inputs) input.onmidimessage = onMensagemMIDI;
+
+  const isG1on = midiOut && ZOOM_KEYWORDS.some(k => midiOut.name.toLowerCase().includes(k));
+
+  if(!midiOut && !midiIn){
+    setDot('err'); setConn('Nenhum dispositivo MIDI encontrado. Conecte a G1On e reconecte.', true);
+    document.getElementById('btnGo').disabled = true;
+    log('Nenhum dispositivo MIDI', 'err');
+    return;
+  }
+
+  if(isG1on){
+    setDot('g1on'); setConn(`G1On detectada: ${midiOut.name}`, false, true);
+    log(`G1On detectada: ${midiOut.name}`, 'ok');
+  } else {
+    setDot('ok'); setConn(`MIDI: ${midiOut?.name || midiIn?.name}`);
+    log(`MIDI ativo: ${midiOut?.name || '—'} / IN: ${midiIn?.name || '—'}`, 'ok');
+  }
+
+  document.getElementById('btnGo').disabled = false;
+  setStatusLinha('Pronto. Toque em INICIAR VARREDURA.', 'ok');
+}
+
+function onStateChange(e){
+  if(e.port.type === 'input') e.port.onmidimessage = onMensagemMIDI;
+  detectarDispositivos();
+}
+
+// ── Recebe mensagens MIDI ─────────────────────────────────────────
+function onMensagemMIDI(event){
+  const d = event.data;
+  if(!d || d.length < 1) return;
+
+  // Loga TUDO que vier — especialmente SysEx desconhecido
+  if(d[0] === 0xF0){
+    const hexStr = Array.from(d).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+    const entrada = { ts: new Date().toISOString(), bytes: Array.from(d), hex: hexStr };
+    allSysexLog.push(entrada);
+    log(`RX SysEx ${d.length}b: ${hexStr.substring(0,60)}${d.length>10?'…':''}`, 'rx');
+
+    // Detecta resposta de dump 0x28 (qualquer model ID)
+    if(d.length >= 5 && d[1] === 0x52 && d[4] === 0x28){
+      log(`✓ Dump 0x28 reconhecido! Model=0x${d[3].toString(16).toUpperCase()} ${d.length}b`, 'ok');
+      // Aprende o model ID correto automaticamente
+      modelId = d[3];
+      if(pendingDump){ pendingDump(Array.from(d)); pendingDump = null; }
+    }
+    // Detecta identity response
+    if(d.length >= 5 && d[1] === 0x7E && d[3] === 0x06 && d[4] === 0x02){
+      log(`Identity Response recebida (${d.length}b)`, 'ok');
+    }
+  }
+}
+
+// ── Handshake de editor ───────────────────────────────────────────
+// Sequência necessária para a G1On entrar em modo editor
+// e responder ao dump request 0x29
+async function abrirEditor(){
+  const id = modelId;
+  const seq = [
+    { msg: SX.IDENTITY,                                         label: 'Identity Request' },
+    { msg: [0xF0, 0x52, 0x00, id, 0x50, 0xF7],                label: `Edit ON  (0x${id.toString(16).toUpperCase()})` },
+    { msg: [0xF0, 0x52, 0x00, id, 0x33, 0xF7],                label: `Editor Ping (0x${id.toString(16).toUpperCase()})` },
+  ];
+  for(const s of seq){
+    try{ midiOut.send(s.msg); log(`TX ${s.label}`, 'ok'); }
+    catch(e){ log(`ERRO TX ${s.label}: ${e.message}`, 'err'); }
+    await sleep(EDIT_WAIT_MS);
+  }
+}
+
+async function fecharEditor(){
+  const id = modelId;
+  try{
+    midiOut.send([0xF0, 0x52, 0x00, id, 0x51, 0xF7]);
+    log(`TX Edit OFF (0x${id.toString(16).toUpperCase()})`, 'ok');
+  } catch(e){ log(`ERRO Edit OFF: ${e.message}`, 'err'); }
+  await sleep(EDIT_WAIT_MS);
+}
+
+// ── Scan automático ───────────────────────────────────────────────
+async function iniciarScan(){
+  if(!midiReady || !midiOut){ alert('Conecte o MIDI primeiro.'); return; }
+
+  scanAtivo    = true;
+  resultados   = [];
+  allSysexLog  = [];
+  modelId      = 0x63; // Model ID confirmado via Identity Response
+
+  document.getElementById('btnGo').style.display   = 'none';
+  document.getElementById('btnStop').style.display = 'block';
+  document.getElementById('btnSaveJson').disabled  = true;
+  document.getElementById('btnSaveTxt').disabled   = true;
+  document.getElementById('resultsGrid').innerHTML = '';
+
+  for(let i=0;i<TOTAL_PATCHES;i++){
+    const s = document.getElementById(`step${i}`);
+    s.className = 'step'; s.textContent = `A${i}`;
+  }
+
+  log('═══ INICIANDO VARREDURA A0→A9 ═══', 'ok');
+  log(`Model ID inicial: 0x${modelId.toString(16).toUpperCase()}`, 'sys');
+
+  for(let i=0; i<TOTAL_PATCHES; i++){
+    if(!scanAtivo) break;
+
+    stepAtual = i;
+    const label = `A${i}`;
+    const stepEl = document.getElementById(`step${i}`);
+    stepEl.className = 'step active';
+    setProgressBar((i / TOTAL_PATCHES) * 100);
+    log(`── Patch ${label} ──`, 'sys');
+
+    // 1. Program Change
+    setStatusLinha(`${label}: enviando PC ${i}…`, 'ativo');
+    try{
+      midiOut.send([0xC0, i]);
+      log(`TX PC ${i} → ${label}`, 'ok');
+    } catch(e){
+      log(`ERRO PC: ${e.message}`, 'err');
+      stepEl.className = 'step failed';
+      resultados.push({ patch:label, rawBytes:null, parseado:null, erro:'Falha PC', timestamp:new Date().toISOString() });
+      continue;
+    }
+
+    // 2. Espera pedaleira carregar patch
+    setStatusLinha(`${label}: aguardando patch carregar…`, 'ativo');
+    await sleep(PC_WAIT_MS);
+    if(!scanAtivo) break;
+
+    // 3. Abre modo editor
+    setStatusLinha(`${label}: abrindo modo editor…`, 'ativo');
+    await abrirEditor();
+    if(!scanAtivo) break;
+
+    // 4. Envia dump request com model ID atual
+    setStatusLinha(`${label}: requisitando dump 0x29…`, 'ativo');
+    try{
+      const dumpReq = [0xF0, 0x52, 0x00, modelId, 0x29, 0xF7];
+      midiOut.send(dumpReq);
+      log(`TX Dump Request 0x29 (model=0x${modelId.toString(16).toUpperCase()})`, 'ok');
+    } catch(e){
+      log(`ERRO Dump Req: ${e.message}`, 'err');
+      await fecharEditor();
+      stepEl.className = 'step failed';
+      resultados.push({ patch:label, rawBytes:null, parseado:null, erro:'Falha dump req', timestamp:new Date().toISOString() });
+      continue;
+    }
+
+    // 5. Aguarda resposta 0x28
+    setStatusLinha(`${label}: aguardando resposta 0x28 (${DUMP_WAIT_MS}ms)…`, 'ativo');
+    let rawBytes = await aguardarDump(DUMP_WAIT_MS);
+
+    // 6. Se não respondeu, loga aviso mas não tenta outro ID
+    if(!rawBytes){
+      log(`Sem resposta com model 0x${modelId.toString(16).toUpperCase()} — verifique conexão`, 'warn');
+    }
+
+    // 7. Fecha editor
+    await fecharEditor();
+
+    // 8. Processa resultado
+    if(rawBytes){
+      log(`✓ Dump recebido: ${rawBytes.length} bytes`, 'ok');
+      const parseado = parseDump(rawBytes, label);
+      resultados.push({ patch:label, rawBytes, parseado, timestamp:new Date().toISOString() });
+      stepEl.className = 'step done';
+      renderResultado(parseado, rawBytes, label);
+    } else {
+      log(`✗ Sem resposta para ${label}`, 'warn');
+      resultados.push({ patch:label, rawBytes:null, parseado:null, erro:'Timeout — sem resposta', timestamp:new Date().toISOString() });
+      stepEl.className = 'step failed';
+      renderResultadoVazio(label);
+    }
+
+    await sleep(200);
+  }
+
+  // Finaliza
+  setProgressBar(100);
+  const ok = resultados.filter(r => r.rawBytes).length;
+  if(scanAtivo){
+    setStatusLinha(`Varredura completa. ${ok}/${TOTAL_PATCHES} dumps recebidos.`, ok > 0 ? 'ok' : 'err');
+    log(`═══ VARREDURA COMPLETA: ${ok}/${TOTAL_PATCHES} ═══`, ok > 0 ? 'ok' : 'warn');
+    if(ok === 0){
+      log('Nenhum dump recebido. Verifique se a G1On está conectada via USB (não só como áudio).', 'warn');
+      log(`Total SysEx capturados: ${allSysexLog.length}`, 'sys');
+    }
+  } else {
+    setStatusLinha('Varredura interrompida.', 'err');
+    log('═══ INTERROMPIDA ═══', 'warn');
+  }
+
+  scanAtivo = false;
+  stepAtual = -1;
+  document.getElementById('btnGo').style.display   = 'block';
+  document.getElementById('btnStop').style.display = 'none';
+  document.getElementById('btnGo').textContent     = '▶ REPETIR VARREDURA';
+
+  const temDados = resultados.some(r => r.rawBytes) || allSysexLog.length > 0;
+  document.getElementById('btnSaveJson').disabled = !temDados;
+  document.getElementById('btnSaveTxt').disabled  = !temDados;
+}
+
+function pararScan(){
+  scanAtivo = false;
+  if(pendingDump){ pendingDump(null); pendingDump = null; }
+}
+
+// ── Promise que aguarda dump ou timeout ───────────────────────────
+function aguardarDump(timeoutMs){
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
+      pendingDump = null;
+      resolve(null);
+    }, timeoutMs);
+
+    pendingDump = (bytes) => {
+      clearTimeout(timer);
+      resolve(bytes);
+    };
+  });
+}
+
+// ── Parser do dump 0x28 ───────────────────────────────────────────
+function parseDump(data, patchLabel){
+  const result = {
+    patch:    patchLabel,
+    nome:     '',
+    efeitos:  [],
+    temTime:  false,
+    temRate:  false,
+    efeitosTime: [],
+    efeitosRate: [],
+    bytesHex: data.map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' '),
+  };
+
+  // Extrai nome (bytes 114–123)
+  if(data.length > 124){
+    result.nome = data.slice(114, 124)
+      .filter(b => b >= 0x20 && b < 0x7F)
+      .map(b => String.fromCharCode(b))
+      .join('').trim();
+  }
+
+  // Extrai 5 slots de efeito (offset 9, blocos de 20 bytes)
+  for(let i=0; i<5; i++){
+    const offset = 9 + (i * 20);
+    if(offset + 2 >= data.length) break;
+    const id      = (data[offset] << 7) | data[offset+1];
+    const enabled = (data[offset+2] & 0x01) === 1;
+    const fx      = ZOOM_FX_DB[id] || { name:`FX_${id.toString(16).toUpperCase()}`, cat:'unknown', tap:null };
+    result.efeitos.push({ slot:i+1, id, nome:fx.name, cat:fx.cat, tap:fx.tap, enabled,
+      rawBytes: data.slice(offset, offset+20).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')
+    });
+  }
+
+  result.efeitosTime = result.efeitos.filter(e => e.enabled && e.tap === 'Time');
+  result.efeitosRate = result.efeitos.filter(e => e.enabled && e.tap === 'Rate');
+  result.temTime     = result.efeitosTime.length > 0;
+  result.temRate     = result.efeitosRate.length > 0;
+
+  return result;
+}
+
+// ── Render resultado na tela ──────────────────────────────────────
+function renderResultado(p, rawBytes, label){
+  const grid = document.getElementById('resultsGrid');
+  const div  = document.createElement('div');
+  div.className = 'result-card';
+
+  const tempoInfo = [
+    p.temTime ? `♩ TIME: ${p.efeitosTime.map(e=>e.nome).join(', ')}` : '',
+    p.temRate ? `∿ RATE: ${p.efeitosRate.map(e=>e.nome).join(', ')}` : '',
+  ].filter(Boolean).join(' · ') || '— sem efeitos de tempo ativos';
+
+  const chips = p.efeitos.map(e =>
+    `<span class="fx-chip ${e.cat}${e.enabled?'':' off'}">${e.nome}</span>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="result-patch">${label}
+      <span>${p.nome || 'sem nome'}</span>
+    </div>
+    <div class="result-body">
+      <div>${tempoInfo}</div>
+      <div class="fx-row">${chips}</div>
+    </div>
+    <div class="result-bytes">${rawBytes.length}b · ${p.bytesHex.substring(0,80)}…</div>
+  `;
+  grid.appendChild(div);
+}
+
+function renderResultadoVazio(label){
+  const grid = document.getElementById('resultsGrid');
+  const div  = document.createElement('div');
+  div.className = 'result-card';
+  div.innerHTML = `<div class="result-patch">${label}</div><div class="result-nodata">Sem resposta da pedaleira</div>`;
+  grid.appendChild(div);
+}
+
+// ── Exportar ─────────────────────────────────────────────────────
+function salvarJSON(){
+  const payload = {
+    geradoEm:    new Date().toISOString(),
+    equipamento: 'Zoom G1On',
+    modelIdUsado: '0x'+modelId.toString(16).toUpperCase(),
+    patches:     resultados,
+    sysexBruto:  allSysexLog, // TUDO que a G1On enviou — útil para diagnóstico
+  };
+  baixar('fmc_g1on_dump.json', JSON.stringify(payload, null, 2), 'application/json');
+}
+
+function salvarTXT(){
+  const linhas = [
+    'FMC-AM 6F — Auto Dump Zoom G1On',
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+    '═'.repeat(60),
+    '',
+  ];
+
+  for(const r of resultados){
+    linhas.push(`PATCH: ${r.patch}  —  ${r.parseado?.nome || '(sem nome)'}`);
+    linhas.push(`Timestamp: ${r.timestamp}`);
+
+    if(r.erro){
+      linhas.push(`ERRO: ${r.erro}`);
+    } else if(r.parseado){
+      const p = r.parseado;
+      linhas.push(`Dump: ${r.rawBytes.length} bytes`);
+      linhas.push('');
+      linhas.push('Efeitos nos slots:');
+      for(const e of p.efeitos){
+        const tap = e.tap ? `[TAP: ${e.tap}]` : '';
+        linhas.push(`  Slot ${e.slot}: ${e.nome.padEnd(16)} ${e.cat.padEnd(10)} ${e.enabled?'ON ':'OFF'} ${tap}`);
+      }
+      linhas.push('');
+      if(p.temTime) linhas.push(`TIME (Delay): ${p.efeitosTime.map(e=>e.nome).join(', ')}`);
+      if(p.temRate) linhas.push(`RATE (Mod):   ${p.efeitosRate.map(e=>e.nome).join(', ')}`);
+      if(!p.temTime && !p.temRate) linhas.push('Sem efeitos de tempo ativos.');
+      linhas.push('');
+      linhas.push(`HEX RAW: ${p.bytesHex}`);
+    }
+
+    linhas.push('─'.repeat(60));
+    linhas.push('');
+  }
+
+  baixar('fmc_g1on_dump.txt', linhas.join('\n'), 'text/plain');
+}
+
+function baixar(nome, conteudo, tipo){
+  const blob = new Blob([conteudo], { type: tipo });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function log(msg, tipo='sys'){
+  const body = document.getElementById('logBody');
+  const div  = document.createElement('div');
+  div.className = `log-entry ${tipo}`;
+  const ts = new Date().toLocaleTimeString('pt',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  div.textContent = `${ts} ${msg}`;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+  while(body.children.length > 200) body.removeChild(body.firstChild);
+}
+
+function limparLog(){ document.getElementById('logBody').innerHTML = ''; }
+function setDot(state){ document.getElementById('dot').className = 'dot ' + state; }
+function setConn(txt, err, g1on){
+  const el = document.getElementById('connTxt');
+  el.textContent = txt;
+  el.className = 'conn-txt' + (err?' err':g1on?' g1on':'');
+}
+function setProgressBar(pct){ document.getElementById('progressBar').style.width = pct + '%'; }
+function setStatusLinha(txt, tipo){
+  const el = document.getElementById('statusLinha');
+  el.textContent = txt;
+  el.className = 'status-linha ' + (tipo||'');
+}
+</script>
+</body>
+</html>
