@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FMC · Full Dump G1On</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+:root{
+  --bg:#080810;--surf:#0e0e18;--border:#2a2a3a;
+  --green:#00ff66;--cyan:#00ffcc;--orange:#ff6b00;
+  --red:#ff2244;--amber:#ffb930;--text:#ccccdd;--dim:#555566;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;}
+body{display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px;gap:14px;}
+
+.title{font-family:'Orbitron',sans-serif;font-size:clamp(15px,4vw,20px);font-weight:900;letter-spacing:.1em;color:#fff;text-align:center;}
+.title span{color:var(--cyan);}
+.subtitle{font-size:9px;color:var(--dim);letter-spacing:.15em;text-align:center;margin-top:4px;}
+
+.card{width:100%;max-width:640px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.card-title{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:8px;}
+
+.conn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .3s,box-shadow .3s;}
+.dot.off{background:#222;}
+.dot.waiting{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink .7s ease-in-out infinite alternate;}
+.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+.dot.g1on{background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:blink 1s ease-in-out infinite alternate;}
+.dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
+@keyframes blink{from{opacity:.4;}to{opacity:1;}}
+.conn-txt{font-size:11px;color:var(--text);flex:1;}
+.conn-txt.err{color:var(--red);}
+.conn-txt.g1on{color:var(--cyan);}
+
+.btn{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.08em;padding:9px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;width:100%;}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);background:rgba(0,255,204,.05);}
+.btn.go{border-color:var(--green);color:var(--green);background:rgba(0,255,102,.06);font-size:13px;font-weight:700;}
+.btn.go:disabled{border-color:var(--border);color:var(--dim);background:transparent;cursor:not-allowed;}
+.btn.save{border-color:var(--amber);color:var(--amber);background:rgba(255,185,48,.05);}
+.btn.save:disabled{border-color:var(--border);color:var(--dim);background:transparent;cursor:not-allowed;}
+.btn.danger{border-color:var(--red);color:var(--red);background:rgba(255,34,68,.04);}
+
+/* Progresso */
+.bank-row{display:flex;gap:4px;flex-wrap:nowrap;}
+.bank-chip{flex:1;min-width:0;height:28px;border-radius:4px;border:1px solid var(--border);background:#111120;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--dim);transition:all .3s;position:relative;overflow:hidden;}
+.bank-chip .fill{position:absolute;left:0;top:0;height:100%;width:0%;background:rgba(0,255,204,.08);transition:width .3s;}
+.bank-chip.active{border-color:var(--amber);color:var(--amber);animation:blink .5s ease-in-out infinite alternate;}
+.bank-chip.done{border-color:var(--green);color:var(--green);}
+.bank-chip.partial{border-color:var(--amber);color:var(--amber);}
+.bank-chip.failed{border-color:var(--red);color:var(--red);}
+.bank-chip span{position:relative;z-index:1;}
+
+.progress-wrap{width:100%;background:#111120;border-radius:4px;height:6px;overflow:hidden;border:1px solid var(--border);}
+.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;transition:width .3s ease;}
+
+.status-linha{font-size:10px;color:var(--dim);text-align:center;min-height:16px;}
+.status-linha.ativo{color:var(--amber);}
+.status-linha.ok{color:var(--green);}
+.status-linha.err{color:var(--red);}
+
+/* Log */
+.log-box{width:100%;max-width:640px;background:var(--surf);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.log-header{padding:7px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.log-header span{font-size:9px;color:var(--dim);letter-spacing:.15em;}
+.log-body{height:180px;overflow-y:auto;overflow-x:hidden;padding:7px 10px;display:flex;flex-direction:column;gap:2px;}
+.log-body::-webkit-scrollbar{width:3px;}
+.log-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.log-entry{font-size:9px;line-height:1.5;word-break:break-all;}
+.log-entry.sys{color:var(--dim);font-style:italic;}
+.log-entry.rx{color:var(--cyan);}
+.log-entry.ok{color:var(--green);}
+.log-entry.warn{color:var(--amber);}
+.log-entry.err{color:var(--red);}
+
+/* Tabela de efeitos */
+.fx-table-wrap{width:100%;max-width:640px;overflow-x:auto;}
+.fx-table{width:100%;border-collapse:collapse;font-size:9px;}
+.fx-table th{background:#111120;color:var(--dim);padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:400;letter-spacing:.1em;}
+.fx-table td{padding:4px 8px;border-bottom:1px solid #1a1a28;color:var(--text);white-space:nowrap;}
+.fx-table tr:hover td{background:rgba(0,255,204,.03);}
+.fx-id{color:var(--dim);font-size:8px;}
+.fx-time{color:var(--cyan);}
+.fx-rate{color:#aa88ff;}
+.fx-none{color:var(--dim);font-style:italic;}
+
+/* Patches grid */
+.patches-grid{width:100%;max-width:640px;display:flex;flex-direction:column;gap:4px;}
+.patch-row{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:5px;border:1px solid var(--border);background:var(--surf);font-size:9px;}
+.patch-id{color:var(--green);font-weight:700;min-width:22px;}
+.patch-nome{flex:1;color:var(--text);}
+.patch-vol{color:var(--amber);min-width:30px;text-align:right;}
+.patch-fx{color:var(--dim);flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.patch-row.no-data{opacity:.4;}
+</style>
+</head>
+<body>
+
+<div class="title">FMC · <span>FULL DUMP</span></div>
+<div class="subtitle">VARREDURA COMPLETA A0–J9 · ZOOM G1On · 100 PATCHES</div>
+
+<!-- Conexão -->
+<div class="card">
+  <div class="card-title">⬡ Conexão MIDI</div>
+  <div class="conn-row">
+    <div class="dot off" id="dot"></div>
+    <div class="conn-txt" id="connTxt">Aguardando conexão</div>
+  </div>
+  <button class="btn primary" id="btnConn" onclick="conectar()">CONECTAR MIDI</button>
+</div>
+
+<!-- Controle -->
+<div class="card">
+  <div class="card-title">⬡ Varredura A0 → J9 (100 patches)</div>
+  <div class="bank-row" id="bankRow"></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="status-linha" id="statusLinha">Aguardando conexão…</div>
+  <button class="btn go" id="btnGo" onclick="iniciarScan()" disabled>▶ INICIAR VARREDURA COMPLETA</button>
+  <button class="btn danger" id="btnStop" onclick="pararScan()" style="display:none">■ PARAR</button>
+</div>
+
+<!-- Exportar -->
+<div class="card">
+  <div class="card-title">⬡ Exportar</div>
+  <button class="btn save" id="btnJson" onclick="salvarJSON()" disabled>⬇ JSON COMPLETO (patches + efeitos)</button>
+  <button class="btn save" id="btnTxt"  onclick="salvarTXT()"  disabled>⬇ LOG LEGÍVEL .TXT</button>
+  <button class="btn save" id="btnStorage" onclick="salvarStorage()" disabled>💾 INJETAR NO LOCALSTORAGE (cache FMC-AM 6F)</button>
+</div>
+
+<!-- Log -->
+<div class="log-box">
+  <div class="log-header">
+    <span>LOG</span>
+    <button class="btn" style="width:auto;padding:2px 8px;font-size:8px;" onclick="limparLog()">LIMPAR</button>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<!-- Tabela de efeitos descobertos -->
+<div class="fx-table-wrap" id="fxTableWrap" style="display:none">
+  <div class="card" style="max-width:640px;">
+    <div class="card-title">⬡ Efeitos Descobertos na Memória</div>
+    <table class="fx-table" id="fxTable">
+      <thead><tr>
+        <th>ID HEX</th><th>NOME (dump)</th><th>SLOT</th><th>PATCH</th><th>TAP</th>
+      </tr></thead>
+      <tbody id="fxTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Lista de patches -->
+<div class="patches-grid" id="patchesGrid"></div>
+
+<script>
+'use strict';
+
+// ── Protocolo Zoom G1On (model 0x63 confirmado fw 1.21) ──────────
+const ZOOM_MFR   = 0x52;
+const ZOOM_DEV   = 0x00;
+const ZOOM_MODEL = 0x63;
+const BANKS      = ['A','B','C','D','E','F','G','H','I','J'];
+const PATCHES_PER_BANK = 10;
+const TOTAL = BANKS.length * PATCHES_PER_BANK; // 100
+
+const PC_WAIT_MS   = 600;
+const DUMP_WAIT_MS = 2500;
+const SYSEX_DELAY  = 80;
+const VOL_OFFSET   = 14;
+const VOL_DEFAULT  = 100;
+
+// ── Banco de efeitos base (IDs conhecidos) ───────────────────────
+const FX_BASE = {
+  0x0001:'Comp',0x0002:'RackComp',0x0003:'SlowATTCK',0x0004:'ZNR',0x0005:'NoiseGate',
+  0x0008:'GraphicEQ',0x0009:'ParaEQ',0x000A:'AutoWah',0x000B:'Resonance',0x000C:'Cry',
+  0x0010:'OverDrive',0x0011:'Distortion',0x0012:'TS Drive',0x0013:'Guvnor',
+  0x0014:'MetalWRLD',0x0015:'FuzzSmile',0x0016:'GreatMuff',
+  0x0020:'FD Combo',0x0021:'VX Combo',0x0022:'US Blues',0x0023:'BG Crunch',
+  0x0024:'HW Stack',0x0025:'MS Crunch',0x0026:'Rectifier',
+  0x0030:'Chorus',0x0031:'StereoChorus',0x0032:'SuperChorus',0x0033:'Flanger',
+  0x0034:'Vibrato',0x0035:'Phaser',0x0036:'Step',0x0037:'Tremolo',
+  0x0038:'AutoPan',0x0039:'RingMod',0x003A:'Detune',0x003B:'PitchShift',
+  0x0040:'MonoPitch',0x0041:'HPS',0x0042:'Octave',
+  0x0050:'Delay',0x0051:'AnalogDelay',0x0052:'TapeEcho',0x0053:'ModDelay',
+  0x0054:'FilterDelay',0x0055:'PingPongDly',0x0056:'ReverseDelay',
+  0x0060:'Hall',0x0061:'Room',0x0062:'Spring',0x0063:'Arena',0x0064:'EarlyRef',
+  0x0070:'Air',
+};
+const FX_TAP = {
+  0x000A:'Rate',0x0030:'Rate',0x0031:'Rate',0x0032:'Rate',0x0033:'Rate',
+  0x0034:'Rate',0x0035:'Rate',0x0036:'Rate',0x0037:'Rate',0x0038:'Rate',0x0039:'Rate',
+  0x0050:'Time',0x0051:'Time',0x0052:'Time',0x0053:'Time',
+  0x0054:'Time',0x0055:'Time',0x0056:'Time',
+};
+
+// ── Estado ───────────────────────────────────────────────────────
+let midiAccess = null, midiOut = null, midiReady = false;
+let scanAtivo = false, modelId = 0x63;
+let allSysexLog = [], resultados = [];
+let fxDiscovered = {}; // id → {nome, patches[], tap}
+let pendingDump = null;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Constrói bank chips ──────────────────────────────────────────
+(()=>{
+  const row = document.getElementById('bankRow');
+  for(const b of BANKS){
+    const chip = document.createElement('div');
+    chip.className = 'bank-chip';
+    chip.id = `chip_${b}`;
+    chip.innerHTML = `<div class="fill" id="fill_${b}"></div><span>${b}</span>`;
+    row.appendChild(chip);
+  }
+})();
+
+// ── MIDI ─────────────────────────────────────────────────────────
+async function conectar(){
+  setDot('waiting'); setConn('Solicitando permissão MIDI…');
+  document.getElementById('btnConn').textContent = 'AGUARDANDO…';
+  try{
+    midiAccess = await navigator.requestMIDIAccess({sysex:true});
+  } catch(e1){
+    try{ midiAccess = await navigator.requestMIDIAccess({sysex:false});
+         log('Sem SysEx — permissão limitada','warn');
+    } catch(e2){ setDot('err');setConn('Permissão negada: '+e2.message,true);
+                 document.getElementById('btnConn').textContent='TENTAR NOVAMENTE'; return; }
+  }
+  midiReady = true;
+  midiAccess.onstatechange = e => {
+    if(e.port.type==='input') e.port.onmidimessage = onMIDI;
+    detectar();
+  };
+  detectar();
+  document.getElementById('btnConn').textContent = 'RECONECTAR';
+}
+
+function detectar(){
+  const outs = [...midiAccess.outputs.values()];
+  const ins  = [...midiAccess.inputs.values()];
+  for(const i of ins) i.onmidimessage = onMIDI;
+  const KW = ['zoom','g1on','g1xon','g1'];
+  midiOut = outs.find(o=>KW.some(k=>o.name.toLowerCase().includes(k)))||outs[0]||null;
+  if(!midiOut){ setDot('err'); setConn('Nenhum dispositivo MIDI.',true);
+                document.getElementById('btnGo').disabled=true; return; }
+  const isG1on = KW.some(k=>midiOut.name.toLowerCase().includes(k));
+  if(isG1on){ setDot('g1on'); setConn(`G1On: ${midiOut.name}`,false,true); log(`G1On: ${midiOut.name}`,'ok'); }
+  else       { setDot('ok');   setConn(`MIDI: ${midiOut.name}`); log(`MIDI: ${midiOut.name}`,'ok'); }
+  document.getElementById('btnGo').disabled = false;
+  setStatus('Pronto. Toque em INICIAR.','ok');
+}
+
+function onMIDI(event){
+  const d = event.data;
+  if(!d||d.length<1) return;
+  if(d[0]===0xF0){
+    const hex = Array.from(d).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+    allSysexLog.push({ts:new Date().toISOString(),bytes:Array.from(d),hex});
+    log(`RX SysEx ${d.length}b: ${hex.substring(0,70)}…`,'rx');
+    // Dump 0x28
+    if(d.length>=5 && d[1]===ZOOM_MFR && d[4]===0x28){
+      log(`✓ Dump 0x28 model=0x${d[3].toString(16).toUpperCase()} ${d.length}b`,'ok');
+      modelId = d[3];
+      if(pendingDump){ pendingDump(Array.from(d)); pendingDump=null; }
+    }
+    // Identity response
+    if(d.length>=7 && d[1]===0x7E && d[3]===0x06 && d[4]===0x02)
+      log(`Identity: model=0x${d[6].toString(16).toUpperCase()} fw="${String.fromCharCode(d[10],d[11],d[12],d[13])}"`,'ok');
+  }
+}
+
+// ── Handshake de editor ──────────────────────────────────────────
+async function abrirEditor(){
+  if(!midiOut||!midiReady) return;
+  midiOut.send([0xF0,0x7E,0x00,0x06,0x01,0xF7]);
+  await sleep(100);
+  midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,ZOOM_MODEL,0x50,0xF7]);
+  await sleep(SYSEX_DELAY);
+}
+
+function aguardarDump(ms){
+  return new Promise(res=>{
+    const t = setTimeout(()=>{ pendingDump=null; res(null); },ms);
+    pendingDump = bytes=>{ clearTimeout(t); res(bytes); };
+  });
+}
+
+// ── Parser ───────────────────────────────────────────────────────
+function decode7bit(data, offset, len){
+  const chars=[];
+  let i=offset;
+  while(i<offset+len && i<data.length-1){
+    const msbs=data[i++];
+    for(let bit=0;bit<7&&i<data.length-1&&chars.length<12;bit++,i++){
+      const b=data[i]|(((msbs>>bit)&1)<<7);
+      if(b>=0x20&&b<0x7F) chars.push(String.fromCharCode(b));
+    }
+  }
+  return chars.join('').trim();
+}
+
+function parseDump(data, patchLabel){
+  const r={patch:patchLabel,nome:'',volume:VOL_DEFAULT,efeitos:[],raw:data};
+  r.nome   = decode7bit(data, 112, 21);
+  r.volume = (data[VOL_OFFSET]>=0&&data[VOL_OFFSET]<=120)?data[VOL_OFFSET]:VOL_DEFAULT;
+  for(let i=0;i<5;i++){
+    const off=9+i*20;
+    if(off+2>=data.length) break;
+    const id=(data[off]<<7)|data[off+1];
+    const en=(data[off+2]&0x01)===1;
+    const nome=FX_BASE[id]||`UNK_0x${id.toString(16).toUpperCase()}`;
+    const tap=FX_TAP[id]||null;
+    r.efeitos.push({slot:i+1,id,idHex:'0x'+id.toString(16).toUpperCase().padStart(4,'0'),nome,enabled:en,tap});
+    // Cataloga efeito descoberto
+    if(id>0){
+      if(!fxDiscovered[id]) fxDiscovered[id]={idHex:'0x'+id.toString(16).toUpperCase().padStart(4,'0'),nome,patches:[],tap,slots:[]};
+      if(!fxDiscovered[id].patches.includes(patchLabel)) fxDiscovered[id].patches.push(patchLabel);
+      fxDiscovered[id].slots.push({patch:patchLabel,slot:i+1,enabled:en});
+    }
+  }
+  return r;
+}
+
+// ── Scan ─────────────────────────────────────────────────────────
+async function iniciarScan(){
+  if(!midiReady||!midiOut){ alert('Conecte o MIDI primeiro.'); return; }
+  scanAtivo=true; resultados=[]; allSysexLog=[]; fxDiscovered={};
+  modelId=0x63;
+  document.getElementById('btnGo').style.display='none';
+  document.getElementById('btnStop').style.display='block';
+  ['btnJson','btnTxt','btnStorage'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('patchesGrid').innerHTML='';
+  document.getElementById('fxTableWrap').style.display='none';
+  for(const b of BANKS){ document.getElementById(`chip_${b}`).className='bank-chip';
+    document.getElementById(`fill_${b}`).style.width='0%'; }
+
+  log('═══ FULL DUMP A0→J9 ═══','ok');
+
+  let total=0;
+  for(const bank of BANKS){
+    if(!scanAtivo) break;
+    const chip=document.getElementById(`chip_${bank}`);
+    chip.className='bank-chip active';
+    let bankOk=0;
+
+    for(let p=0;p<PATCHES_PER_BANK;p++){
+      if(!scanAtivo) break;
+      const pc = BANKS.indexOf(bank)*10 + p;
+      const label=`${bank}${p}`;
+      total++;
+      setStatus(`${label}: enviando PC ${pc}…`,'ativo');
+      log(`── ${label} ──`,'sys');
+
+      // PC
+      try{ midiOut.send([0xC0,pc]); log(`TX PC ${pc}`,'ok'); }
+      catch(e){ log(`ERRO PC: ${e.message}`,'err'); resultados.push({patch:label,erro:'PC falhou'}); continue; }
+      await sleep(PC_WAIT_MS);
+      if(!scanAtivo) break;
+
+      // Abre editor + dump
+      await abrirEditor();
+      if(!scanAtivo) break;
+      try{ midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,modelId,0x29,0xF7]); log(`TX 0x29 → ${label}`,'ok'); }
+      catch(e){ log(`ERRO dump req: ${e.message}`,'err'); resultados.push({patch:label,erro:'Dump req falhou'}); continue; }
+
+      setStatus(`${label}: aguardando 0x28…`,'ativo');
+      const raw = await aguardarDump(DUMP_WAIT_MS);
+
+      if(raw){
+        const parsed = parseDump(raw, label);
+        resultados.push({patch:label,rawBytes:raw,parseado:parsed,timestamp:new Date().toISOString()});
+        renderPatch(parsed);
+        bankOk++;
+        log(`✓ ${label} "${parsed.nome}" vol=${parsed.volume}`,'ok');
+      } else {
+        log(`✗ Timeout ${label}`,'warn');
+        resultados.push({patch:label,rawBytes:null,parseado:null,erro:'Timeout',timestamp:new Date().toISOString()});
+        renderPatchVazio(label);
+      }
+
+      // Progresso
+      const pct=((BANKS.indexOf(bank)*10+p+1)/TOTAL)*100;
+      setProgress(pct);
+      document.getElementById(`fill_${b}`).style.width=`${((p+1)/10)*100}%`;
+      await sleep(150);
+    }
+
+    chip.className = bankOk===10?'bank-chip done':bankOk>0?'bank-chip partial':'bank-chip failed';
+    document.getElementById(`fill_${bank}`).style.width='100%';
+  }
+
+  setProgress(100);
+  const ok=resultados.filter(r=>r.rawBytes).length;
+  if(scanAtivo){
+    setStatus(`Varredura completa. ${ok}/100 dumps recebidos.`,ok>0?'ok':'err');
+    log(`═══ FIM: ${ok}/100 dumps ═══`,ok>0?'ok':'warn');
+    if(ok>0) renderFxTable();
+  } else {
+    setStatus('Interrompido.','err');
+    log('═══ INTERROMPIDO ═══','warn');
+  }
+  scanAtivo=false;
+  document.getElementById('btnGo').style.display='block';
+  document.getElementById('btnStop').style.display='none';
+  document.getElementById('btnGo').textContent='▶ REPETIR VARREDURA';
+  const temDados = resultados.some(r=>r.rawBytes);
+  ['btnJson','btnTxt'].forEach(id=>document.getElementById(id).disabled=!temDados);
+  document.getElementById('btnStorage').disabled=!temDados;
+}
+
+function pararScan(){
+  scanAtivo=false;
+  if(pendingDump){ pendingDump(null); pendingDump=null; }
+}
+
+// ── Render patches ───────────────────────────────────────────────
+function renderPatch(p){
+  const g=document.getElementById('patchesGrid');
+  const d=document.createElement('div'); d.className='patch-row';
+  const fxStr=p.efeitos.filter(e=>e.enabled&&e.id>0).map(e=>e.nome).join(' · ')||'—';
+  const timeFx=p.efeitos.filter(e=>e.tap&&e.enabled).map(e=>`${e.nome}[${e.tap}]`).join(' ');
+  d.innerHTML=`<span class="patch-id">${p.patch}</span>
+    <span class="patch-nome">${p.nome||'—'}</span>
+    <span class="patch-vol">${p.volume}</span>
+    <span class="patch-fx">${fxStr}${timeFx?' · ⏱'+timeFx:''}</span>`;
+  g.appendChild(d);
+}
+function renderPatchVazio(label){
+  const g=document.getElementById('patchesGrid');
+  const d=document.createElement('div'); d.className='patch-row no-data';
+  d.innerHTML=`<span class="patch-id">${label}</span><span class="patch-nome" style="color:var(--red)">Sem resposta</span>`;
+  g.appendChild(d);
+}
+
+function renderFxTable(){
+  const wrap=document.getElementById('fxTableWrap');
+  const tbody=document.getElementById('fxTableBody');
+  tbody.innerHTML='';
+  const sorted=Object.entries(fxDiscovered).sort((a,b)=>Number(a[0])-Number(b[0]));
+  for(const [id,fx] of sorted){
+    const tr=document.createElement('tr');
+    const tapHtml=fx.tap?`<span class="${fx.tap==='Time'?'fx-time':'fx-rate'}">${fx.tap}</span>`:'<span class="fx-none">—</span>';
+    tr.innerHTML=`<td class="fx-id">${fx.idHex}</td>
+      <td>${fx.nome}</td>
+      <td class="fx-id">${[...new Set(fx.slots.map(s=>s.slot))].join(',')}</td>
+      <td class="fx-id">${fx.patches.join(' ')}</td>
+      <td>${tapHtml}</td>`;
+    tbody.appendChild(tr);
+  }
+  wrap.style.display='block';
+}
+
+// ── Exportar ─────────────────────────────────────────────────────
+function salvarJSON(){
+  const fxArr=Object.values(fxDiscovered).sort((a,b)=>parseInt(a.idHex)-parseInt(b.idHex));
+  const payload={
+    geradoEm:new Date().toISOString(),equipamento:'Zoom G1On',modelIdUsado:'0x'+modelId.toString(16).toUpperCase(),
+    resumo:{total:TOTAL,coletados:resultados.filter(r=>r.rawBytes).length,fxDescobertos:fxArr.length},
+    fxDescobertos:fxArr,
+    patches:resultados.map(r=>({
+      patch:r.patch,erro:r.erro||null,timestamp:r.timestamp,
+      nome:r.parseado?.nome||null,
+      volume:r.parseado?.volume??null,
+      efeitos:r.parseado?.efeitos||null,
+      rawHex:r.rawBytes?r.rawBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '):null,
+    })),
+    sysexBruto:allSysexLog,
+  };
+  baixar('fmc_g1on_fulldump.json',JSON.stringify(payload,null,2),'application/json');
+}
+
+function salvarTXT(){
+  const linhas=[
+    'FMC-AM 6F — Full Dump Zoom G1On (A0–J9)',
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+    `Model ID: 0x${modelId.toString(16).toUpperCase()}`,
+    '═'.repeat(60),'',
+    '=== EFEITOS DESCOBERTOS NA MEMÓRIA ===',
+  ];
+  const fxArr=Object.values(fxDiscovered).sort((a,b)=>parseInt(a.idHex)-parseInt(b.idHex));
+  for(const fx of fxArr){
+    linhas.push(`  ${fx.idHex.padEnd(8)} ${fx.nome.padEnd(16)} TAP:${fx.tap||'—'} Patches: ${fx.patches.join(' ')}`);
+  }
+  linhas.push('','=== PATCHES ===','');
+  for(const r of resultados){
+    linhas.push(`${r.patch}  ${r.parseado?.nome||'—'}  VOL:${r.parseado?.volume??'—'}`);
+    if(r.parseado?.efeitos?.length){
+      for(const e of r.parseado.efeitos.filter(e=>e.id>0)){
+        linhas.push(`    Slot${e.slot}: ${e.nome.padEnd(14)} ${e.enabled?'ON ':'OFF'} ${e.tap?`[${e.tap}]`:''}`);
+      }
+    }
+    if(r.erro) linhas.push(`    ERRO: ${r.erro}`);
+    if(r.rawBytes) linhas.push(`    HEX: ${r.rawBytes.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}`);
+    linhas.push('─'.repeat(60));
+  }
+  baixar('fmc_g1on_fulldump.txt',linhas.join('\n'),'text/plain');
+}
+
+function salvarStorage(){
+  // Injeta no formato do cache FMC-AM 6F (fmc_pcache1/2/3)
+  // Compatível com gravarCachePatch do motor v4
+  const cache={};
+  for(const r of resultados){
+    if(!r.parseado) continue;
+    const p=r.parseado;
+    cache[r.patch]={
+      nome:p.nome,volume:p.volume,
+      efeitos:p.efeitos,
+      temTime:p.efeitos.some(e=>e.enabled&&e.tap==='Time'),
+      temRate:p.efeitos.some(e=>e.enabled&&e.tap==='Rate'),
+      ts:Date.now(),
+    };
+  }
+  const json=JSON.stringify(cache);
+  let ok=0;
+  for(let n=1;n<=3;n++){
+    try{ localStorage.setItem(`fmc_pcache${n}`,json); ok++; }catch(e){}
+  }
+  if(ok>0){
+    alert(`✅ Cache injetado em ${ok} camada(s) do localStorage.\nAbra o FMC-AM 6F e os nomes aparecerão instantaneamente.`);
+    log(`💾 Cache injetado: ${Object.keys(cache).length} patches em ${ok} camadas`,'ok');
+  } else {
+    alert('❌ Erro ao salvar no localStorage. Tente exportar o JSON e me enviar para integrar manualmente.');
+  }
+}
+
+function baixar(nome,conteudo,tipo){
+  const blob=new Blob([conteudo],{type:tipo});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=nome; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+// ── Helpers UI ───────────────────────────────────────────────────
+function setDot(state){ document.getElementById('dot').className='dot '+state; }
+function setConn(txt,err,g1on){
+  const el=document.getElementById('connTxt');
+  el.textContent=txt;
+  el.className='conn-txt'+(err?' err':g1on?' g1on':'');
+}
+function setProgress(pct){ document.getElementById('progressBar').style.width=pct+'%'; }
+function setStatus(txt,tipo){
+  const el=document.getElementById('statusLinha');
+  el.textContent=txt; el.className='status-linha '+(tipo||'');
+}
+function log(msg,tipo='sys'){
+  const body=document.getElementById('logBody');
+  const d=document.createElement('div'); d.className='log-entry '+tipo;
+  const ts=new Date().toLocaleTimeString('pt',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  d.textContent=`${ts} ${msg}`; body.appendChild(d); body.scrollTop=body.scrollHeight;
+  while(body.children.length>300) body.removeChild(body.firstChild);
+}
+function limparLog(){ document.getElementById('logBody').innerHTML=''; }
+</script>
+</body>
+</html>
