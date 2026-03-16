@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FMC-AM 6F · Seletor de Interface</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600&display=swap');
+
+:root {
+  --bg:      #0a0a0c;
+  --surface: #111116;
+  --border:  #2a2a35;
+  --accent:  #e8e8e8;
+  --orange:  #ff6b00;
+  --green:   #00ff66;
+  --cyan:    #00ccff;
+  --red:     #ff2244;
+  --amber:   #ffb930;
+  --purple:  #7c6aff;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+html, body {
+  width:100%; min-height:100%;
+  background:var(--bg);
+  color:var(--accent);
+  font-family:'Rajdhani', sans-serif;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+/* Noise */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:0;
+}
+
+.page {
+  position:relative; z-index:1;
+  max-width:860px;
+  margin:0 auto;
+  padding:32px 20px 48px;
+  display:flex; flex-direction:column; gap:36px;
+}
+
+/* ── Header ─────────────────────────────────── */
+.header { text-align:center; }
+
+.title {
+  font-family:'Orbitron', sans-serif;
+  font-size:clamp(22px, 5vw, 40px);
+  font-weight:900;
+  letter-spacing:.14em;
+  color:#fff;
+}
+.title span { color:var(--orange); }
+
+.subtitle {
+  font-family:'Share Tech Mono', monospace;
+  font-size:clamp(10px, 2vw, 13px);
+  color:#555566;
+  letter-spacing:.2em;
+  margin-top:6px;
+  text-transform:uppercase;
+}
+
+.divider {
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--border), transparent);
+  margin-top:20px;
+}
+
+/* ── Section title ───────────────────────────── */
+.section-title {
+  font-family:'Share Tech Mono', monospace;
+  font-size:10px;
+  color:#444455;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ── Cards grid ──────────────────────────────── */
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  gap:14px;
+}
+
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  text-decoration:none;
+  color:inherit;
+  display:flex; flex-direction:column; gap:10px;
+  position:relative; overflow:hidden;
+  transition:border-color .2s, box-shadow .2s, transform .15s;
+  cursor:pointer;
+}
+.card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,.6), 0 0 0 1px var(--card-color, var(--border));
+  border-color:var(--card-color, var(--border));
+}
+.card:active { transform:translateY(0); }
+
+/* Colored top bar */
+.card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:3px;
+  background:var(--card-color, var(--border));
+  border-radius:12px 12px 0 0;
+}
+
+/* Glow on hover */
+.card::after {
+  content:'';
+  position:absolute; inset:0;
+  background:radial-gradient(ellipse at 50% 0%, var(--card-color-dim, transparent) 0%, transparent 70%);
+  opacity:0; transition:opacity .3s;
+  pointer-events:none;
+}
+.card:hover::after { opacity:1; }
+
+.card-badge {
+  font-family:'Share Tech Mono', monospace;
+  font-size:9px; letter-spacing:.15em;
+  color:var(--card-color, #555);
+  text-transform:uppercase;
+}
+
+.card-name {
+  font-family:'Orbitron', sans-serif;
+  font-size:clamp(14px, 2.5vw, 18px);
+  font-weight:700;
+  color:#fff;
+  letter-spacing:.06em;
+  line-height:1.2;
+}
+
+.card-desc {
+  font-family:'Rajdhani', sans-serif;
+  font-size:clamp(12px, 2vw, 14px);
+  color:#666677;
+  line-height:1.4;
+  flex:1;
+}
+
+.card-tags {
+  display:flex; gap:6px; flex-wrap:wrap;
+}
+.tag {
+  font-family:'Share Tech Mono', monospace;
+  font-size:8px; padding:2px 7px;
+  border-radius:3px;
+  border:1px solid;
+  letter-spacing:.06em;
+  color:var(--card-color, #555);
+  border-color:var(--card-color-dim, #333);
+  background:var(--card-color-bg, transparent);
+}
+
+.card-arrow {
+  position:absolute; bottom:16px; right:16px;
+  font-size:18px; color:var(--card-color, #333);
+  opacity:.5; transition:opacity .2s, transform .2s;
+}
+.card:hover .card-arrow { opacity:1; transform:translateX(3px); }
+
+/* ── Deprecated section ──────────────────────── */
+.grid-deprecated .card {
+  opacity:.55;
+}
+.grid-deprecated .card:hover { opacity:.85; }
+
+/* ── Footer ──────────────────────────────────── */
+.footer {
+  text-align:center;
+  font-family:'Share Tech Mono', monospace;
+  font-size:10px;
+  color:#333340;
+  letter-spacing:.15em;
+  padding-top:20px;
+  border-top:1px solid var(--border);
+}
+.footer a { color:#444455; text-decoration:none; }
+.footer a:hover { color:#666677; }
+
+/* MIDI badge */
+.midi-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(0,255,102,.06);
+  border:1px solid rgba(0,255,102,.2);
+  border-radius:4px;
+  padding:3px 8px;
+  font-family:'Share Tech Mono', monospace;
+  font-size:9px; color:var(--green);
+  letter-spacing:.1em;
+}
+.midi-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 5px var(--green);
+  animation:pulse-dot 1.4s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity:1; box-shadow:0 0 5px var(--green); }
+  50% { opacity:.4; box-shadow:none; }
+}
+
+@media(max-width:480px) {
+  .grid { grid-template-columns:1fr; }
+  .page { padding:20px 14px 36px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">FMC<span>·</span>AM <span>6F</span></div>
+    <div class="subtitle">Controlador MIDI de Piso · Angelo Miggliori · Motor v4</div>
+    <div class="divider"></div>
+  </div>
+
+  <!-- Interfaces ativas -->
+  <div>
+    <div class="section-title">⬡ Interfaces Ativas — Motor v4</div>
+    <br>
+    <div class="grid">
+
+      <!-- v4 Original -->
+      <a class="card" href="pedalboard-v4.html"
+         style="--card-color:#e8e8e8; --card-color-dim:#33333a; --card-color-bg:rgba(232,232,232,.04)">
+        <div class="card-badge">FMC-AM 6F · Original</div>
+        <div class="card-name">FMC·AM 6F<br>v4</div>
+        <div class="card-desc">Interface original do projeto. Design escuro minimalista inspirado em Helix e Headrush.</div>
+        <div class="card-tags">
+          <span class="tag">MOTOR v4</span>
+          <span class="tag">MIDI BIDIRECIONAL</span>
+          <span class="tag">DUMP 0x28</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <!-- HeadRush -->
+      <a class="card" href="theme-headrush.html"
+         style="--card-color:#7c6aff; --card-color-dim:#2a2440; --card-color-bg:rgba(124,106,255,.04)">
+        <div class="card-badge">Tema · HeadRush Pedalboard</div>
+        <div class="card-name">Head<br>Rush</div>
+        <div class="card-desc">Touchscreen escura, botões retangulares com tira LED, tipografia neon sobre preto.</div>
+        <div class="card-tags">
+          <span class="tag">MOTOR v4</span>
+          <span class="tag">NEON</span>
+          <span class="tag">RETANGULAR</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <!-- Boss ME-90 -->
+      <a class="card" href="theme-boss.html"
+         style="--card-color:#ff5500; --card-color-dim:#3a1a00; --card-color-bg:rgba(255,85,0,.04)">
+        <div class="card-badge">Tema · Boss ME-90</div>
+        <div class="card-name">Boss<br>ME-90</div>
+        <div class="card-desc">Industrial laranja e preto, LCD verde com scanlines, botões de borracha com afundamento físico.</div>
+        <div class="card-tags">
+          <span class="tag">MOTOR v4</span>
+          <span class="tag">LCD VERDE</span>
+          <span class="tag">INDUSTRIAL</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <!-- Kemper Stage -->
+      <a class="card" href="theme-kemper.html"
+         style="--card-color:#ffb930; --card-color-dim:#3a2c08; --card-color-bg:rgba(255,185,48,.04)">
+        <div class="card-badge">Tema · Kemper Profiler Stage</div>
+        <div class="card-name">Kemper<br>Stage</div>
+        <div class="card-desc">Minimalismo alemão premium. Linha âmbar, tipografia Bebas Neue, botões planos com tira LED.</div>
+        <div class="card-tags">
+          <span class="tag">MOTOR v4</span>
+          <span class="tag">PREMIUM</span>
+          <span class="tag">ÂMBAR</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <!-- Zoom G1On -->
+      <a class="card" href="theme-zoom.html"
+         style="--card-color:#00cc88; --card-color-dim:#003322; --card-color-bg:rgba(0,204,136,.04)">
+        <div class="card-badge">Tema · Zoom G1On · Homenagem</div>
+        <div class="card-name">Zoom<br>G1On</div>
+        <div class="card-desc">LCD verde 7-segmentos, plástico cinza-chumbo, textura hachurada. O equipamento que originou tudo — com motor v4 por dentro.</div>
+        <div class="card-tags">
+          <span class="tag">MOTOR v4</span>
+          <span class="tag">LCD 7-SEG</span>
+          <span class="tag">ORIGEM</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- MIDI info -->
+  <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div class="midi-badge"><div class="midi-dot"></div>WEB MIDI API ATIVA</div>
+    <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#444455; letter-spacing:.1em;">
+      Todas as interfaces requerem HTTPS para Web MIDI. GitHub Pages ✓
+    </div>
+  </div>
+
+  <!-- Versões anteriores -->
+  <div>
+    <div class="section-title">◌ Versões Anteriores — Referência Histórica</div>
+    <br>
+    <div class="grid grid-deprecated">
+
+      <a class="card" href="pedalboard-v2.html"
+         style="--card-color:#555566; --card-color-dim:#222228; --card-color-bg:rgba(85,85,102,.03)">
+        <div class="card-badge">Versão 2 · Legado</div>
+        <div class="card-name">FMC·AM 6F<br>v2</div>
+        <div class="card-desc">Motor v2. Sistema de memória em camadas, SysEx, iluminação de borda por banco. Sem dump 0x28.</div>
+        <div class="card-tags">
+          <span class="tag">LEGADO</span>
+          <span class="tag">MOTOR v2</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <a class="card" href="pedalboard-sim.html"
+         style="--card-color:#555566; --card-color-dim:#222228; --card-color-bg:rgba(85,85,102,.03)">
+        <div class="card-badge">Simulação · Legado</div>
+        <div class="card-name">FMC·AM 6F<br>Sim</div>
+        <div class="card-desc">Versão de simulação sem Web MIDI. Motor original, referência do desenvolvimento inicial.</div>
+        <div class="card-tags">
+          <span class="tag">LEGADO</span>
+          <span class="tag">SEM MIDI</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Ferramentas técnicas -->
+  <div>
+    <div class="section-title">⬡ Ferramentas Técnicas</div>
+    <br>
+    <div class="grid">
+
+      <a class="card" href="auto-dump.html"
+         style="--card-color:#00ffcc; --card-color-dim:#003322; --card-color-bg:rgba(0,255,204,.04)">
+        <div class="card-badge">Diagnóstico · Zoom G1On</div>
+        <div class="card-name">Auto<br>Dump</div>
+        <div class="card-desc">Varredura automática A0→A9. Captura dumps SysEx 0x28 com handshake de editor. Exporta JSON e TXT com bytes raw, nomes de patch e efeitos por slot.</div>
+        <div class="card-tags">
+          <span class="tag">0x28 DUMP</span>
+          <span class="tag">EDIT MODE</span>
+          <span class="tag">EXPORT</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      
+      <a class="card" href="full-dump.html"
+         style="--card-color:#aa88ff; --card-color-dim:#220033; --card-color-bg:rgba(170,136,255,.04)">
+        <div class="card-badge">Diagnóstico · Zoom G1On</div>
+        <div class="card-name">Full<br>Dump</div>
+        <div class="card-desc">Varredura completa A0–J9 (100 patches). Coleta nome, volume, efeitos e bytes raw. Exporta JSON + TXT + injeta cache diretamente no FMC-AM 6F.</div>
+        <div class="card-tags">
+          <span class="tag">100 PATCHES</span>
+          <span class="tag">FX DISCOVER</span>
+          <span class="tag">CACHE INJECT</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+      <a class="card" href="dump-e0e9.html"
+         style="--card-color:#ff6b00; --card-color-dim:#331800; --card-color-bg:rgba(255,107,0,.04)">
+        <div class="card-badge">Diagnóstico · Deep Debug</div>
+        <div class="card-name">Deep<br>Dump E0-E9</div>
+        <div class="card-desc">Varredura profunda dos patches E0–E9 com exibição byte a byte de cada rawSlot. Identifica parâmetros de tempo e rate por posição e escala.</div>
+        <div class="card-tags">
+          <span class="tag">RAW BYTES</span>
+          <span class="tag">PARAM MAP</span>
+          <span class="tag">TAP DEBUG</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+      <a class="card" href="midi-sniffer.html"
+         style="--card-color:#ffaa00; --card-color-dim:#332200; --card-color-bg:rgba(255,170,0,.04)">
+        <div class="card-badge">Diagnóstico · Monitor MIDI</div>
+        <div class="card-name">MIDI<br>Sniffer</div>
+        <div class="card-desc">Captura e exibe todas as mensagens MIDI recebidas. Decodifica SysEx Zoom automaticamente. Permite envio manual de bytes hex para testes.</div>
+        <div class="card-tags">
+          <span class="tag">MONITOR</span>
+          <span class="tag">SYSEX</span>
+          <span class="tag">TX MANUAL</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    FMC-AM 6F · Angelo Miggliori · Desenvolvido com Claude (Anthropic) · 2026<br><br>
+    Motor v4 · Web MIDI API · SysEx Zoom G1On · Parser 0x28 · Memória 4 Camadas · Tap Tempo BPM·Time·Rate
+  </div>
+
+</div>
+</body>
+</html>
