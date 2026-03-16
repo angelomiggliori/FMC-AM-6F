@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FMC-AM 6F · v4 SNIFFER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg:       #0a0a0c;
+    --border:   #2a2a35;
+    --dim:      #3a3a50;
+    --text:     #e0e0f0;
+    --text-dim: #6a6a88;
+    --accent:   #e8e8e8;
+    --accent2:  #ff6b00;
+    --tap-color:#ff6b00;
+    --bank-A:   #00ff66;
+    --bank-B:   #ffaa00;
+    --bank-C:   #ff0000;
+    --bank-D:   #00ffff;
+    --bank-E:   #ffffff;
+    --fs-h: 90px;
+    --fs-w: 90px;
+    --glow: 0 0 10px rgba(232,232,232,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Chassis ─────────────────────────────── */
+  .chassis {
+    position: relative; z-index: 1;
+    width: min(98vw, 820px);
+    background: linear-gradient(160deg, #1c1c24 0%, #0e0e14 60%, #14141c 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow:
+      0 0 0 1px #2a2a3a,
+      0 4px 40px rgba(0,0,0,0.9),
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      inset 0 -1px 0 rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .chassis::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    border-radius: 14px;
+    pointer-events: none; z-index: 10;
+  }
+  .screw {
+    position: absolute; width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3a3a4a, #1a1a22);
+    border: 1px solid #2a2a36;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .screw::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(45deg); width:60%; height:1px; background:rgba(255,255,255,0.08); }
+  .screw.tl{top:8px;left:8px;} .screw.tr{top:8px;right:8px;}
+  .screw.bl{bottom:8px;left:8px;} .screw.br{bottom:8px;right:8px;}
+
+  /* ── Top bar ─────────────────────────────── */
+  .top-bar { display:flex; align-items:center; gap:8px; }
+  .logo {
+    font-family:'Orbitron',sans-serif; font-weight:900;
+    font-size:clamp(13px,2.5vw,18px); letter-spacing:.12em;
+    color:var(--accent); text-shadow:var(--glow); white-space:nowrap;
+  }
+  .logo span{color:var(--accent2);}
+
+  /* ── Display ─────────────────────────────── */
+  .display {
+    flex:1; background:#060608;
+    border:1px solid #1e1e2e; border-radius:8px;
+    padding:6px 14px; display:flex; align-items:center;
+    gap:12px; min-width:0;
+    box-shadow:inset 0 2px 10px rgba(0,0,0,0.7);
+    position:relative; overflow:hidden;
+  }
+  .display::before {
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:var(--bank-color,#333); border-radius:8px 0 0 8px;
+    transition:background 0.3s;
+  }
+  .display-main { flex:1; min-width:0; }
+
+  .patch-id {
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(20px,5vw,36px); font-weight:900;
+    color:var(--bank-color,var(--accent));
+    text-shadow:0 0 14px var(--bank-color,transparent),0 0 40px var(--bank-color,transparent);
+    letter-spacing:.1em; line-height:1;
+    transition:color .2s,text-shadow .2s;
+  }
+  .patch-id.blink { animation:blink-patch .45s linear infinite; }
+  @keyframes blink-patch{ 50%{opacity:.08;} }
+
+  .patch-name {
+    font-family:'Share Tech Mono',monospace;
+    font-size:clamp(8px,1.4vw,11px); color:var(--text-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-top:2px;
+  }
+  /* Indicadores de efeitos ativos — linha abaixo do nome */
+  .fx-indicators {
+    display:flex; gap:4px; margin-top:3px; flex-wrap:wrap;
+  }
+  .fx-tag {
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px; padding:1px 5px; border-radius:2px;
+    border:1px solid; letter-spacing:.06em;
+    transition:all .2s;
+  }
+  .fx-tag.delay    { color:#00ffcc; border-color:#00ffcc44; background:rgba(0,255,204,.08); }
+  .fx-tag.mod      { color:#aa88ff; border-color:#aa88ff44; background:rgba(170,136,255,.08); }
+  .fx-tag.reverb   { color:#4488ff; border-color:#4488ff44; background:rgba(68,136,255,.08); }
+  .fx-tag.drive    { color:#ff6600; border-color:#ff660044; background:rgba(255,102,0,.08); }
+  .fx-tag.dynamics { color:#ffcc00; border-color:#ffcc0044; background:rgba(255,204,0,.08); }
+  .fx-tag.off      { opacity:.3; filter:grayscale(1); }
+
+  .bpm-display {
+    font-family:'Share Tech Mono',monospace;
+    font-size:clamp(10px,1.8vw,13px); color:var(--accent2);
+    white-space:nowrap; border-left:1px solid var(--border);
+    padding-left:12px; line-height:1.4; text-align:center;
+  }
+  .bpm-val { font-size:clamp(14px,2.5vw,20px); font-weight:700; display:block; }
+
+  /* ── MIDI status ─────────────────────────── */
+  
+  .midi-indicator {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--dim); flex-shrink:0;
+    transition:background .2s, box-shadow .2s;
+  }
+  .midi-indicator.sim      { background:#555566; }
+  .midi-indicator.connected{ background:#00ff66; box-shadow:0 0 6px #00ff66; }
+  .midi-indicator.error    { background:#cc2233; box-shadow:0 0 6px #cc2233; }
+  .midi-indicator.activity { background:#ff6b00; box-shadow:0 0 8px #ff6b00; }
+
+  
+
+  /* ── Middle ──────────────────────────────── */
+  .middle { display:flex; min-height:0; }
+
+  /* ── Grid 3×2 ────────────────────────────── */
+  .fs-grid {
+    flex:1; display:grid;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:clamp(8px,2vw,16px); 
+    align-content:center;
+    justify-items:center; 
+    padding:6px 4px;
+    width:100%;
+  }
+  .fs-col { display:flex; flex-direction:column; align-items:center; gap:5px; width:100%; }
+
+  /* ── Botão ───────────────────────────────── */
+  .fs-btn {
+    width:clamp(72px, 22vw, 110px); height:clamp(72px, 22vw, 110px);
+    width:var(--fs-w); height:var(--fs-h);
+    background:radial-gradient(ellipse at 40% 35%,#2a2a36 0%,#161620 70%);
+    border:2px solid #2e2e3e; border-radius:50%;
+    cursor:pointer; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(9px,1.5vw,11px); font-weight:700;
+    color:var(--text-dim); letter-spacing:.05em;
+    position:relative;
+    transition:border-color .12s,box-shadow .12s,background .12s,transform .08s;
+    box-shadow:0 4px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06),inset 0 -3px 8px rgba(0,0,0,.5);
+    touch-action:none; -webkit-tap-highlight-color:transparent; flex-shrink:0; overflow:hidden;
+  }
+  .fs-btn:active,.fs-btn.pressed { transform:scale(.93); box-shadow:0 1px 4px rgba(0,0,0,.8),inset 0 3px 10px rgba(0,0,0,.6); }
+
+  /* Iluminação de borda §2.1 */
+  .fs-btn.lit-top {
+    border-top-color:var(--bank-color,#00ff66); border-top-width:3px;
+    box-shadow:0 2px 8px rgba(0,0,0,.5),0 -8px 18px -4px var(--bank-color,#00ff66),inset 0 1px 0 rgba(255,255,255,.06);
+    background:radial-gradient(ellipse at 50% 50%,#1e1e28 0%,#0e0e14 70%); color:#ccc;
+  }
+  .fs-btn.lit-bottom {
+    border-bottom-color:var(--bank-color,#00ff66); border-bottom-width:3px;
+    box-shadow:0 2px 8px rgba(0,0,0,.5),0 8px 18px -4px var(--bank-color,#00ff66),inset 0 1px 0 rgba(255,255,255,.06);
+    background:radial-gradient(ellipse at 50% 50%,#1e1e28 0%,#0e0e14 70%); color:#ccc;
+  }
+
+  /* Modo pré-seleção */
+  .fs-btn.preselect-mode { animation:preselect-pulse .5s ease-in-out infinite alternate; }
+  @keyframes preselect-pulse{ from{opacity:.65;} to{opacity:1;} }
+
+  /* FS6 tap */
+  .fs-btn.tap-btn { border-color:var(--dim); }
+  .fs-btn.tap-btn.tap-beat {
+    background:radial-gradient(ellipse at 40% 35%,#2a1a0a 0%,#160e04 70%);
+    border-color:var(--tap-color); color:var(--tap-color);
+    box-shadow:0 4px 12px rgba(0,0,0,.6),0 0 20px rgba(255,107,0,.65),0 0 50px rgba(255,107,0,.2),inset 0 1px 0 rgba(255,107,0,.1);
+  }
+  .fs-btn.tap-btn.tap-off {
+    border-color:#1e1e2a;
+    background:radial-gradient(ellipse at 40% 35%,#141414 0%,#0c0c10 70%);
+    color:#2a2a36;
+    box-shadow:0 2px 6px rgba(0,0,0,.8),inset 0 2px 6px rgba(0,0,0,.5);
+  }
+
+  /* Tap piscando na cor do delay quando delay está ativo */
+  .fs-btn.tap-btn.delay-sync { --tap-color: #00ffcc; }
+
+  /* Tap piscando em roxo quando só tem Rate (modulação) ativo */
+  .fs-btn.tap-btn.rate-sync  { --tap-color: #aa88ff; }
+
+  .fs-label {
+    font-family:'Share Tech Mono',monospace;
+    font-size:clamp(7px,1.1vw,9px); color:var(--text-dim);
+    letter-spacing:.04em; text-align:center;
+    max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* ── Middle ──────────────────────────────── */
+  .middle { display:flex; min-height:0; }
+
+  
+
+  /* ── Status bar ──────────────────────────── */
+  .status-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:4px 8px; background:#08080c;
+    border:1px solid var(--border); border-radius:5px; gap:6px;
+  }
+  .status-item { display:flex; align-items:center; gap:4px; font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--text-dim); }
+  .status-dot { width:5px; height:5px; border-radius:50%; background:var(--dim); transition:background .2s,box-shadow .2s; }
+  .status-dot.on   { background:#00ff66; box-shadow:0 0 5px #00ff66; }
+  .status-dot.warn { background:#ffd600; box-shadow:0 0 5px #ffd600; }
+
+  .mode-badge { font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; letter-spacing:.08em; }
+  .mode-badge.normal     { background:rgba(232,232,232,.08); color:#aaa; border:1px solid #333; }
+  .mode-badge.banksel    { background:rgba(255,107,0,.15); color:#ff6b00; border:1px solid rgba(255,107,0,.4); animation:preselect-pulse .5s ease-in-out infinite alternate; }
+  .mode-badge.confirming { background:rgba(255,214,0,.15); color:#ffd600; border:1px solid rgba(255,214,0,.4); animation:preselect-pulse .45s ease-in-out infinite alternate; }
+
+  /* ── Confirm ring ────────────────────────── */
+  .confirm-ring { position:absolute; inset:-4px; border-radius:50%; border:2px solid #ffffff44; animation:confirmRing .4s ease forwards; pointer-events:none; }
+  @keyframes confirmRing{ 0%{opacity:1;transform:scale(1);} 100%{opacity:0;transform:scale(1.4);} }
+
+  /* ── Boost button ────────────────────────── */
+  .boost-btn {
+    font-family:'Share Tech Mono',monospace;
+    font-size:9px; letter-spacing:.1em;
+    padding:3px 10px; border-radius:4px;
+    border:1px solid #333344; background:#111118;
+    color:#555566; cursor:pointer;
+    transition:all .2s;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+    flex-shrink:0;
+  }
+  .boost-btn:hover { border-color:#ffaa00; color:#ffaa00; }
+  .boost-btn.boost-on {
+    border-color:#ffaa00; color:#ffaa00;
+    background:rgba(255,170,0,.1);
+    box-shadow:0 0 8px rgba(255,170,0,.3);
+    animation:boost-pulse .6s ease-in-out infinite alternate;
+  }
+  @keyframes boost-pulse { from{box-shadow:0 0 4px rgba(255,170,0,.2);} to{box-shadow:0 0 12px rgba(255,170,0,.5);} }
+
+  /* ── Tuner ───────────────────────────────── */
+  .fs-btn.tuner-on {
+    border-color:#ff2244 !important;
+    color:#ff2244 !important;
+    background:rgba(255,34,68,.1) !important;
+    box-shadow:0 0 16px rgba(255,34,68,.4),0 0 40px rgba(255,34,68,.15) !important;
+    animation:tuner-pulse .5s ease-in-out infinite alternate;
+  }
+  @keyframes tuner-pulse { from{box-shadow:0 0 8px rgba(255,34,68,.3);} to{box-shadow:0 0 24px rgba(255,34,68,.6);} }
+  .mode-badge.tuner {
+    background:rgba(255,34,68,.15);
+    border-color:#ff224488;
+    color:#ff2244;
+    animation:tuner-pulse .5s ease-in-out infinite alternate;
+  }
+
+  /* ── Flash health ────────────────────────── */
+  .flash-health {
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px; color:#333344; letter-spacing:.06em;
+    white-space:nowrap; cursor:pointer;
+    transition:color .3s;
+  }
+  .flash-health:hover { color:#666677; }
+
+  /* ── Toast ───────────────────────────────── */
+  .toast {
+    position:fixed; bottom:20px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:rgba(20,20,28,.92); border:1px solid #ff6b00; color:#ff6b00;
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    padding:6px 16px; border-radius:20px; letter-spacing:.1em;
+    opacity:0; transition:all .3s; pointer-events:none; z-index:100; white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ── Responsivo ──────────────────────────── */
+  @media(max-width:600px){ :root{--fs-w:62px;--fs-h:62px;} .logo{font-size:11px;} .patch-id{font-size:26px;} }
+  @media(max-width:400px){ :root{--fs-w:52px;--fs-h:52px;} }
+  @media(max-height:500px) and (orientation:landscape){ :root{--fs-w:58px;--fs-h:58px;} .chassis{padding:8px 12px;gap:6px;} }
+
+  /* ── Barra MIDI externa (abaixo do chassis) ─── */
+  .midi-bar {
+    position:relative; z-index:2;
+    width:min(98vw, 820px);
+    margin-top:10px;
+    background:#0a0a0e;
+    border:1px solid #2a2a35;
+    border-radius:10px;
+    padding:8px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    box-shadow:0 4px 20px rgba(0,0,0,.6);
+  }
+
+  .midi-bar-dot {
+    width:9px; height:9px; border-radius:50%;
+    flex-shrink:0;
+    background:#2a2a35;
+    transition:background .3s, box-shadow .3s;
+  }
+  .midi-bar-dot.off        { background:#2a2a35; }
+  .midi-bar-dot.aguardando { background:#555566; animation:pulse-wait .9s ease-in-out infinite alternate; }
+  .midi-bar-dot.conectado  { background:#00ff66; box-shadow:0 0 8px #00ff66; }
+  .midi-bar-dot.g1on       { background:#00ffcc; box-shadow:0 0 10px #00ffcc; animation:pulse-g1on 1.2s ease-in-out infinite alternate; }
+  .midi-bar-dot.erro       { background:#ff2244; box-shadow:0 0 8px #ff2244; }
+  @keyframes pulse-wait  { from{opacity:.3;} to{opacity:1;} }
+  @keyframes pulse-g1on  { from{box-shadow:0 0 6px #00ffcc;} to{box-shadow:0 0 16px #00ffcc;} }
+
+  .midi-bar-texto {
+    font-family:'Share Tech Mono', monospace;
+    font-size:11px;
+    color:#666677;
+    flex:1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    letter-spacing:.04em;
+  }
+  .midi-bar-texto strong { color:#aaaacc; }
+  .midi-bar-texto.g1on   { color:#00ffcc; }
+  .midi-bar-texto.erro   { color:#ff4455; }
+
+  .midi-bar-btn {
+    font-family:'Share Tech Mono', monospace;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:5px 14px;
+    border-radius:6px;
+    border:1px solid #333344;
+    background:#111118;
+    color:#888899;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:all .2s;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .midi-bar-btn:hover   { border-color:#555566; color:#aaaacc; }
+  .midi-bar-btn.loading { border-color:#ffaa00; color:#ffaa00; animation:pulse-wait .6s ease-in-out infinite alternate; }
+  .midi-bar-btn.ok      { border-color:#00ff6633; color:#00ff66; pointer-events:none; }
+  .midi-bar-btn.g1on    { border-color:#00ffcc55; color:#00ffcc; pointer-events:none; }
+
+
+  /* ── Build badge ─────────────────────────── */
+  .build-badge {
+    font-family:'Share Tech Mono',monospace;
+    font-size:8px; letter-spacing:.12em;
+    color:#ffffff; background:#2a2a3a;
+    border:1px solid #3a3a50;
+    border-radius:3px;
+    padding:1px 6px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+
+
+  /* ── Volume display ──────────────────────── */
+  .vol-display {
+    font-family:'Share Tech Mono',monospace;
+    font-size:clamp(10px,1.8vw,13px);
+    white-space:nowrap;
+    border-right:1px solid var(--border);
+    padding-right:12px;
+    line-height:1.4;
+    text-align:center;
+    color:var(--text-dim);
+    transition:color .3s;
+  }
+  .vol-val {
+    font-size:clamp(14px,2.5vw,20px);
+    font-weight:700;
+    display:block;
+    font-family:'Orbitron',sans-serif;
+  }
+
+  /* ── SNIFFER ──────────────────────────────────── */
+  #snifferPanel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #080810;
+    border-top: 1px solid #ff6b00;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transition: height .2s ease;
+    height: 38px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  #snifferPanel.expanded { height: 280px; }
+
+  #snifferHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    height: 38px;
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid #1a1a25;
+  }
+  #snifferHeader:hover { background: rgba(255,107,0,.05); }
+  .sn-title {
+    font-size: 10px; letter-spacing: .2em; color: #ff6b00;
+    text-transform: uppercase; flex: 1;
+  }
+  .sn-count {
+    font-size: 10px; color: #555570;
+    min-width: 60px; text-align: right;
+  }
+  .sn-btn {
+    font-size: 10px; letter-spacing: .1em;
+    padding: 3px 10px; border-radius: 3px;
+    border: 1px solid #2a2a35; background: none;
+    color: #555570; cursor: pointer; transition: all .15s;
+  }
+  .sn-btn:hover { border-color: #ff6b00; color: #ff6b00; }
+  .sn-btn.active { border-color: #00ff66; color: #00ff66; }
+  #snifferToggle {
+    font-size: 12px; color: #555570; transition: transform .2s;
+  }
+  #snifferPanel.expanded #snifferToggle { transform: rotate(180deg); }
+
+  #snifferLog {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+    display: none;
+  }
+  #snifferPanel.expanded #snifferLog { display: block; }
+
+  .sn-entry {
+    display: grid;
+    grid-template-columns: 62px 26px 1fr;
+    gap: 0 8px;
+    padding: 1px 14px;
+    font-size: 10px;
+    line-height: 1.7;
+    border-bottom: 1px solid rgba(42,42,53,.3);
+  }
+  .sn-entry:hover { background: rgba(255,255,255,.02); }
+  .sn-ts  { color: #333348; }
+  .sn-dir { text-align: center; font-weight: 700; }
+  .sn-dir.tx { color: #ff6b00; }
+  .sn-dir.rx { color: #00ccff; }
+  .sn-dir.pc { color: #00ff66; }
+  .sn-dir.cc { color: #ffb930; }
+  .sn-dir.er { color: #ff2244; }
+  .sn-data { color: #8888aa; word-break: break-all; }
+  .sn-data b { color: #e0e0f0; font-weight: normal; }
+  .sn-data .hl { color: #ffb930; }   /* byte destacado — ID, valor */
+  .sn-data .ok { color: #00ff66; }   /* parse bem-sucedido */
+  .sn-data .warn { color: #ff6b00; } /* ID desconhecido */
+
+  #snifferLog::-webkit-scrollbar { width: 3px; }
+  #snifferLog::-webkit-scrollbar-thumb { background: #2a2a35; }
+</style>
+</head>
+<body>
+<div class="chassis">
+  <div class="screw tl"></div><div class="screw tr"></div>
+  <div class="screw bl"></div><div class="screw br"></div>
+
+  <div class="top-bar">
+    <div class="logo">FMC<span>·</span>AM<span style="font-size:.7em;opacity:.6"> 6F</span></div>
+
+    <div class="display" id="mainDisplay">
+      <div class="vol-display">
+        <span class="vol-val" id="patchVolume">---</span>
+        <span>VOL</span>
+      </div>
+      <div class="display-main">
+        <div class="patch-id" id="patchId">A0</div>
+        <div class="patch-name" id="patchName">CLEAN BOOST</div>
+        <div class="fx-indicators" id="fxIndicators"></div>
+      </div>
+      <div class="bpm-display">
+        <span class="bpm-val" id="bpmVal">120</span>
+        <span>BPM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div class="fs-grid" id="fsGrid"></div>
+  </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="midi-indicator sim" id="midiIndicator"></div>
+      <span id="midiPortLabel">SIM</span>
+    </div>
+    <div class="mode-badge normal" id="modeBadge">EXECUÇÃO</div>
+    <div class="status-item">
+      <button class="boost-btn" id="boostBtn" onclick="toggleBoost()">⬆ BOOST</button>
+    </div>
+    <div class="status-item">
+      <div class="status-dot on"></div>
+      <span id="memStatus">MEM OK</span>
+    </div>
+  </div>
+  <div class="status-bar" style="margin-top:-6px; border-top:none; border-radius:0 0 5px 5px; padding:2px 8px;">
+    <span class="build-badge" title="Build ID">v4.2-b20260316-final · SNIFFER</span>
+    <span style="cursor:pointer;font-size:9px;color:#ff6b00;letter-spacing:.08em;padding:2px 6px;border:1px solid #ff6b00;border-radius:3px;" onclick="limparCachePatches()" title="Apaga cache de patches e recarrega seed">↺ CACHE</span>
+    <span class="flash-health" id="flashHealth" onclick="mostrarDetalhesSaude()" title="Clique para detalhes">◌ carregando…</span>
+  </div>
+
+<!-- Barra de status MIDI — fora do chassis -->
+<div class="midi-bar" id="midiBar">
+  <div class="midi-bar-dot off" id="midiBarDot"></div>
+  <div class="midi-bar-texto" id="midiBarTexto">MIDI não iniciado</div>
+  <button class="midi-bar-btn" id="midiBarBtn" onclick="conectarMIDI()">CONECTAR MIDI</button>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+// Tema: FMC-AM 6F v4
+// Motor: fmc-engine.js (não edite aqui — edite o engine)
+const THEME_NAME = 'FMC-AM 6F v4';
+</script>
+<script src="fmc-engine.js"></script>
+<!-- ══ SNIFFER PANEL ══════════════════════════════════════════ -->
+<div id="snifferPanel">
+  <div id="snifferHeader" onclick="snToggle()">
+    <span class="sn-title">◉ MIDI SNIFFER</span>
+    <span class="sn-count" id="snCount">0 msgs</span>
+    <button class="sn-btn" id="snPauseBtn" onclick="event.stopPropagation();snPause()">⏸ PAUSAR</button>
+    <button class="sn-btn" onclick="event.stopPropagation();snClear()">✕ LIMPAR</button>
+    <button class="sn-btn" onclick="event.stopPropagation();snExportJSON()">⬇ JSON</button>
+    <button class="sn-btn" onclick="event.stopPropagation();snExportTXT()">⬇ TXT</button>
+    <span id="snifferToggle">▲</span>
+  </div>
+  <div id="snifferLog"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// SNIFFER — captura MIDI ilimitada, zero impacto na GUI
+// ══════════════════════════════════════════════════════════════════
+const SN = {
+  log:     [],      // array ilimitado — cada entrada é um objeto
+  paused:  false,
+  autoScroll: true,
+  maxVisible: 500,  // linhas no DOM (mais antigos são removidos do DOM mas ficam no array)
+};
+
+function snTs(){
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+}
+
+function snHex(bytes){
+  return Array.from(bytes).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+}
+
+// Analisa um dump 0x28 e extrai info dos slots para o log
+function snAnalyzeDump(bytes){
+  if(!bytes || bytes.length < 110) return null;
+  const slots = [];
+  for(let i=0;i<5;i++){
+    const off = 9 + i*20;
+    if(off+2 >= bytes.length) break;
+    const r0=bytes[off], r1=bytes[off+1], r2=bytes[off+2];
+    const id = (r0<<7)|r1;
+    const en = (r0&1)===1;
+    const known = typeof ZOOM_FX_DB !== 'undefined' && ZOOM_FX_DB[id];
+    const nome  = known ? known.n : `UNK_0x${id.toString(16).toUpperCase()}`;
+    const tap   = known ? known.t : null;
+    slots.push({slot:i+1, id, idHex:'0x'+id.toString(16).toUpperCase().padStart(4,'0'),
+                r0, r1, r2, en, nome, tap, known:!!known,
+                rawSlot: Array.from(bytes.slice(off, off+20))});
+  }
+  const vol = bytes.length > 110 ? bytes[110] : '?';
+  return {slots, vol};
+}
+
+function snAddEntry(dir, label, bytes, extra){
+  if(SN.paused) return;
+
+  const entry = {
+    ts: snTs(),
+    tsMs: Date.now(),
+    dir,       // 'TX','RX','PC','CC','SX','ER'
+    label,
+    hex: bytes ? snHex(bytes) : null,
+    bytes: bytes ? Array.from(bytes) : null,
+    extra,     // objeto extra (dump analysis, etc)
+  };
+  SN.log.push(entry);
+
+  // Renderizar no DOM
+  const logEl = document.getElementById('snifferLog');
+  const el = document.createElement('div');
+  el.className = 'sn-entry';
+
+  let dataHtml = '';
+
+  if(dir === 'DUMP' && extra && extra.slots){
+    // Dump 0x28 — mostrar slots com highlight de IDs
+    const slotsHtml = extra.slots.map(s=>{
+      const col = s.known ? 'ok' : 'warn';
+      const tapStr = s.tap ? ` <span style="color:#ffb930">[${s.tap}]</span>` : '';
+      const enStr  = s.en  ? '' : ' <span style="color:#555570">[off]</span>';
+      return `<span class="${col}">S${s.slot}:${s.idHex}=${s.nome}${tapStr}${enStr}</span>`;
+    }).join('  ');
+    dataHtml = `VOL=<span class="hl">${extra.vol}</span>  ${slotsHtml}`;
+
+    // Linha extra com hex bruto dos slots
+    const hexSlots = extra.slots.map(s=>
+      `S${s.slot}:[${s.rawSlot.slice(0,4).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}...]`
+    ).join(' ');
+    dataHtml += `<br><span style="color:#333348;font-size:9px;">${hexSlots}</span>`;
+  } else if(bytes && bytes.length > 0){
+    // SysEx genérico — mostrar hex com primeiros bytes destacados
+    const hexArr = Array.from(bytes);
+    const hexStr = hexArr.map((b,i)=>{
+      const h = '0x'+b.toString(16).toUpperCase().padStart(2,'0');
+      // Destacar: cmd byte (idx 4), dados relevantes
+      if(i===4) return `<b>${h}</b>`;
+      if(i>4 && i<9) return `<span class="hl">${h}</span>`;
+      return h;
+    }).join(' ');
+    dataHtml = `<span style="color:#555570">[${bytes.length}b]</span> ${hexStr}`;
+  } else {
+    dataHtml = label || '';
+  }
+
+  const dirClass = dir==='TX'?'tx':dir==='RX'||dir==='DUMP'?'rx':dir==='PC'?'pc':dir==='CC'?'cc':'er';
+  el.innerHTML = `
+    <span class="sn-ts">${entry.ts}</span>
+    <span class="sn-dir ${dirClass}">${dir}</span>
+    <span class="sn-data">${dataHtml}</span>
+  `;
+  logEl.appendChild(el);
+
+  // Limitar DOM a maxVisible entradas (performance)
+  if(logEl.children.length > SN.maxVisible){
+    logEl.removeChild(logEl.firstChild);
+  }
+
+  // Auto-scroll
+  if(SN.autoScroll && document.getElementById('snifferPanel').classList.contains('expanded')){
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Atualizar contador
+  document.getElementById('snCount').textContent = SN.log.length.toLocaleString() + ' msgs';
+}
+
+// ── Interceptar enviarMIDI ────────────────────────────────────────
+// Monkey-patch da função do engine
+const _enviarMIDI_orig = typeof enviarMIDI !== 'undefined' ? enviarMIDI : null;
+function enviarMIDI(bytes, tipo, label){
+  // Chamar original
+  if(_enviarMIDI_orig) _enviarMIDI_orig(bytes, tipo, label);
+  // Logar
+  const dir = (tipo==='pc') ? 'PC' : 'TX';
+  snAddEntry(dir, label||'', bytes);
+}
+
+// ── Interceptar onMensagemMIDI ───────────────────────────────────
+const _onMensagemMIDI_orig = typeof onMensagemMIDI !== 'undefined' ? onMensagemMIDI : null;
+function onMensagemMIDI(event){
+  // Chamar original
+  if(_onMensagemMIDI_orig) _onMensagemMIDI_orig(event);
+
+  const d = event.data;
+  if(!d||d.length<1) return;
+
+  // PC recebido
+  if((d[0]&0xF0)===0xC0){
+    const pc=d[1];
+    const bank=Math.floor(pc/10), patch=pc%10;
+    snAddEntry('PC', `PC ${pc} → ${['A','B','C','D','E','F','G','H','I','J'][bank]||'?'}${patch}`, null);
+    return;
+  }
+  // CC
+  if((d[0]&0xF0)===0xB0){
+    snAddEntry('CC', `CC${d[1]}=${d[2]}`, null);
+    return;
+  }
+  // SysEx
+  if(d[0]===0xF0){
+    if(d[4]===0x28){
+      // Dump 0x28 — analisar
+      const analysis = snAnalyzeDump(d);
+      snAddEntry('DUMP', `DUMP 0x28 (${d.length}b)`, d, analysis);
+    } else {
+      // Outro SysEx RX
+      const cmdNames = {0x58:'EditON-ACK', 0x50:'EditON', 0x51:'EditOFF',
+                        0x33:'Ping', 0x29:'DumpReq', 0x03:'Tuner'};
+      const cmd = d[4];
+      const name = cmdNames[cmd]||`CMD_0x${cmd.toString(16).toUpperCase()}`;
+      snAddEntry('RX', name, d);
+    }
+  }
+}
+
+// ── Reconnect: re-aplicar handler após conexão MIDI ──────────────
+// O engine já registra onMensagemMIDI — nosso monkey-patch sobrescreve.
+// Mas precisamos garantir que o engine use nossa versão interceptada.
+// Fazemos isso depois que o DOM carregar:
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    // Re-registrar o handler com nossa versão
+    if(typeof midiAccess !== 'undefined' && midiAccess){
+      for(const inp of midiAccess.inputs.values()){
+        inp.onmidimessage = onMensagemMIDI;
+      }
+    }
+    snAddEntry('SN', 'Sniffer ativo', null);
+  }, 500);
+});
+
+// ── Controles do painel ──────────────────────────────────────────
+function snToggle(){
+  document.getElementById('snifferPanel').classList.toggle('expanded');
+  // Scroll to bottom ao abrir
+  const log = document.getElementById('snifferLog');
+  setTimeout(()=>{ log.scrollTop = log.scrollHeight; }, 50);
+}
+
+function snPause(){
+  SN.paused = !SN.paused;
+  const btn = document.getElementById('snPauseBtn');
+  btn.textContent = SN.paused ? '▶ RETOMAR' : '⏸ PAUSAR';
+  btn.classList.toggle('active', SN.paused);
+}
+
+function snClear(){
+  SN.log = [];
+  document.getElementById('snifferLog').innerHTML = '';
+  document.getElementById('snCount').textContent = '0 msgs';
+  snAddEntry('SN', 'Log limpo', null);
+}
+
+function snExportJSON(){
+  // Exporta TUDO — incluindo bytes raw dos dumps
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    totalEntries: SN.log.length,
+    entries: SN.log
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fmc-sniffer-${Date.now()}.json`;
+  a.click();
+  snAddEntry('SN', `Exportado: ${SN.log.length} entradas → JSON`, null);
+}
+
+function snExportTXT(){
+  // Exporta texto legível — ideal para análise rápida
+  const lines = [`FMC-AM 6F · MIDI Sniffer Export`, `Data: ${new Date().toLocaleString('pt-BR')}`,
+    `Total: ${SN.log.length} entradas`, `${'─'.repeat(80)}`];
+
+  for(const e of SN.log){
+    let line = `${e.ts} [${e.dir.padEnd(4)}] `;
+    if(e.dir === 'DUMP' && e.extra && e.extra.slots){
+      line += `DUMP 0x28  VOL=${e.extra.vol}`;
+      for(const s of e.extra.slots){
+        line += `\n          S${s.slot}: id=${s.idHex} nome=${s.nome.padEnd(14)} tap=${s.tap||'—'} en=${s.en?'ON':'off'} raw[0..3]=[${s.rawSlot.slice(0,4).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(',')}]`;
+      }
+    } else if(e.hex){
+      line += `${e.label||''}  ${e.hex}`;
+    } else {
+      line += e.label||'';
+    }
+    lines.push(line);
+  }
+
+  const blob = new Blob([lines.join('\n')], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fmc-sniffer-${Date.now()}.txt`;
+  a.click();
+  snAddEntry('SN', `Exportado: ${SN.log.length} entradas → TXT`, null);
+}
+</script>
+
+</body>
+</html>
