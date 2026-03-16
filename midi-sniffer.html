@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FMC · MIDI Sniffer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700&display=swap');
+
+:root {
+  --bg:     #080810;
+  --green:  #00ff66;
+  --cyan:   #00ffcc;
+  --orange: #ff6b00;
+  --red:    #ff2244;
+  --dim:    #1a1a2a;
+  --border: #2a2a3a;
+  --text:   #ccccdd;
+  --tdim:   #555566;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body {
+  width:100%; height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Share Tech Mono', monospace;
+  overflow:hidden;
+}
+body { display:flex; flex-direction:column; }
+
+/* ── Header ── */
+.header {
+  padding:12px 16px 10px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  flex-shrink:0;
+}
+.title {
+  font-family:'Orbitron', sans-serif;
+  font-size:14px; font-weight:700;
+  color:var(--cyan); letter-spacing:.1em;
+}
+.title span { color:var(--orange); }
+
+.btn {
+  font-family:'Share Tech Mono', monospace;
+  font-size:11px; letter-spacing:.08em;
+  padding:6px 14px; border-radius:5px;
+  border:1px solid var(--border);
+  background:var(--dim); color:var(--tdim);
+  cursor:pointer; transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.btn:hover   { border-color:#555566; color:var(--text); }
+.btn.primary { border-color:var(--cyan); color:var(--cyan); background:rgba(0,255,204,.06); }
+.btn.danger  { border-color:var(--red);  color:var(--red);  background:rgba(255,34,68,.06); }
+.btn.active  { border-color:var(--green); color:var(--green); background:rgba(0,255,102,.06); animation:pulse .8s ease-in-out infinite alternate; }
+@keyframes pulse { from{opacity:.7;} to{opacity:1;} }
+
+.status-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--tdim); flex-shrink:0;
+  transition:background .3s, box-shadow .3s;
+}
+.status-dot.on  { background:var(--green); box-shadow:0 0 8px var(--green); }
+.status-dot.g1on{ background:var(--cyan);  box-shadow:0 0 10px var(--cyan); animation:pulse .8s ease-in-out infinite alternate; }
+.status-dot.err { background:var(--red);   box-shadow:0 0 6px var(--red); }
+
+.status-txt {
+  font-size:11px; color:var(--tdim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:220px;
+}
+
+/* ── Filtros ── */
+.filters {
+  padding:8px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex; gap:6px; flex-wrap:wrap;
+  flex-shrink:0;
+}
+.filter-btn {
+  font-family:'Share Tech Mono', monospace;
+  font-size:10px; padding:3px 10px;
+  border-radius:3px; border:1px solid var(--border);
+  background:transparent; color:var(--tdim);
+  cursor:pointer; transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.filter-btn.on { background:rgba(255,255,255,.06); color:var(--text); border-color:#555; }
+.filter-btn[data-type="sx"].on    { border-color:var(--cyan);   color:var(--cyan); }
+.filter-btn[data-type="pc"].on    { border-color:var(--green);  color:var(--green); }
+.filter-btn[data-type="cc"].on    { border-color:var(--orange); color:var(--orange); }
+.filter-btn[data-type="note"].on  { border-color:#aa88ff; color:#aa88ff; }
+.filter-btn[data-type="other"].on { border-color:#888;    color:#aaa; }
+
+/* ── Log ── */
+.log-wrap {
+  flex:1; overflow-y:auto; overflow-x:hidden;
+  padding:8px 12px;
+}
+.log-wrap::-webkit-scrollbar { width:3px; }
+.log-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+.entry {
+  display:grid;
+  grid-template-columns:56px 44px 1fr;
+  gap:0 10px;
+  padding:3px 6px;
+  border-radius:3px;
+  animation:fadeIn .15s ease;
+  border-left:2px solid transparent;
+  margin-bottom:2px;
+}
+.entry:hover { background:rgba(255,255,255,.03); }
+@keyframes fadeIn { from{opacity:0;transform:translateX(-4px);} to{opacity:1;transform:translateX(0);} }
+
+.entry.sx    { border-left-color:var(--cyan); }
+.entry.pc    { border-left-color:var(--green); }
+.entry.cc    { border-left-color:var(--orange); }
+.entry.note  { border-left-color:#aa88ff; }
+.entry.other { border-left-color:#555; }
+
+.e-time { font-size:10px; color:var(--tdim); align-self:start; padding-top:1px; }
+.e-type {
+  font-size:10px; font-weight:700; align-self:start; padding-top:1px;
+}
+.entry.sx    .e-type { color:var(--cyan); }
+.entry.pc    .e-type { color:var(--green); }
+.entry.cc    .e-type { color:var(--orange); }
+.entry.note  .e-type { color:#aa88ff; }
+.entry.other .e-type { color:#888; }
+
+.e-data { font-size:11px; color:var(--text); word-break:break-all; }
+.e-hex  { font-size:10px; color:var(--tdim); margin-top:2px; word-break:break-all; }
+.e-desc { font-size:10px; color:var(--cyan); margin-top:2px; font-style:italic; }
+
+/* ── SysEx detail ── */
+.sx-bytes {
+  display:flex; flex-wrap:wrap; gap:4px;
+  margin-top:4px;
+}
+.sx-byte {
+  font-size:11px;
+  padding:1px 5px;
+  border-radius:2px;
+  background:rgba(0,255,204,.06);
+  border:1px solid rgba(0,255,204,.15);
+  color:var(--cyan);
+}
+.sx-byte.known  { background:rgba(0,255,102,.08); border-color:rgba(0,255,102,.3); color:var(--green); }
+.sx-byte.marked { background:rgba(255,107,0,.1);  border-color:rgba(255,107,0,.4); color:var(--orange); font-weight:700; }
+
+/* ── Botão enviar teste ── */
+.send-panel {
+  padding:8px 16px;
+  border-top:1px solid var(--border);
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  flex-shrink:0;
+}
+.send-panel input {
+  font-family:'Share Tech Mono', monospace;
+  font-size:11px; flex:1; min-width:180px;
+  background:var(--dim); border:1px solid var(--border);
+  border-radius:4px; padding:6px 10px; color:var(--text);
+  outline:none;
+}
+.send-panel input:focus { border-color:var(--cyan); }
+.send-panel label { font-size:10px; color:var(--tdim); }
+
+.empty-state {
+  text-align:center; padding:40px 20px;
+  color:var(--tdim); font-size:12px; line-height:2;
+}
+.empty-state .big { font-size:32px; display:block; margin-bottom:8px; opacity:.3; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">FMC · <span>MIDI SNIFFER</span></div>
+  <div class="status-dot" id="dot"></div>
+  <div class="status-txt" id="statusTxt">Desconectado</div>
+  <button class="btn primary" id="btnConectar" onclick="conectar()">CONECTAR</button>
+  <button class="btn danger"  onclick="limpar()">LIMPAR</button>
+</div>
+
+<div class="filters">
+  <span style="font-size:10px;color:var(--tdim);align-self:center;">FILTROS:</span>
+  <button class="filter-btn on" data-type="sx"    onclick="toggleFiltro(this)">SYSEX</button>
+  <button class="filter-btn on" data-type="pc"    onclick="toggleFiltro(this)">PROG CHG</button>
+  <button class="filter-btn on" data-type="cc"    onclick="toggleFiltro(this)">CTRL CHG</button>
+  <button class="filter-btn on" data-type="note"  onclick="toggleFiltro(this)">NOTE</button>
+  <button class="filter-btn on" data-type="other" onclick="toggleFiltro(this)">OUTROS</button>
+</div>
+
+<div class="log-wrap" id="logWrap">
+  <div class="empty-state" id="emptyState">
+    <span class="big">⬡</span>
+    Conecte a G1On via USB OTG<br>
+    Toque em <strong>CONECTAR</strong><br>
+    Todas as mensagens MIDI recebidas aparecerão aqui<br><br>
+    <em>Dica: ajuste o BPM manualmente na G1On<br>e observe os bytes SysEx capturados</em>
+  </div>
+</div>
+
+<div class="send-panel">
+  <label>ENVIAR HEX:</label>
+  <input id="sendInput" type="text" placeholder="F0 52 00 5E 29 F7" spellcheck="false">
+  <button class="btn" onclick="enviarHex()">ENVIAR</button>
+  <button class="btn" onclick="enviarDumpReq()" title="Solicita dump do patch atual">DUMP REQ</button>
+</div>
+
+<script>
+'use strict';
+
+let midiAccess = null;
+let filtros = { sx:true, pc:true, cc:true, note:true, other:true };
+let totalMensagens = 0;
+
+// Bytes conhecidos da Zoom G1On para anotação
+const ZOOM_KNOWN = {
+  '0xF0': 'SysEx Start',
+  '0xF7': 'SysEx End',
+  '0x52': 'Zoom MFR ID',
+  '0x00': 'Device ID',
+  '0x5E': 'G1On Model',
+  '0x4D': 'G1 (alt)',
+  '0x28': 'Dump Response',
+  '0x29': 'Dump Request',
+  '0x50': 'Edit ON',
+  '0x51': 'Edit OFF',
+  '0x31': 'Param Set',
+  '0x33': 'Editor Ping',
+};
+
+// ── MIDI ─────────────────────────────────────────────────────────
+async function conectar(){
+  if(!navigator.requestMIDIAccess){
+    setStatus('Web MIDI não suportado. Use Chrome.', 'err');
+    return;
+  }
+  setStatus('Solicitando permissão…', '');
+  document.getElementById('btnConectar').textContent = 'AGUARDANDO…';
+  document.getElementById('btnConectar').className = 'btn active';
+
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+    midiAccess.onstatechange = onStateChange;
+    conectarEntradas();
+    verificarConexao();
+    document.getElementById('btnConectar').textContent = 'RECONECTAR';
+    document.getElementById('btnConectar').className = 'btn';
+  } catch(e) {
+    // Tenta sem sysex
+    try {
+      midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+      midiAccess.onstatechange = onStateChange;
+      conectarEntradas();
+      verificarConexao();
+      setStatus('Conectado sem SysEx (permissão limitada)', 'on');
+      document.getElementById('btnConectar').textContent = 'RECONECTAR';
+      document.getElementById('btnConectar').className = 'btn';
+    } catch(e2) {
+      setStatus('Permissão negada: ' + e2.message, 'err');
+      document.getElementById('btnConectar').textContent = 'TENTAR NOVAMENTE';
+      document.getElementById('btnConectar').className = 'btn primary';
+    }
+  }
+}
+
+function conectarEntradas(){
+  for(const input of midiAccess.inputs.values()){
+    input.onmidimessage = onMensagem;
+  }
+}
+
+function onStateChange(e){
+  if(e.port.type === 'input') e.port.onmidimessage = onMensagem;
+  verificarConexao();
+}
+
+function verificarConexao(){
+  const outputs = [...midiAccess.outputs.values()];
+  const inputs  = [...midiAccess.inputs.values()];
+  const zoomOut = outputs.find(o => contemZoom(o.name));
+  const zoomIn  = inputs.find(i  => contemZoom(i.name));
+
+  if(zoomIn || zoomOut){
+    const nome = (zoomIn||zoomOut).name;
+    setStatus(`G1On detectada: ${nome}`, 'g1on');
+    adicionarEntradaSistema(`G1On conectada → ${nome}`);
+  } else if(inputs.length > 0 || outputs.length > 0){
+    setStatus(`${inputs.length} entrada(s), ${outputs.length} saída(s) MIDI`, 'on');
+    adicionarEntradaSistema(`MIDI ativo: ${inputs.map(i=>i.name).join(', ')||'—'}`);
+  } else {
+    setStatus('Nenhum dispositivo MIDI encontrado', '');
+    adicionarEntradaSistema('Nenhum dispositivo MIDI encontrado');
+  }
+}
+
+function contemZoom(nome){
+  return ['zoom','g1on','g1xon','g1'].some(k => (nome||'').toLowerCase().includes(k));
+}
+
+// ── Recebe mensagem MIDI ──────────────────────────────────────────
+function onMensagem(event){
+  const data   = event.data;
+  const status = data[0];
+  let tipo, descricao, dados;
+
+  // Classifica
+  if(status === 0xF0){
+    tipo = 'sx';
+    descricao = analisarSysEx(data);
+    dados = null; // renderizado especialmente
+  } else if((status & 0xF0) === 0xC0){
+    tipo = 'pc';
+    const canal = (status & 0x0F) + 1;
+    const prog  = data[1];
+    descricao = `Program Change  CH${canal}  PROG ${prog}  (${String.fromCharCode(65 + Math.floor(prog/10))}${prog%10})`;
+    dados = hexBytes(data);
+  } else if((status & 0xF0) === 0xB0){
+    tipo = 'cc';
+    const canal = (status & 0x0F) + 1;
+    const cc    = data[1];
+    const val   = data[2];
+    descricao = `Control Change  CH${canal}  CC${cc}  VAL ${val}`;
+    dados = hexBytes(data);
+  } else if((status & 0xF0) === 0x90 || (status & 0xF0) === 0x80){
+    tipo = 'note';
+    const canal = (status & 0x0F) + 1;
+    const nota  = data[1];
+    const vel   = data[2];
+    const on    = (status & 0xF0) === 0x90 && vel > 0;
+    descricao = `Note ${on?'ON':'OFF'}  CH${canal}  NOTE ${nota}  VEL ${vel}`;
+    dados = hexBytes(data);
+  } else {
+    tipo = 'other';
+    descricao = `Status 0x${status.toString(16).toUpperCase()}`;
+    dados = hexBytes(data);
+  }
+
+  if(!filtros[tipo]) return;
+
+  adicionarEntrada(tipo, descricao, dados, tipo==='sx' ? data : null);
+}
+
+// ── Analisa SysEx Zoom ────────────────────────────────────────────
+function analisarSysEx(data){
+  const h = arr => Array.from(data).map(b => '0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+
+  if(data.length < 5) return `SysEx curto (${data.length}b): ${h()}`;
+
+  const mfr   = data[1];
+  const dev   = data[2];
+  const model = data[3];
+  const cmd   = data[4];
+
+  if(mfr === 0x52){
+    const modelNome = model === 0x5E ? 'G1On(5E)' : model === 0x4D ? 'G1(4D)' : `0x${model.toString(16).toUpperCase()}`;
+    const cmdNome = {
+      0x28:'Dump Response', 0x29:'Dump Request',
+      0x50:'Edit ON', 0x51:'Edit OFF',
+      0x31:'Param Set', 0x33:'Editor Ping',
+    }[cmd] || `CMD 0x${cmd.toString(16).toUpperCase()}`;
+
+    if(cmd === 0x31 && data.length >= 9){
+      // Decodifica BPM se for param de tempo (0A 07)
+      const p1 = data[5], p2 = data[6];
+      if(p1 === 0x0A && p2 === 0x07){
+        const lsb = data[7], msb = data[8];
+        const bpmVal = (msb << 7) | lsb;
+        const bpm = bpmVal + 40;
+        return `ZOOM ${modelNome} · Param Set · TEMPO → LSB=0x${lsb.toString(16).toUpperCase()} MSB=0x${msb.toString(16).toUpperCase()} → VAL=${bpmVal} → BPM=${bpm}`;
+      }
+      const payload = Array.from(data.slice(5, data.length-1)).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+      return `ZOOM ${modelNome} · Param Set · PAYLOAD: ${payload}`;
+    }
+
+    return `ZOOM ${modelNome} · ${cmdNome} · ${data.length}b`;
+  }
+
+  if(data[1] === 0x7E){
+    return `Universal SysEx · ${data.length}b`;
+  }
+
+  return `SysEx MFR=0x${mfr.toString(16).toUpperCase()} · ${data.length}b`;
+}
+
+// ── Renderiza entrada no log ──────────────────────────────────────
+function adicionarEntrada(tipo, descricao, dados, sysexData){
+  const wrap = document.getElementById('logWrap');
+  const empty = document.getElementById('emptyState');
+  if(empty) empty.remove();
+
+  const ts = new Date().toLocaleTimeString('pt', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const ms = String(new Date().getMilliseconds()).padStart(3,'0');
+
+  const div = document.createElement('div');
+  div.className = `entry ${tipo}`;
+
+  let html = `
+    <div class="e-time">${ts}.${ms}</div>
+    <div class="e-type">${tipo.toUpperCase()}</div>
+    <div>
+      <div class="e-data">${escapeHtml(descricao)}</div>
+  `;
+
+  if(sysexData && sysexData.length > 0){
+    html += '<div class="sx-bytes">';
+    for(let i=0; i<sysexData.length; i++){
+      const b = sysexData[i];
+      const hex = '0x' + b.toString(16).toUpperCase().padStart(2,'0');
+      const isKnown = !!ZOOM_KNOWN[hex];
+      // Marca bytes de payload (índice 5 em diante, antes do F7)
+      const isPayload = i >= 5 && i < sysexData.length - 1;
+      const cls = isPayload ? 'marked' : isKnown ? 'known' : '';
+      const title = ZOOM_KNOWN[hex] ? ` title="${ZOOM_KNOWN[hex]}"` : '';
+      html += `<span class="sx-byte ${cls}"${title}>${hex}</span>`;
+    }
+    html += '</div>';
+  } else if(dados){
+    html += `<div class="e-hex">${escapeHtml(dados)}</div>`;
+  }
+
+  html += '</div>';
+  div.innerHTML = html;
+
+  // Insere no final e scrolla
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+
+  // Limita a 200 entradas
+  const entries = wrap.querySelectorAll('.entry');
+  if(entries.length > 200) entries[0].remove();
+
+  totalMensagens++;
+}
+
+function adicionarEntradaSistema(msg){
+  const wrap = document.getElementById('logWrap');
+  const div = document.createElement('div');
+  div.style.cssText = 'padding:4px 6px;font-size:10px;color:#444455;font-style:italic;border-left:2px solid #2a2a3a;margin-bottom:2px;';
+  div.textContent = '— ' + msg;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── Envio manual ─────────────────────────────────────────────────
+function enviarHex(){
+  const input = document.getElementById('sendInput').value.trim();
+  if(!input){ return; }
+
+  const bytes = input.split(/[\s,]+/)
+    .filter(s => s.length > 0)
+    .map(s => parseInt(s.startsWith('0x') || s.startsWith('0X') ? s : '0x'+s, 16))
+    .filter(n => !isNaN(n) && n >= 0 && n <= 255);
+
+  if(bytes.length === 0){ alert('Bytes inválidos'); return; }
+
+  const outputs = midiAccess ? [...midiAccess.outputs.values()] : [];
+  if(outputs.length === 0){ alert('Nenhuma saída MIDI conectada'); return; }
+
+  const out = outputs.find(o => contemZoom(o.name)) || outputs[0];
+  try {
+    out.send(bytes);
+    adicionarEntradaSistema(`TX → ${out.name}: ${bytes.map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ')}`);
+  } catch(e) {
+    adicionarEntradaSistema(`ERRO TX: ${e.message}`);
+  }
+}
+
+function enviarDumpReq(){
+  document.getElementById('sendInput').value = 'F0 52 00 5E 29 F7';
+  enviarHex();
+}
+
+// ── UI helpers ───────────────────────────────────────────────────
+function setStatus(txt, state){
+  const dot = document.getElementById('dot');
+  const el  = document.getElementById('statusTxt');
+  dot.className = 'status-dot ' + state;
+  el.textContent = txt;
+}
+
+function toggleFiltro(btn){
+  const tipo = btn.dataset.type;
+  filtros[tipo] = !filtros[tipo];
+  btn.classList.toggle('on', filtros[tipo]);
+}
+
+function limpar(){
+  const wrap = document.getElementById('logWrap');
+  wrap.innerHTML = '';
+  totalMensagens = 0;
+}
+
+function hexBytes(data){
+  return Array.from(data).map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
