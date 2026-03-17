@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FMC · Dump E0–E9</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+:root{
+  --bg:#080810;--surf:#0e0e18;--border:#2a2a3a;
+  --green:#00ff66;--cyan:#00ffcc;--amber:#ffb930;
+  --red:#ff2244;--text:#ccccdd;--dim:#555566;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;}
+body{display:flex;flex-direction:column;align-items:center;padding:20px 16px 60px;gap:14px;}
+
+.title{font-family:'Orbitron',sans-serif;font-size:clamp(14px,4vw,20px);font-weight:900;letter-spacing:.1em;color:#fff;text-align:center;}
+.title span{color:var(--cyan);}
+.subtitle{font-size:9px;color:var(--dim);letter-spacing:.12em;text-align:center;margin-top:3px;}
+
+.card{width:100%;max-width:700px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.card-title{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:6px;}
+
+.conn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all .3s;}
+.dot.off{background:#222;}
+.dot.waiting{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink .7s ease-in-out infinite alternate;}
+.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+.dot.g1on{background:var(--cyan);box-shadow:0 0 12px var(--cyan);}
+.dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
+@keyframes blink{from{opacity:.4;}to{opacity:1;}}
+.conn-txt{font-size:11px;color:var(--text);flex:1;}
+.conn-txt.err{color:var(--red);}
+.conn-txt.g1on{color:var(--cyan);}
+
+.btn{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.06em;padding:9px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;width:100%;}
+.btn.primary{border-color:var(--cyan);color:var(--cyan);background:rgba(0,255,204,.05);}
+.btn.go{border-color:var(--green);color:var(--green);background:rgba(0,255,102,.06);font-size:13px;}
+.btn.go:disabled{border-color:var(--border);color:var(--dim);background:transparent;cursor:not-allowed;}
+.btn.save{border-color:var(--amber);color:var(--amber);background:rgba(255,185,48,.05);}
+.btn.save:disabled{border-color:var(--border);color:var(--dim);cursor:not-allowed;}
+.btn.danger{border-color:var(--red);color:var(--red);}
+
+.step-row{display:flex;gap:4px;}
+.step{flex:1;height:26px;border-radius:4px;border:1px solid var(--border);background:#111120;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--dim);transition:all .3s;}
+.step.active{border-color:var(--amber);color:var(--amber);animation:blink .5s ease-in-out infinite alternate;}
+.step.done{border-color:var(--green);color:var(--green);}
+.step.failed{border-color:var(--red);color:var(--red);}
+
+.progress-wrap{width:100%;background:#111120;border-radius:4px;height:5px;overflow:hidden;border:1px solid var(--border);}
+.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;transition:width .3s;}
+.status{font-size:10px;color:var(--dim);text-align:center;min-height:15px;}
+.status.ativo{color:var(--amber);}
+.status.ok{color:var(--green);}
+.status.err{color:var(--red);}
+
+/* Log */
+.log-box{width:100%;max-width:700px;background:var(--surf);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.log-header{padding:6px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.log-header span{font-size:9px;color:var(--dim);letter-spacing:.12em;}
+.log-body{height:160px;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:2px;}
+.log-body::-webkit-scrollbar{width:3px;}
+.log-body::-webkit-scrollbar-thumb{background:var(--border);}
+.log-entry{font-size:9px;line-height:1.4;word-break:break-all;}
+.log-entry.sys{color:var(--dim);font-style:italic;}
+.log-entry.rx{color:var(--cyan);}
+.log-entry.ok{color:var(--green);}
+.log-entry.warn{color:var(--amber);}
+.log-entry.err{color:var(--red);}
+
+/* Hex viewer */
+.patch-card{width:100%;max-width:700px;background:var(--surf);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.patch-header{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.patch-id{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--green);}
+.patch-name{font-size:11px;color:var(--text);}
+.patch-vol{font-size:10px;color:var(--amber);}
+.patch-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+
+/* Slot viewer */
+.slot{border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.slot-header{background:#111120;padding:5px 10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.slot-num{font-size:9px;color:var(--dim);}
+.slot-id{font-size:10px;color:var(--cyan);}
+.slot-name{font-size:10px;color:var(--text);}
+.slot-en{font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid;}
+.slot-en.on{color:var(--green);border-color:var(--green);}
+.slot-en.off{color:var(--dim);border-color:var(--border);}
+.slot-tap{font-size:9px;color:var(--amber);}
+
+.hex-grid{padding:8px 10px;display:flex;flex-wrap:wrap;gap:2px;font-size:9px;}
+.hb{display:inline-flex;flex-direction:column;align-items:center;width:28px;}
+.hb .hi{color:var(--text);}
+.hb .lo{color:var(--dim);font-size:7px;}
+.hb.highlight .hi{color:var(--amber);font-weight:700;}
+.hb.highlight-green .hi{color:var(--green);font-weight:700;}
+.hb.highlight-cyan .hi{color:var(--cyan);}
+
+/* Param table */
+.param-table{width:100%;border-collapse:collapse;font-size:9px;margin-top:4px;}
+.param-table th{background:#111120;color:var(--dim);padding:3px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.param-table td{padding:3px 8px;border-bottom:1px solid #1a1a28;color:var(--text);}
+.param-table td.label{color:var(--cyan);}
+.param-table td.val{color:var(--green);}
+.param-table td.raw{color:var(--dim);font-size:8px;}
+</style>
+</head>
+<body>
+
+<div class="title">FMC · <span>DUMP E0–E9</span></div>
+<div class="subtitle">ANÁLISE PROFUNDA DE PARÂMETROS · ZOOM G1On fw 1.21</div>
+
+<!-- Conexão -->
+<div class="card">
+  <div class="card-title">⬡ Conexão MIDI</div>
+  <div class="conn-row">
+    <div class="dot off" id="dot"></div>
+    <div class="conn-txt" id="connTxt">Aguardando conexão</div>
+  </div>
+  <button class="btn primary" onclick="conectar()">CONECTAR MIDI</button>
+</div>
+
+<!-- Scan -->
+<div class="card">
+  <div class="card-title">⬡ Varredura E0 → E9</div>
+  <div class="step-row" id="stepRow"></div>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="status" id="statusLine">Aguardando…</div>
+  <button class="btn go" id="btnGo" onclick="iniciarScan()" disabled>▶ INICIAR DUMP E0–E9</button>
+  <button class="btn danger" id="btnStop" onclick="pararScan()" style="display:none">■ PARAR</button>
+</div>
+
+<!-- Exportar -->
+<div class="card">
+  <div class="card-title">⬡ Exportar</div>
+  <button class="btn save" id="btnJson" onclick="salvarJSON()" disabled>⬇ JSON COMPLETO (todos os bytes + parâmetros)</button>
+  <button class="btn save" id="btnTxt"  onclick="salvarTXT()"  disabled>⬇ TXT ANÁLISE DE PARÂMETROS</button>
+</div>
+
+<!-- Log -->
+<div class="log-box">
+  <div class="log-header">
+    <span>LOG</span>
+    <button class="btn" style="width:auto;padding:2px 8px;font-size:8px;" onclick="limparLog()">LIMPAR</button>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<!-- Resultados -->
+<div id="resultados"></div>
+
+<script>
+'use strict';
+
+// ── Protocolo ────────────────────────────────────────────────────
+const ZOOM_MFR   = 0x52;
+const ZOOM_DEV   = 0x00;
+const ZOOM_MODEL = 0x63;
+const BANK_E     = 4; // índice do banco E (A=0,B=1,C=2,D=3,E=4)
+const PATCHES    = 10;
+const PC_WAIT    = 700;
+const DUMP_WAIT  = 2500;
+const SX_DELAY   = 80;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── FX DB (IDs confirmados + incompletos) ────────────────────────
+// IDs confirmados pelo dump J0:
+//   0x280B=Delay, 0x214C=Flanger, 0x004C=Phaser, 0x0180=Tremolo, 0x0100=Vibrato
+const FX_DB = {
+  0x0001:'Comp',       0x0002:'RackComp',   0x0003:'SlowATTCK',
+  0x0004:'ZNR',        0x0005:'NoiseGate',  0x0008:'GraphicEQ',
+  0x0009:'ParaEQ',     0x000A:'AutoWah',    0x000B:'Resonance',
+  0x000C:'Cry',        0x000D:'SlowGear',   0x000E:'Tremolo',
+  0x0010:'OverDrive',  0x0011:'Distortion', 0x0012:'TS Drive',
+  0x0013:'Guvnor',     0x0014:'MetalWRLD',  0x0015:'FuzzSmile',
+  0x0016:'GreatMuff',
+  0x0020:'FD Combo',   0x0021:'VX Combo',   0x0022:'US Blues',
+  0x0023:'BG Crunch',  0x0024:'HW Stack',   0x0025:'MS Crunch',
+  0x0026:'Rectifier',
+  // Confirmados dump J0:
+  0x0100:'Vibrato',    0x0180:'Tremolo',
+  0x004C:'Phaser',     0x214C:'Flanger',    0x280B:'Delay',
+  // Confirmados dumps anteriores:
+  0x0052:'TapeEcho',   0x0050:'Delay2',
+  0x0030:'Chorus',     0x0031:'StereoChorus',0x0032:'SuperChorus',
+  0x0033:'Flanger2',   0x0034:'Vibrato2',   0x0035:'Phaser2',
+  0x0036:'Step',       0x0037:'Tremolo2',   0x0038:'AutoPan',
+  0x0039:'RingMod',    0x003A:'Detune',     0x003B:'PitchShift',
+  0x0040:'MonoPitch',  0x0041:'HPS',        0x0042:'Octave',
+  0x0051:'AnalogDly',  0x0053:'ModDelay',   0x0054:'FilterDly',
+  0x0055:'PingPong',   0x0056:'ReverseDly',
+  0x0060:'Hall',       0x0061:'Room',       0x0062:'Spring',
+  0x0063:'Arena',      0x0064:'EarlyRef',   0x0070:'Air',
+  // Amp sims confirmados:
+  0x0201:'AmpSim-C',   0x0600:'AmpSim-Bass',0x087D:'Default',
+  0x2100:'AmpSim-A',   0x2102:'AmpSim-B',
+  // Cab:
+  0x0888:'Cab-Bass',   0x2002:'Cab-BC',     0x22C8:'Cab-A',
+  0x2A48:'Cab-D',
+};
+
+const FX_TAP = {
+  0x0100:'Rate', 0x0180:'Rate', 0x004C:'Rate', 0x214C:'Rate',
+  0x280B:'Time', 0x0052:'Time', 0x0050:'Time', 0x0051:'Time',
+  0x0053:'Time', 0x0054:'Time', 0x0055:'Time', 0x0056:'Time',
+  0x000A:'Rate', 0x0030:'Rate', 0x0031:'Rate', 0x0032:'Rate',
+  0x0033:'Rate', 0x0034:'Rate', 0x0035:'Rate', 0x0036:'Rate',
+  0x0037:'Rate', 0x0038:'Rate', 0x0039:'Rate',
+};
+
+// ── Estado ────────────────────────────────────────────────────────
+let midiAccess=null, midiOut=null, midiReady=false;
+let scanAtivo=false, pendingDump=null, modelId=0x63;
+let resultados=[], allSysex=[];
+
+// ── Steps ─────────────────────────────────────────────────────────
+const stepRow = document.getElementById('stepRow');
+for(let i=0;i<10;i++){
+  const s=document.createElement('div');
+  s.className='step'; s.id=`step${i}`; s.textContent=`E${i}`;
+  stepRow.appendChild(s);
+}
+
+// ── MIDI ──────────────────────────────────────────────────────────
+async function conectar(){
+  setDot('waiting'); setConn('Solicitando permissão…');
+  try{ midiAccess=await navigator.requestMIDIAccess({sysex:true}); }
+  catch(e1){
+    try{ midiAccess=await navigator.requestMIDIAccess({sysex:false}); log('Sem SysEx','warn'); }
+    catch(e2){ setDot('err');setConn('Permissão negada',true); return; }
+  }
+  midiReady=true;
+  midiAccess.onstatechange=e=>{if(e.port.type==='input')e.port.onmidimessage=onMIDI; detectar();};
+  detectar();
+}
+
+function detectar(){
+  const outs=[...midiAccess.outputs.values()];
+  const ins=[...midiAccess.inputs.values()];
+  for(const i of ins) i.onmidimessage=onMIDI;
+  const KW=['zoom','g1on','g1xon','g1'];
+  midiOut=outs.find(o=>KW.some(k=>o.name.toLowerCase().includes(k)))||outs[0]||null;
+  if(!midiOut){setDot('err');setConn('Sem dispositivo',true);return;}
+  const isG1=KW.some(k=>midiOut.name.toLowerCase().includes(k));
+  setDot(isG1?'g1on':'ok');
+  setConn(isG1?`G1On: ${midiOut.name}`:midiOut.name,false,isG1);
+  log(`MIDI: ${midiOut.name}`,'ok');
+  document.getElementById('btnGo').disabled=false;
+  setStatus('Pronto.','ok');
+}
+
+function onMIDI(e){
+  const d=e.data; if(!d||d.length<1) return;
+  if(d[0]===0xF0){
+    const hex=Array.from(d).map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
+    allSysex.push({ts:new Date().toISOString(),bytes:Array.from(d),hex});
+    if(d.length>=5&&d[1]===ZOOM_MFR&&d[4]===0x28){
+      modelId=d[3];
+      log(`✓ 0x28 model=0x${d[3].toString(16).toUpperCase()} ${d.length}b`,'ok');
+      if(pendingDump){pendingDump(Array.from(d));pendingDump=null;}
+    }
+    if(d.length>=7&&d[1]===0x7E&&d[3]===0x06&&d[4]===0x02)
+      log(`Identity: model=0x${d[6].toString(16).toUpperCase()} fw="${String.fromCharCode(d[10],d[11],d[12],d[13])}"`,'ok');
+  }
+}
+
+// ── Handshake ─────────────────────────────────────────────────────
+async function abrirEditor(){
+  if(!midiOut||!midiReady) return;
+  midiOut.send([0xF0,0x7E,0x00,0x06,0x01,0xF7]);
+  await sleep(100);
+  midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,ZOOM_MODEL,0x50,0xF7]);
+  await sleep(SX_DELAY);
+  midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,ZOOM_MODEL,0x33,0xF7]);
+  await sleep(SX_DELAY);
+}
+async function fecharEditor(){
+  if(!midiOut||!midiReady) return;
+  midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,ZOOM_MODEL,0x51,0xF7]);
+  await sleep(SX_DELAY);
+}
+function aguardarDump(ms){
+  return new Promise(res=>{
+    const t=setTimeout(()=>{pendingDump=null;res(null);},ms);
+    pendingDump=bytes=>{clearTimeout(t);res(bytes);};
+  });
+}
+
+// ── Parser ────────────────────────────────────────────────────────
+function decode7bitNome(data,off,len){
+  const c=[];let i=off;
+  while(i<off+len&&i<data.length-1){
+    const msbs=data[i++];
+    for(let bit=0;bit<7&&i<data.length-1&&c.length<12;bit++,i++){
+      const b=data[i]|(((msbs>>bit)&1)<<7);
+      if(b>=0x20&&b<0x7F) c.push(String.fromCharCode(b));
+    }
+  }
+  return c.join('').trim();
+}
+
+// Unpack 7-bit dos parâmetros de um slot
+// byte[0,1]=ID, byte[2]=MSBs grupo1, byte[3..9]=params0..6
+// byte[10]=MSBs grupo2, byte[11..17]=params7..13, byte[18,19]=restante
+function unpackSlotParams(slot){
+  const params=[];
+  for(const [msb_idx,start,count] of [[2,3,7],[10,11,7]]){
+    const msbs=slot[msb_idx]||0;
+    for(let bit=0;bit<count;bit++){
+      const idx=start+bit;
+      if(idx<slot.length){
+        params.push(slot[idx]|(((msbs>>bit)&1)<<7));
+      }
+    }
+  }
+  // Últimos 2 bytes raw
+  params.push(slot[18]||0, slot[19]||0);
+  return params;
+}
+
+function parsePatch(data, patchLabel){
+  const r={
+    patch:patchLabel, nome:'', volume:0,
+    slots:[], rawBytes:data,
+    rawHex:data.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '),
+    timestamp:new Date().toISOString()
+  };
+  r.nome   = decode7bitNome(data,112,21);
+  r.volume = data[110]||0;  // byte[110] = Patch Output Volume (confirmado dump4)
+  for(let i=0;i<5;i++){
+    const off=9+i*20;
+    if(off+19>=data.length) break;
+    const slot=data.slice(off,off+20);
+    const id=(slot[0]<<7)|slot[1];
+    const enabled=(slot[2]&1)===1;
+    const nome=FX_DB[id]||`UNK_0x${id.toString(16).toUpperCase().padStart(4,'0')}`;
+    const tap=FX_TAP[id]||null;
+    const params=unpackSlotParams(slot);
+    r.slots.push({
+      slot:i+1, id, idHex:'0x'+id.toString(16).toUpperCase().padStart(4,'0'),
+      nome, enabled, tap,
+      params,          // 16 valores desempacotados
+      rawSlot:Array.from(slot),
+      rawSlotHex:Array.from(slot).map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' ')
+    });
+  }
+  return r;
+}
+
+// ── Scan ──────────────────────────────────────────────────────────
+async function iniciarScan(){
+  if(!midiReady||!midiOut){alert('Conecte o MIDI.');return;}
+  scanAtivo=true; resultados=[]; allSysex=[]; modelId=0x63;
+  document.getElementById('btnGo').style.display='none';
+  document.getElementById('btnStop').style.display='block';
+  ['btnJson','btnTxt'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('resultados').innerHTML='';
+  for(let i=0;i<10;i++) document.getElementById(`step${i}`).className='step';
+  log('═══ DUMP E0→E9 ═══','ok');
+
+  // Abrir editor UMA VEZ antes de começar
+  log('Abrindo modo editor…','sys');
+  await abrirEditor();
+  log('Modo editor ativo.','ok');
+
+  let timeoutsConsecutivos = 0;
+
+  for(let p=0;p<10;p++){
+    if(!scanAtivo) break;
+    const pc = BANK_E*10 + p;
+    const label = `E${p}`;
+    document.getElementById(`step${p}`).className='step active';
+    setStatus(`${label}: PC ${pc}…`,'ativo');
+    setProgress((p/10)*100);
+    log(`── ${label} ──`,'sys');
+
+    try{midiOut.send([0xC0,pc]);} catch(e){log(`ERRO PC: ${e.message}`,'err');continue;}
+    await sleep(PC_WAIT);
+    if(!scanAtivo) break;
+
+    // Dump request — editor já aberto
+    try{midiOut.send([0xF0,ZOOM_MFR,ZOOM_DEV,modelId,0x29,0xF7]);}
+    catch(e){log(`ERRO dump: ${e.message}`,'err');continue;}
+
+    setStatus(`${label}: aguardando 0x28…`,'ativo');
+    const raw=await aguardarDump(DUMP_WAIT);
+
+    if(raw){
+      timeoutsConsecutivos = 0;
+      const parsed=parsePatch(raw,label);
+      resultados.push(parsed);
+      renderPatch(parsed);
+      log(`✓ ${label} "${parsed.nome}" vol=${parsed.volume}`,'ok');
+    } else {
+      timeoutsConsecutivos++;
+      log(`✗ Timeout ${label}`,'warn');
+      resultados.push({patch:label,erro:'Timeout',rawBytes:null});
+      if(timeoutsConsecutivos >= 3){
+        log('3 timeouts — reabrindo editor…','warn');
+        await abrirEditor();
+        timeoutsConsecutivos = 0;
+      }
+    }
+    await sleep(200);
+  }
+
+  // Fecha editor ao terminar
+  await fecharEditor();
+  log('Modo editor fechado.','sys');
+
+  setProgress(100);
+  const ok=resultados.filter(r=>r.rawBytes).length;
+  setStatus(`Completo: ${ok}/10`,'ok');
+  log(`═══ FIM ${ok}/10 ═══`,'ok');
+  scanAtivo=false;
+  document.getElementById('btnGo').style.display='block';
+  document.getElementById('btnStop').style.display='none';
+  document.getElementById('btnGo').textContent='▶ REPETIR';
+  ['btnJson','btnTxt'].forEach(id=>document.getElementById(id).disabled=ok===0);
+}
+
+function pararScan(){
+  scanAtivo=false;
+  if(pendingDump){pendingDump(null);pendingDump=null;}
+}
+
+// ── Render ────────────────────────────────────────────────────────
+function renderPatch(p){
+  const wrap=document.getElementById('resultados');
+  const card=document.createElement('div');
+  card.className='patch-card';
+
+  // Header
+  const hdr=document.createElement('div');
+  hdr.className='patch-header';
+  hdr.innerHTML=`
+    <span class="patch-id">${p.patch}</span>
+    <span class="patch-name">${p.nome||'—'}</span>
+    <span class="patch-vol">VOL ${p.volume}</span>`;
+  card.appendChild(hdr);
+
+  const body=document.createElement('div');
+  body.className='patch-body';
+
+  // Hex dump completo (bytes 5-111, payload sem header/nome)
+  const hexDiv=document.createElement('div');
+  hexDiv.style.cssText='font-size:8px;color:var(--dim);word-break:break-all;line-height:1.6;';
+  hexDiv.innerHTML=`<span style="color:var(--dim);font-size:7px;">RAW BYTES [0-133]:</span><br>`+
+    p.rawBytes.map((b,i)=>{
+      const h=b.toString(16).toUpperCase().padStart(2,'0');
+      // Marca byte[110] = Patch Output Volume
+      if(i===110) return `<span style="color:var(--amber)">${h}</span>`;
+      // Marca área de slots
+      if(i>=9&&i<109) return `<span style="color:var(--text)">${h}</span>`;
+      // Marca área de nome
+      if(i>=112&&i<133) return `<span style="color:var(--cyan)">${h}</span>`;
+      return `<span>${h}</span>`;
+    }).join(' ');
+  body.appendChild(hexDiv);
+
+  // Slots
+  for(const s of p.slots){
+    const slotDiv=document.createElement('div');
+    slotDiv.className='slot';
+
+    const sh=document.createElement('div');
+    sh.className='slot-header';
+    const enClass=s.enabled?'on':'off';
+    const tapStr=s.tap?`<span class="slot-tap">⏱ ${s.tap}</span>`:'';
+    sh.innerHTML=`
+      <span class="slot-num">SLOT ${s.slot}</span>
+      <span class="slot-id">${s.idHex}</span>
+      <span class="slot-name">${s.nome}</span>
+      <span class="slot-en ${enClass}">${s.enabled?'ON':'OFF'}</span>
+      ${tapStr}`;
+    slotDiv.appendChild(sh);
+
+    // Hex do slot com índices
+    const hexGrid=document.createElement('div');
+    hexGrid.className='hex-grid';
+    s.rawSlot.forEach((b,i)=>{
+      const hb=document.createElement('div');
+      hb.className='hb'+(i<2?' highlight-cyan':i===2?' highlight':'');
+      hb.innerHTML=`<span class="hi">${b.toString(16).toUpperCase().padStart(2,'0')}</span><span class="lo">[${i}]</span>`;
+      hexGrid.appendChild(hb);
+    });
+    slotDiv.appendChild(hexGrid);
+
+    // Parâmetros desempacotados
+    const pTable=document.createElement('table');
+    pTable.className='param-table';
+    pTable.innerHTML=`<thead><tr><th>P#</th><th>VALOR</th><th>HEX</th><th>×2</th><th>×4</th><th>×8</th><th>as ms@120bpm</th></tr></thead>`;
+    const tbody=document.createElement('tbody');
+    s.params.forEach((v,i)=>{
+      const tr=document.createElement('tr');
+      const ms120 = Math.round(60000/120); // 500ms referência
+      tr.innerHTML=`
+        <td class="label">[${i}]</td>
+        <td class="val">${v}</td>
+        <td class="raw">0x${v.toString(16).toUpperCase().padStart(2,'0')}</td>
+        <td class="raw">${v*2}</td>
+        <td class="raw">${v*4}</td>
+        <td class="raw">${v*8}</td>
+        <td class="raw">${v>0?Math.round(60000/(v*8))+'bpm':'-'}</td>`;
+      tbody.appendChild(tr);
+    });
+    pTable.appendChild(tbody);
+    slotDiv.appendChild(pTable);
+    body.appendChild(slotDiv);
+  }
+
+  card.appendChild(body);
+  wrap.appendChild(card);
+
+  // Marca step como done
+  const idx=parseInt(p.patch.replace('E',''));
+  if(!isNaN(idx)) document.getElementById(`step${idx}`).className='step done';
+}
+
+// ── Exportar ─────────────────────────────────────────────────────
+function salvarJSON(){
+  const payload={
+    geradoEm:new Date().toISOString(),
+    equipamento:'Zoom G1On fw 1.21',
+    modelId:'0x'+modelId.toString(16).toUpperCase(),
+    bancoE:resultados.map(r=>({
+      patch:r.patch, nome:r.nome, volume:r.volume,
+      slots:r.slots, rawHex:r.rawHex,
+      timestamp:r.timestamp, erro:r.erro||null
+    })),
+    sysexBruto:allSysex
+  };
+  baixar('fmc_g1on_e0e9_deep.json',JSON.stringify(payload,null,2),'application/json');
+}
+
+function salvarTXT(){
+  const linhas=['FMC-AM 6F — Deep Dump E0–E9','Gerado: '+new Date().toLocaleString('pt-BR'),'═'.repeat(70),''];
+  for(const r of resultados){
+    linhas.push(`PATCH ${r.patch} | "${r.nome||'—'}" | vol=${r.volume}`);
+    if(r.erro){linhas.push(`  ERRO: ${r.erro}`);} 
+    else {
+      for(const s of (r.slots||[])){
+        linhas.push(`  Slot${s.slot}: ${s.idHex} ${s.nome.padEnd(14)} ${s.enabled?'ON ':'OFF'} ${s.tap?`TAP:${s.tap}`:'       '}`);
+        linhas.push(`    raw:    ${s.rawSlotHex}`);
+        linhas.push(`    params: ${s.params.join(', ')}`);
+        // Escalas para cada param
+        const scales=s.params.map((v,i)=>`[${i}]=${v}(×4=${v*4},×8=${v*8})`).join(' ');
+        linhas.push(`    scales: ${scales}`);
+      }
+      linhas.push(`  rawHex: ${r.rawHex}`);
+    }
+    linhas.push('─'.repeat(70));
+    linhas.push('');
+  }
+  baixar('fmc_g1on_e0e9_deep.txt',linhas.join('\n'),'text/plain');
+}
+
+function baixar(n,c,t){
+  const b=new Blob([c],{type:t});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=n;a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+
+// ── UI helpers ────────────────────────────────────────────────────
+function setDot(s){document.getElementById('dot').className='dot '+s;}
+function setConn(t,err,g1on){
+  const el=document.getElementById('connTxt');
+  el.textContent=t;
+  el.className='conn-txt'+(err?' err':g1on?' g1on':'');
+}
+function setProgress(p){document.getElementById('progressBar').style.width=p+'%';}
+function setStatus(t,tipo){
+  const el=document.getElementById('statusLine');
+  el.textContent=t;el.className='status '+(tipo||'');
+}
+function log(msg,tipo='sys'){
+  const b=document.getElementById('logBody');
+  const d=document.createElement('div');d.className='log-entry '+tipo;
+  const ts=new Date().toLocaleTimeString('pt',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  d.textContent=`${ts} ${msg}`;b.appendChild(d);b.scrollTop=b.scrollHeight;
+  while(b.children.length>200)b.removeChild(b.firstChild);
+}
+function limparLog(){document.getElementById('logBody').innerHTML='';}
+</script>
+</body>
+</html>
