@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "descricao": "Timings MIDI e UI"
+  },
+  "sysexIdleMs": 50,
+  "sysexDelayMs": 80,
+  "pcToDumpMs": 500,
+  "holdMs": 900,
+  "debounceMs": 30,
+  "tapAvgN": 4,
+  "tapTimeoutMs": 2000,
+  "bpmMin": 40,
+  "bpmMax": 250,
+  "memCheckMs": 5000,
+  "tapMaxProbe": 8,
+  "tapProbeDelay": 150,
+  "tapTestVal": 64,
+  "watchdogMs": 240000
+}
