@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FMC Controller</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #0a0a0c;
+    --panel: #111114;
+    --panel2: #18181e;
+    --border: #2a2a35;
+    --accent: #00d4ff;
+    --accent2: #ff6b00;
+    --green: #00ff88;
+    --red: #ff2244;
+    --yellow: #ffd600;
+    --dim: #3a3a50;
+    --text: #e0e0f0;
+    --text-dim: #6a6a88;
+    --led-off: #1a1a22;
+    --led-on: #00d4ff;
+    --led-tap: #ff6b00;
+    --led-active: #00ff88;
+    --fs-h: 90px;
+    --fs-w: 90px;
+    --glow: 0 0 12px rgba(0,212,255,0.6), 0 0 40px rgba(0,212,255,0.2);
+    --glow-green: 0 0 12px rgba(0,255,136,0.7), 0 0 40px rgba(0,255,136,0.3);
+    --glow-orange: 0 0 12px rgba(255,107,0,0.7), 0 0 40px rgba(255,107,0,0.3);
+    --glow-red: 0 0 14px rgba(255,34,68,0.8);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Noise texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  .chassis {
+    position: relative; z-index: 1;
+    width: min(98vw, 800px);
+    background: linear-gradient(160deg, #1c1c24 0%, #0e0e14 60%, #14141c 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow:
+      0 0 0 1px #2a2a3a,
+      0 4px 40px rgba(0,0,0,0.9),
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      inset 0 -1px 0 rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Top bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(13px, 2.5vw, 20px);
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--accent2); }
+
+  /* Display */
+  .display {
+    flex: 1;
+    background: #090910;
+    border: 1px solid #1e1e2e;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 0;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  .patch-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(14px, 3vw, 22px);
+    font-weight: 700;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .patch-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(9px, 1.5vw, 12px);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .bpm-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(10px, 1.8vw, 14px);
+    color: var(--accent2);
+    text-shadow: var(--glow-orange);
+    white-space: nowrap;
+    border-left: 1px solid var(--border);
+    padding-left: 10px;
+  }
+
+  /* Bank selector */
+  .bank-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bank-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-right: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .bank-btn {
+    width: 26px; height: 20px;
+    background: var(--led-off);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .bank-btn.active {
+    background: rgba(0,212,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  .bank-btn.preselect {
+    background: rgba(255,107,0,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+    box-shadow: var(--glow-orange);
+    animation: preselect-pulse 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes preselect-pulse {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+  }
+
+  /* Middle section */
+  .middle {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Footswitch grid — 3×2 */
+  .fs-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, auto);
+    gap: 8px 10px;
+    align-content: center;
+    justify-items: center;
+    padding: 6px;
+  }
+
+  .fs-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .fs-led {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--led-off);
+    border: 1px solid #222230;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .fs-led.active {
+    background: var(--led-active);
+    border-color: var(--green);
+    box-shadow: var(--glow-green);
+  }
+
+  .fs-led.tap-on {
+    background: var(--led-tap);
+    border-color: var(--accent2);
+    box-shadow: var(--glow-orange);
+  }
+
+  .fs-led.preselect {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    box-shadow: var(--glow-orange);
+    animation: preselect-pulse 0.5s ease-in-out infinite alternate;
+  }
+
+  .fs-btn {
+    width: var(--fs-w);
+    height: var(--fs-h);
+    background: radial-gradient(ellipse at 40% 35%, #2a2a36 0%, #161620 70%);
+    border: 2px solid #2e2e3e;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(9px, 1.5vw, 11px);
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    position: relative;
+    transition: all 0.08s;
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.7),
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 -3px 8px rgba(0,0,0,0.5) inset;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+
+  .fs-btn:active, .fs-btn.pressed {
+    transform: scale(0.93);
+    box-shadow:
+      0 1px 4px rgba(0,0,0,0.8),
+      inset 0 3px 10px rgba(0,0,0,0.6);
+    border-color: #1a1a26;
+  }
+
+  .fs-btn.active-patch {
+    border-color: var(--green);
+    background: radial-gradient(ellipse at 40% 35%, #1a3028 0%, #0e1e18 70%);
+    color: var(--green);
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.5),
+      0 0 12px rgba(0,255,136,0.35),
+      0 0 30px rgba(0,255,136,0.12),
+      inset 0 1px 0 rgba(0,255,136,0.15);
+  }
+
+  .fs-btn.tap-btn {
+    border-color: var(--dim);
+  }
+
+  .fs-btn.tap-btn.tap-beat {
+    border-color: var(--accent2);
+    background: radial-gradient(ellipse at 40% 35%, #2a1a0a 0%, #160e04 70%);
+    color: var(--accent2);
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.6),
+      0 0 22px rgba(255,107,0,0.7),
+      0 0 55px rgba(255,107,0,0.25),
+      inset 0 1px 0 rgba(255,107,0,0.12);
+  }
+
+  .fs-btn.tap-btn.tap-off {
+    border-color: #1e1e2a;
+    background: radial-gradient(ellipse at 40% 35%, #161616 0%, #0c0c10 70%);
+    color: #333344;
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.8),
+      inset 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  .fs-btn.preselect-mode {
+    border-color: var(--accent2);
+    background: radial-gradient(ellipse at 40% 35%, #221808 0%, #140e04 70%);
+    color: var(--accent2);
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.6),
+      0 0 18px rgba(255,107,0,0.4),
+      0 0 45px rgba(255,107,0,0.15),
+      inset 0 1px 0 rgba(255,107,0,0.1);
+    animation: preselect-pulse 0.5s ease-in-out infinite alternate;
+  }
+
+  .fs-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: clamp(8px, 1.2vw, 10px);
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+
+  /* Side panel */
+  .side-panel {
+    width: 130px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .midi-monitor {
+    height: 150px;
+    flex-shrink: 0;
+    background: #060608;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .midi-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+  }
+
+  .midi-log {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+
+  .midi-log::-webkit-scrollbar { width: 2px; }
+  .midi-log::-webkit-scrollbar-track { background: transparent; }
+  .midi-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1px; }
+
+  .midi-entry {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    padding: 1px 2px;
+    border-radius: 2px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .midi-entry.pc { color: var(--accent); }
+  .midi-entry.cc { color: var(--accent2); }
+  .midi-entry.new {
+    background: rgba(0,212,255,0.08);
+    color: var(--text);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Info cards */
+  .info-card {
+    background: #060608;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .info-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .info-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    text-shadow: var(--glow);
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: #08080c;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    gap: 6px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--dim);
+  }
+  .status-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .status-dot.warn { background: var(--yellow); box-shadow: 0 0 5px var(--yellow); }
+
+  .mode-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+  .mode-badge.normal { background: rgba(0,212,255,0.12); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+  .mode-badge.preselect { background: rgba(255,107,0,0.15); color: var(--accent2); border: 1px solid rgba(255,107,0,0.4); animation: preselect-pulse 0.5s ease-in-out infinite alternate; }
+
+  /* Screws decoration */
+  .screw {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #3a3a4a, #1a1a22);
+    border: 1px solid #2a2a36;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .screw::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 60%; height: 1px;
+    background: rgba(255,255,255,0.08);
+  }
+  .screw.tl { top: 8px; left: 8px; }
+  .screw.tr { top: 8px; right: 8px; }
+  .screw.bl { bottom: 8px; left: 8px; }
+  .screw.br { bottom: 8px; right: 8px; }
+
+  /* Scan line effect */
+  .chassis::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    border-radius: 14px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    :root {
+      --fs-w: 62px;
+      --fs-h: 62px;
+    }
+    .side-panel { width: 90px; }
+    .logo { font-size: 11px; }
+  }
+
+  @media (max-width: 400px) {
+    :root {
+      --fs-w: 52px;
+      --fs-h: 52px;
+    }
+    .side-panel { display: none; }
+    .middle { justify-content: center; }
+  }
+
+  /* Landscape phone */
+  @media (max-height: 500px) and (orientation: landscape) {
+    :root {
+      --fs-w: 58px;
+      --fs-h: 58px;
+    }
+    .chassis { padding: 8px 12px; gap: 6px; }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0,212,255,0.12);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Confirm overlay */
+  .confirm-ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid var(--accent2);
+    animation: confirmRing 0.4s ease forwards;
+    pointer-events: none;
+  }
+  @keyframes confirmRing {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+</style>
+</head>
+<body>
+
+<div class="chassis" id="chassis">
+  <!-- Screws -->
+  <div class="screw tl"></div>
+  <div class="screw tr"></div>
+  <div class="screw bl"></div>
+  <div class="screw br"></div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo">FMC<span>·</span>CTRL</div>
+
+    <div class="display" id="mainDisplay">
+      <div>
+        <div class="patch-name" id="patchName">CLEAN BOOST</div>
+        <div class="patch-sub" id="patchSub">BANK A · PATCH 1</div>
+      </div>
+      <div class="bpm-display" id="bpmDisplay">♩ 120 BPM</div>
+    </div>
+  </div>
+
+  <!-- Middle -->
+  <div class="middle">
+    <div class="fs-grid" id="fsGrid"></div>
+
+    <div class="side-panel">
+      <div class="midi-monitor">
+        <div class="midi-title">⬡ MIDI OUT</div>
+        <div class="midi-log" id="midiLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot on" id="midiDot"></div>
+      <span id="midiStatus">MIDI SIM</span>
+    </div>
+
+    <div class="mode-badge normal" id="modeBadge">NORMAL</div>
+
+    <div class="status-item">
+      <div class="status-dot on"></div>
+      <span id="memStatus">MEM OK</span>
+    </div>
+
+    <div class="status-item">
+      <span id="bankGroupLabel">BANKS A–E</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ───────────────────────────────────────────────
+// FMC CONTROLLER – Full Logic
+// ───────────────────────────────────────────────
+
+const DEBOUNCE_MS = 20;
+const TAP_AVG_SIZE = 4;
+const TAP_TIMEOUT = 3000;
+const HOLD_MS = 600;
+const BANKS_ALL = ['A','B','C','D','E','F','G','H','I','J'];
+
+const PATCH_NAMES = {
+  A: ['CLEAN BOOST','TUBE DRIVE','OCTO VERB','SHIMMER PAD','TAPE ECHO','HEAVY GATE','DUAL CHORUS','POLY DETUNE','PITCH SHIFT','DIRT BOX'],
+  B: ['BLUES JR','TWEED 4X10','AC SPANK','VOX CLEAN','BRIT CRUNCH','PLEXI ROAR','MESA TIGHT','SOLDANO HI','FRIEDMAN BE','BOGNER ECST'],
+  C: ['SMALL ROOM','LARGE HALL','PLATE VERB','SPRING TANK','SHIMMER 1','SHIMMER 2','CAVE ECHO','MOD DELAY','TAPE SLAP','PING PONG'],
+  D: ['WAH CRYBABY','OCTAVE FUZ','RING MOD','TREMOLO','VIBRATO','PHASER 4ST','FLANGER JET','CHORUS 2V','ROTARY','UNIVIBE'],
+  E: ['LOOPER 1','LOOPER 2','PHRASE 1','PHRASE 2','MIDI CLK','SYNC BEAT','POLY LOOP','HALF SPEED','REVERSE','REBUILD'],
+};
+// Fill remaining banks F-J
+for(let b of ['F','G','H','I','J']){
+  PATCH_NAMES[b] = PATCH_NAMES[BANKS_ALL[BANKS_ALL.indexOf(b)-5]].map(n=>n+' II');
+}
+
+// ── State ──────────────────────────────────────
+const state = loadState() || {
+  bank: 'A',
+  patch: 0,
+  bpm: 120,
+  bankGroup: 0,       // 0=A-E, 1=F-J
+  bankSelect: false,  // modo bank select (FS6 hold)
+  preselect: false,   // aguardando confirmação de patch via FS1–5
+  preselectBank: null,
+};
+
+// Toggle par/ímpar — não persistido, sempre reset no boot
+// lastFsIdx: qual FS foi tocado por último (0–4)
+// fsToggle: false=par, true=ímpar
+let lastFsIdx  = null;
+let fsToggle   = false;
+
+let tapTimes = [];
+let tapTimer = null;
+let tapLedTimer = null;
+let tapBeatTimer = null;
+let midiBuffer = [];
+let midiFlushTimer = null;
+let preselectConfirming = false;
+
+// ── DOM ────────────────────────────────────────
+const $patchName     = document.getElementById('patchName');
+const $patchSub      = document.getElementById('patchSub');
+const $bpmDisplay    = document.getElementById('bpmDisplay');
+const $midiLog       = document.getElementById('midiLog');
+const $modeBadge     = document.getElementById('modeBadge');
+const $bankGroupLabel= document.getElementById('bankGroupLabel');
+const $toast         = document.getElementById('toast');
+const $midiDot       = document.getElementById('midiDot');
+
+// ── Build UI ───────────────────────────────────
+const fsGrid = document.getElementById('fsGrid');
+const fsEls = [];
+const ledEls = [];
+const labelEls = [];
+
+for(let i = 0; i < 6; i++){
+  const col = document.createElement('div');
+  col.className = 'fs-col';
+
+  const btn = document.createElement('div');
+  btn.className = 'fs-btn';
+  btn.setAttribute('role','button');
+  btn.setAttribute('tabindex','0');
+
+  if(i < 5){
+    btn.textContent = `FS${i+1}`;
+  } else {
+    btn.innerHTML = `FS6<br><span style="font-size:7px;opacity:0.7">TAP</span>`;
+    btn.classList.add('tap-btn');
+  }
+
+  const lbl = document.createElement('div');
+  lbl.className = 'fs-label';
+
+  col.appendChild(btn);
+  col.appendChild(lbl);
+  fsGrid.appendChild(col);
+
+  fsEls.push(btn);
+  ledEls.push(btn); // LED é o próprio botão agora
+  labelEls.push(lbl);
+}
+
+// ── Render ─────────────────────────────────────
+function render(){
+  const name = PATCH_NAMES[state.bank]?.[state.patch] || `PATCH ${state.patch+1}`;
+  $patchName.textContent = name;
+  $patchSub.textContent = `BANK ${state.bank} · PATCH ${state.patch+1}`;
+  $bpmDisplay.textContent = `♩ ${Math.round(state.bpm)} BPM`;
+
+  const visibleBanks = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+  const bankInView = visibleBanks.includes(state.bank);
+
+  if(state.bankSelect){
+    const group = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+
+    if(state.preselect && state.preselectBank){
+      const pBank = state.preselectBank;
+      for(let i=0; i<5; i++){
+        const patchIdx = i * 2 + (fsToggle ? 1 : 0);
+        const pname = PATCH_NAMES[pBank]?.[patchIdx] ?? `P${patchIdx+1}`;
+        fsEls[i].classList.toggle('active-patch', false);
+        fsEls[i].classList.toggle('preselect-mode', true);
+        labelEls[i].textContent = pname.substring(0, 8);
+      }
+      labelEls[5].textContent = 'TAP=±LAYER HOLD=SAIR';
+      $modeBadge.className = 'mode-badge preselect';
+      $modeBadge.textContent = `${pBank} ${fsToggle ? 'ÍMPAR' : 'PAR'}`;
+    } else {
+      for(let i=0; i<5; i++){
+        const b = group[i];
+        fsEls[i].classList.toggle('active-patch', false);
+        fsEls[i].classList.toggle('preselect-mode', true);
+        labelEls[i].textContent = b || '·';
+      }
+      labelEls[5].textContent = 'TAP=GRUPO HOLD=SAIR';
+      $modeBadge.className = 'mode-badge preselect';
+      $modeBadge.textContent = 'BANK SEL';
+    }
+  } else {
+    // Modo normal
+    for(let i=0; i<5; i++){
+      const base      = i * 2;
+      const isActive  = bankInView && (state.patch === base || state.patch === base + 1);
+      const nextPatch = (lastFsIdx === i && fsToggle) ? base + 1 : base;
+
+      fsEls[i].classList.toggle('active-patch', isActive);
+      fsEls[i].classList.toggle('preselect-mode', false);
+
+      if(bankInView){
+        const showPatch = isActive ? state.patch : nextPatch;
+        const sname = PATCH_NAMES[state.bank]?.[showPatch] ?? `P${showPatch+1}`;
+        labelEls[i].textContent = sname.substring(0, 8);
+      } else {
+        labelEls[i].textContent = '· · ·';
+      }
+    }
+    labelEls[5].textContent = 'TAP·HOLD';
+    $modeBadge.className = 'mode-badge normal';
+    $modeBadge.textContent = 'NORMAL';
+  }
+
+  saveState();
+}
+
+// ── Footswitch handlers ─────────────────────────
+let debounceTimers = {};
+let holdTimers = {};
+let pressTimes = {};
+
+function attachFS(idx, el){
+  function onPress(){
+    if(debounceTimers[idx]) return;
+    debounceTimers[idx] = setTimeout(()=>{ debounceTimers[idx]=null; }, DEBOUNCE_MS);
+
+    el.classList.add('pressed');
+    pressTimes[idx] = Date.now();
+
+    // Hold detect (FS6 only)
+    if(idx === 5){
+      holdTimers[idx] = setTimeout(()=>{
+        onFS6Hold();
+      }, HOLD_MS);
+    }
+  }
+
+  function onRelease(){
+    el.classList.remove('pressed');
+    const held = Date.now() - (pressTimes[idx]||0);
+
+    if(idx === 5){
+      clearTimeout(holdTimers[idx]);
+      if(held < HOLD_MS){
+        onFS6Tap();
+      }
+    } else {
+      onFSPatch(idx);
+    }
+  }
+
+  // Mouse
+  el.addEventListener('mousedown', e=>{ e.preventDefault(); onPress(); });
+  el.addEventListener('mouseup', e=>{ e.preventDefault(); onRelease(); });
+  el.addEventListener('mouseleave', ()=>{ el.classList.remove('pressed'); clearTimeout(holdTimers[idx]); });
+
+  // Touch
+  el.addEventListener('touchstart', e=>{ e.preventDefault(); onPress(); }, {passive:false});
+  el.addEventListener('touchend', e=>{ e.preventDefault(); onRelease(); }, {passive:false});
+  el.addEventListener('touchcancel', ()=>{ el.classList.remove('pressed'); clearTimeout(holdTimers[idx]); });
+}
+
+fsEls.forEach((el, i) => attachFS(i, el));
+
+// ── FS Patch select ────────────────────────────
+function onFSPatch(idx){
+  if(state.bankSelect){
+    // No bank select: FS1–5 escolhem os bancos do grupo visível
+    const group = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+    const chosenBank = group[idx];
+    if(!chosenBank) return;
+
+    if(state.preselect && state.preselectBank){
+      // Banco pré-selecionado + layer escolhido: FS1–5 confirmam o patch
+      const pBank    = state.preselectBank;
+      const patchIdx = idx * 2 + (fsToggle ? 1 : 0);
+      state.bank          = pBank;
+      state.patch         = patchIdx;
+      state.bankSelect    = false;
+      state.preselect     = false;
+      state.preselectBank = null;
+      lastFsIdx = idx;
+      // fsToggle já está correto, não resetar
+      const pc = BANKS_ALL.indexOf(pBank)*10 + patchIdx;
+      enqueueMIDI({ type:'PC', ch:1, val:pc, label:`PC ${pc} [${pBank}${patchIdx+1}]` });
+      flashConfirmRing(fsEls[idx]);
+      showToast(`${pBank}${patchIdx+1} ATIVADO`);
+      render();
+      return;
+    }
+
+    if(state.preselect && state.preselectBank === chosenBank){
+      // Segunda pisada no mesmo banco (sem layer) → ativa banco + patch 0 e sai
+      state.bank          = chosenBank;
+      state.patch         = 0;
+      state.bankSelect    = false;
+      state.preselect     = false;
+      state.preselectBank = null;
+      lastFsIdx = null;
+      fsToggle  = false;
+      const pc = BANKS_ALL.indexOf(chosenBank)*10;
+      enqueueMIDI({ type:'PC', ch:1, val:pc, label:`PC ${pc} [${chosenBank}1]` });
+      flashConfirmRing(fsEls[idx]);
+      showToast(`BANCO ${chosenBank} ATIVADO`);
+    } else {
+      // Primeira pisada → pré-seleciona, aguarda confirmação
+      state.preselect     = true;
+      state.preselectBank = chosenBank;
+      showToast(`BANCO ${chosenBank} · PISE NOVAMENTE P/ CONFIRMAR`);
+    }
+    render();
+    return;
+  }
+
+  if(state.preselect){
+    // Confirmação de patch dentro de um banco pré-selecionado
+    confirmPreselect(idx);
+    return;
+  }
+
+  // Modo normal: toggle par/ímpar
+  const visibleBanks = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+  if(!visibleBanks.includes(state.bank)) return;
+
+  // Mapeamento: FS0→0/1, FS1→2/3, FS2→4/5, FS3→6/7, FS4→8/9
+  const base = idx * 2;
+
+  if(lastFsIdx !== idx){
+    // Novo botão
+    lastFsIdx = idx;
+    // Se o patch ativo já pertence a este FS (boot com patch salvo),
+    // começa no ímpar direto para o próximo toque fazer sentido.
+    // Mas neste toque atual: vai pro par se patch ativo é ímpar deste FS,
+    // vai pro ímpar se patch ativo já é o par deste FS.
+    if(state.patch === base){
+      // Já está no par → vai pro ímpar
+      fsToggle = true;
+    } else {
+      // Qualquer outro caso → vai pro par
+      fsToggle = false;
+    }
+  } else {
+    // Mesmo botão: alterna
+    fsToggle = !fsToggle;
+  }
+
+  state.patch = base + (fsToggle ? 1 : 0);
+  const pc = BANKS_ALL.indexOf(state.bank)*10 + state.patch;
+  enqueueMIDI({ type:'PC', ch:1, val:pc, label:`PC ${pc} [${state.bank}${state.patch+1}]` });
+  flashConfirmRing(fsEls[idx]);
+  render();
+}
+
+function confirmPreselect(idx){
+  const newBank = state.preselectBank;
+  state.bank = newBank;
+  state.patch = idx;
+  state.preselect = false;
+  state.preselectBank = null;
+
+  const pc = BANKS_ALL.indexOf(newBank)*10 + idx;
+  enqueueMIDI({ type:'PC', ch:1, val:pc, label:`PC ${pc} [${newBank}${idx+1}]` });
+  flashConfirmRing(fsEls[idx]);
+  showToast(`CONFIRMED: ${newBank}${idx+1}`);
+  render();
+}
+
+// ── FS6 Tap ────────────────────────────────────
+// Tap simples:
+//   - modo normal      → sempre TAP TEMPO
+//   - modo bank select → alterna grupo A–E / F–J
+function onFS6Tap(){
+  if(state.bankSelect){
+    if(state.preselect && state.preselectBank){
+      // Banco já pré-selecionado: tap alterna entre patches pares e ímpares
+      fsToggle = !fsToggle;
+      const layer = fsToggle ? 'ÍMPARES (1,3,5,7,9)' : 'PARES (0,2,4,6,8)';
+      showToast(`${state.preselectBank} · LAYER ${layer}`);
+      render();
+    } else {
+      // Nenhum banco pré-selecionado ainda: tap alterna grupo A–E / F–J
+      state.bankGroup = state.bankGroup === 0 ? 1 : 0;
+      const group = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+      state.preselectBank = null;
+      state.preselect = false;
+      showToast(`GRUPO ${group[0]}–${group[4]} · ESCOLHA UM BANCO`);
+      render();
+    }
+    return;
+  }
+
+  // Modo normal: tap tempo
+  const now = Date.now();
+  if(tapTimer) clearTimeout(tapTimer);
+  tapTimer = setTimeout(resetTap, TAP_TIMEOUT);
+
+  if(tapTimes.length > 0){
+    const interval = now - tapTimes[tapTimes.length-1];
+    if(interval < 2000){
+      tapTimes.push(now);
+      if(tapTimes.length > TAP_AVG_SIZE+1) tapTimes.shift();
+      if(tapTimes.length >= 2){
+        const intervals = [];
+        for(let i=1;i<tapTimes.length;i++) intervals.push(tapTimes[i]-tapTimes[i-1]);
+        const avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+        state.bpm = Math.min(250, Math.max(40, Math.round(60000/avg)));
+        const bpmMs = Math.round(60000/state.bpm);
+        enqueueMIDI({ type:'CC', ch:1, cc:64, val:Math.min(127,Math.round(state.bpm)), label:`CC64 BPM→${state.bpm}` });
+        startTapBlink(bpmMs);
+        render();
+      }
+    } else {
+      tapTimes = [now];
+    }
+  } else {
+    tapTimes = [now];
+  }
+  flashTapLed();
+}
+
+function flashTapLed(){
+  // Flash rápido no beat manual (feedback imediato ao toque)
+  fsEls[5].classList.add('tap-beat');
+  fsEls[5].classList.remove('tap-off');
+  if(tapLedTimer) clearTimeout(tapLedTimer);
+  tapLedTimer = setTimeout(()=>{
+    fsEls[5].classList.remove('tap-beat');
+    fsEls[5].classList.add('tap-off');
+  }, 80);
+}
+
+function startTapBlink(intervalMs){
+  if(tapBeatTimer) clearInterval(tapBeatTimer);
+  const onMs  = Math.min(80, intervalMs * 0.15);
+  tapBeatTimer = setInterval(()=>{
+    if(state.bankSelect) return; // pausa visual no bank select
+    fsEls[5].classList.add('tap-beat');
+    fsEls[5].classList.remove('tap-off');
+    setTimeout(()=>{
+      fsEls[5].classList.remove('tap-beat');
+      fsEls[5].classList.add('tap-off');
+    }, onMs);
+  }, intervalMs);
+}
+
+function resetTap(){
+  tapTimes = [];
+  if(tapBeatTimer){ clearInterval(tapBeatTimer); tapBeatTimer = null; }
+  // Volta ao BPM padrão piscando
+  startTapBlink(Math.round(60000 / state.bpm));
+}
+
+// ── FS6 Hold ───────────────────────────────────
+// Hold:
+//   - modo normal      → entra em bank select (pré-seleção)
+//   - modo bank select → cancela e volta ao normal
+function onFS6Hold(){
+  if(state.bankSelect){
+    // Cancela bank select
+    state.bankSelect    = false;
+    state.preselect     = false;
+    state.preselectBank = null;
+    showToast('BANK SELECT CANCELADO');
+    render();
+    return;
+  }
+  // Entra em bank select
+  state.bankSelect    = true;
+  state.preselect     = false;
+  state.preselectBank = null;
+  const group = BANKS_ALL.slice(state.bankGroup*5, state.bankGroup*5+5);
+  showToast(`BANK SELECT · GRUPO ${group[0]}–${group[4]} · TAP=ALTERNA, FS1–5=BANCO`);
+  render();
+}
+
+// ── MIDI Buffer ────────────────────────────────
+function enqueueMIDI(msg){
+  midiBuffer.push(msg);
+  if(!midiFlushTimer){
+    midiFlushTimer = setTimeout(flushMIDI, 0);
+  }
+}
+
+function flushMIDI(){
+  midiFlushTimer = null;
+  while(midiBuffer.length){
+    const msg = midiBuffer.shift();
+    logMIDI(msg);
+    // Real Web MIDI would go here
+  }
+}
+
+function logMIDI(msg){
+  const entry = document.createElement('div');
+  entry.className = `midi-entry ${msg.type.toLowerCase()} new`;
+  const ts = new Date().toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  entry.textContent = `${ts} ${msg.label}`;
+  $midiLog.appendChild(entry);
+
+  setTimeout(()=> entry.classList.remove('new'), 300);
+
+  // Trim log
+  while($midiLog.children.length > 30) $midiLog.removeChild($midiLog.firstChild);
+
+  // Blink status dot
+  $midiDot.classList.remove('on');
+  setTimeout(()=> $midiDot.classList.add('on'), 60);
+}
+
+// ── Visual effects ─────────────────────────────
+function flashConfirmRing(el){
+  const ring = document.createElement('div');
+  ring.className = 'confirm-ring';
+  el.style.position = 'relative';
+  el.appendChild(ring);
+  setTimeout(()=> ring.remove(), 400);
+}
+
+let toastTimer = null;
+function showToast(msg){
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> $toast.classList.remove('show'), 2000);
+}
+
+// ── Persistence (simulated EEPROM) ─────────────
+function saveState(){
+  try {
+    localStorage.setItem('fmc_state', JSON.stringify({
+      bank: state.bank,
+      patch: state.patch,
+      bpm: state.bpm,
+      bankGroup: state.bankGroup,
+    }));
+  } catch(e){}
+}
+
+function loadState(){
+  try {
+    const s = localStorage.getItem('fmc_state');
+    if(s){
+      const d = JSON.parse(s);
+      return { ...d, preselect: false, preselectBank: null };
+    }
+  } catch(e){}
+  return null;
+}
+
+// ── Context menu + zoom lock ───────────────────
+document.addEventListener('contextmenu', e=> e.preventDefault());
+document.addEventListener('gesturestart', e=> e.preventDefault());
+document.addEventListener('gesturechange', e=> e.preventDefault());
+document.addEventListener('gestureend', e=> e.preventDefault());
+document.addEventListener('touchmove', e=>{
+  if(e.touches.length > 1) e.preventDefault();
+}, {passive:false});
+
+// ── Orientation ────────────────────────────────
+function handleOrientation(){
+  const isLandscape = window.innerWidth > window.innerHeight;
+  // Layout naturally adapts via CSS; could add further logic here
+}
+window.addEventListener('resize', handleOrientation);
+window.addEventListener('orientationchange', ()=> setTimeout(handleOrientation, 200));
+
+// ── Init ───────────────────────────────────────
+handleOrientation();
+const bankIdx = BANKS_ALL.indexOf(state.bank);
+if(bankIdx >= 5) state.bankGroup = 1;
+else state.bankGroup = 0;
+render();
+// Inicia metrônomo visual no BPM salvo/padrão
+startTapBlink(Math.round(60000 / state.bpm));
+showToast('FMC CONTROLLER READY');
+</script>
+</body>
+</html>
