@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMC-AM 6F · Settings</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
+
+:root {
+  --bg:      #08080b;
+  --surface: #111116;
+  --surface2:#18181f;
+  --border:  #252532;
+  --border2: #333342;
+  --accent:  #6c55f0;
+  --cyan:    #00b8e6;
+  --green:   #00e87a;
+  --red:     #e83258;
+  --yellow:  #ffcc30;
+  --text:    #eaeaf4;
+  --dim:     #60607a;
+  --mid:     #9090b8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100%;background:var(--bg);color:var(--text);
+  font-family:'Barlow',sans-serif;overflow-x:hidden;}
+
+/* ── Login screen ─────────────────────────────────────────── */
+#loginScreen{
+  position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;align-items:center;justify-content:center;}
+.login-box{
+  background:var(--surface);border:1px solid var(--border2);border-radius:14px;
+  padding:40px 48px;width:min(90vw,420px);
+  box-shadow:0 0 80px rgba(108,85,240,.12),0 30px 80px rgba(0,0,0,.9);
+  display:flex;flex-direction:column;gap:20px;align-items:center;}
+.login-logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;
+  font-size:22px;letter-spacing:.2em;color:#fff;text-align:center;}
+.login-logo em{color:var(--accent);font-style:normal;}
+.login-sub{font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:var(--dim);letter-spacing:.2em;text-transform:uppercase;}
+.login-sep{width:100%;height:1px;background:var(--border);}
+.login-field{width:100%;display:flex;flex-direction:column;gap:6px;}
+.login-label{font-family:'Share Tech Mono',monospace;font-size:9px;
+  letter-spacing:.14em;color:var(--dim);text-transform:uppercase;}
+.login-input{
+  width:100%;padding:10px 14px;border-radius:7px;
+  border:1px solid var(--border2);background:#0c0c14;
+  color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;
+  letter-spacing:.06em;outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:var(--accent);}
+.login-btn{
+  width:100%;padding:12px;border-radius:8px;
+  border:none;background:var(--accent);color:#fff;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:15px;letter-spacing:.14em;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;}
+.login-btn:hover{background:#7c65ff;box-shadow:0 0 20px rgba(108,85,240,.4);}
+.login-error{font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:var(--red);letter-spacing:.08em;display:none;text-align:center;}
+.login-error.show{display:block;}
+
+/* ── Main layout ──────────────────────────────────────────── */
+#mainApp{display:none;}
+#mainApp.show{display:block;}
+
+.app-header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:14px 24px;display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:100;}
+.app-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;
+  font-size:20px;letter-spacing:.14em;color:#fff;}
+.app-title em{color:var(--accent);font-style:normal;}
+.app-subtitle{font-family:'Share Tech Mono',monospace;font-size:9px;
+  color:var(--dim);letter-spacing:.18em;}
+.header-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+
+/* Buttons */
+.btn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;padding:7px 16px;border-radius:6px;cursor:pointer;
+  transition:all .2s;border:1px solid;-webkit-tap-highlight-color:transparent;}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-primary:hover{background:#7c65ff;box-shadow:0 0 14px rgba(108,85,240,.4);}
+.btn-danger {background:transparent;border-color:var(--red);color:var(--red);}
+.btn-danger:hover{background:rgba(232,50,88,.1);}
+.btn-ghost  {background:transparent;border-color:var(--border2);color:var(--mid);}
+.btn-ghost:hover{border-color:var(--mid);color:var(--text);}
+.btn-success{background:transparent;border-color:var(--green);color:var(--green);}
+.btn-success:hover{background:rgba(0,232,122,.08);}
+.btn-save   {background:var(--green);border-color:var(--green);color:#000;font-weight:700;}
+.btn-save:hover{background:#00ffaa;}
+.btn.loading{opacity:.6;pointer-events:none;}
+
+/* ── Sidebar + content ────────────────────────────────────── */
+.app-body{display:flex;min-height:calc(100vh - 57px);}
+.sidebar{
+  width:220px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);padding:16px 0;
+  position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;}
+.nav-section{padding:6px 16px 4px;font-family:'Share Tech Mono',monospace;
+  font-size:8px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;
+  cursor:pointer;font-family:'Barlow',sans-serif;font-size:13px;
+  color:var(--mid);transition:all .15s;border-left:2px solid transparent;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--text);background:rgba(108,85,240,.08);
+  border-left-color:var(--accent);}
+.nav-item .nav-icon{font-size:14px;width:18px;text-align:center;}
+.nav-dot{width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0;}
+.nav-dot.dirty{background:var(--yellow);}
+.nav-dot.saved{background:var(--green);}
+
+.content{flex:1;padding:28px 32px;max-width:900px;}
+
+/* ── Section panels ───────────────────────────────────────── */
+.panel{display:none;}
+.panel.active{display:block;}
+.panel-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;
+  font-size:22px;letter-spacing:.1em;color:#fff;margin-bottom:4px;}
+.panel-desc{font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:var(--dim);letter-spacing:.06em;margin-bottom:24px;}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:20px;margin-bottom:16px;}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mid);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';width:3px;height:14px;background:var(--accent);
+  border-radius:2px;flex-shrink:0;}
+
+/* Form elements */
+.form-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.form-label{font-family:'Share Tech Mono',monospace;font-size:9px;
+  letter-spacing:.1em;color:var(--dim);text-transform:uppercase;
+  min-width:120px;flex-shrink:0;}
+.form-input{flex:1;padding:8px 12px;border-radius:6px;
+  border:1px solid var(--border2);background:#0a0a12;
+  color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;
+  outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--accent);}
+.form-input[type="color"]{padding:2px 4px;height:34px;width:60px;cursor:pointer;flex:none;}
+.form-input[type="range"]{padding:0;background:transparent;border:none;cursor:pointer;}
+.form-select{flex:1;padding:8px 12px;border-radius:6px;
+  border:1px solid var(--border2);background:#0a0a12;
+  color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;
+  outline:none;cursor:pointer;}
+.form-hint{font-family:'Share Tech Mono',monospace;font-size:8px;
+  color:var(--dim);letter-spacing:.06em;}
+
+/* Token status */
+.token-status{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-radius:7px;border:1px solid var(--border);background:rgba(0,0,0,.3);
+  font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--mid);}
+.token-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.token-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+.token-dot.missing{background:var(--red);}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;
+  font-family:'Share Tech Mono',monospace;font-size:11px;}
+.data-table th{padding:8px 10px;text-align:left;color:var(--dim);
+  font-size:8px;letter-spacing:.12em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);font-weight:400;}
+.data-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);
+  color:var(--mid);}
+.data-table tr:hover td{background:rgba(255,255,255,.02);color:var(--text);}
+.data-table .td-name{color:var(--text);}
+.data-table .td-status span{padding:2px 7px;border-radius:3px;font-size:8px;}
+.td-ok{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.2);}
+.td-dirty{background:rgba(255,204,48,.08);color:var(--yellow);border:1px solid rgba(255,204,48,.2);}
+.td-missing{background:rgba(232,50,88,.08);color:var(--red);border:1px solid rgba(232,50,88,.2);}
+
+/* Log viewer */
+.log-area{background:#050508;border:1px solid var(--border);border-radius:7px;
+  padding:12px;height:220px;overflow-y:auto;
+  font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.7;
+  color:var(--mid);scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.log-info{color:var(--mid);}
+.log-warn{color:var(--yellow);}
+.log-err {color:var(--red);}
+
+/* Status bar */
+.status-bar-bottom{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:7px 24px;display:flex;align-items:center;gap:12px;
+  font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);}
+.status-dot{width:7px;height:7px;border-radius:50%;}
+.status-dot.ok   {background:var(--green);box-shadow:0 0 5px var(--green);}
+.status-dot.busy {background:var(--yellow);animation:pulse-s .7s ease-in-out infinite alternate;}
+.status-dot.err  {background:var(--red);}
+.status-dot.off  {background:var(--border2);}
+@keyframes pulse-s{from{opacity:.4;}to{opacity:1;}}
+
+/* Toast */
+.toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:rgba(8,8,16,.97);border:1px solid var(--accent);color:var(--accent);
+  font-family:'Share Tech Mono',monospace;font-size:11px;
+  padding:8px 20px;border-radius:6px;letter-spacing:.1em;
+  opacity:0;transition:all .25s;pointer-events:none;z-index:500;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Color grid */
+.color-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.color-item{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:rgba(0,0,0,.3);border-radius:6px;border:1px solid var(--border);}
+.color-swatch{width:28px;height:28px;border-radius:4px;border:1px solid rgba(255,255,255,.1);}
+.color-info{flex:1;min-width:0;}
+.color-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:13px;letter-spacing:.06em;}
+.color-hex {font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);}
+
+/* Patch list */
+.patch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+.patch-card{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:7px;
+  padding:10px 12px;cursor:pointer;transition:border-color .15s;}
+.patch-card:hover{border-color:var(--border2);}
+.patch-id-lbl{font-family:'Barlow Condensed',sans-serif;font-weight:800;
+  font-size:18px;color:var(--bank-color,#fff);letter-spacing:.08em;}
+.patch-name-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;
+  color:var(--mid);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.patch-fx-lbl{font-size:8px;color:var(--dim);margin-top:4px;}
+
+/* Responsive */
+@media(max-width:640px){
+  .sidebar{display:none;}
+  .content{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div>
+      <div class="login-logo">FMC<em>·</em>AM 6F</div>
+      <div class="login-sub" style="text-align:center;margin-top:4px">Settings · Área Restrita</div>
+    </div>
+    <div class="login-sep"></div>
+    <div class="login-field">
+      <div class="login-label">Usuário</div>
+      <input class="login-input" type="text" id="loginUser" placeholder="usuário" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <div class="login-label">Senha</div>
+      <input class="login-input" type="password" id="loginPass" placeholder="••••••" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="loginError">Usuário ou senha incorretos.</div>
+    <button class="login-btn" onclick="tentarLogin()">ENTRAR</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN APP
+     ═══════════════════════════════════════════════════════ -->
+<div id="mainApp">
+
+  <div class="app-header">
+    <div>
+      <div class="app-title">FMC<em>·</em>AM 6F <span style="font-size:13px;font-weight:400;color:var(--dim)">Settings</span></div>
+      <div class="app-subtitle">angelomiggliori/FMC-AM-6F · branch: main</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-success" onclick="salvarTudo()" id="btnSaveAll">💾 SALVAR TUDO</button>
+      <button class="btn btn-ghost" onclick="recarregarDados()">↺ RECARREGAR</button>
+      <button class="btn btn-danger" onclick="fazerLogout()">SAIR</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="nav-section">Dados</div>
+      <div class="nav-item active" onclick="showPanel('github')" id="nav-github">
+        <span class="nav-icon">🔑</span> GitHub API
+      </div>
+      <div class="nav-item" onclick="showPanel('files')" id="nav-files">
+        <span class="nav-icon">📁</span> Arquivos
+        <div class="nav-dot" id="dot-files"></div>
+      </div>
+      <div class="nav-item" onclick="showPanel('patches')" id="nav-patches">
+        <span class="nav-icon">🎸</span> Patches
+        <div class="nav-dot" id="dot-patches"></div>
+      </div>
+
+      <div class="nav-section" style="margin-top:8px">Visual</div>
+      <div class="nav-item" onclick="showPanel('colors')" id="nav-colors">
+        <span class="nav-icon">🎨</span> Cores
+        <div class="nav-dot" id="dot-colors"></div>
+      </div>
+      <div class="nav-item" onclick="showPanel('leds')" id="nav-leds">
+        <span class="nav-icon">💡</span> LEDs NeoPixel
+        <div class="nav-dot" id="dot-leds"></div>
+      </div>
+
+      <div class="nav-section" style="margin-top:8px">Sistema</div>
+      <div class="nav-item" onclick="showPanel('timing')" id="nav-timing">
+        <span class="nav-icon">⏱</span> Timing MIDI
+        <div class="nav-dot" id="dot-timing"></div>
+      </div>
+      <div class="nav-item" onclick="showPanel('boost')" id="nav-boost">
+        <span class="nav-icon">⬆</span> Boost & Volume
+        <div class="nav-dot" id="dot-boost"></div>
+      </div>
+      <div class="nav-item" onclick="showPanel('logs')" id="nav-logs">
+        <span class="nav-icon">📋</span> Logs
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ── GitHub API ── -->
+      <div class="panel active" id="panel-github">
+        <div class="panel-title">GitHub API</div>
+        <div class="panel-desc">Configure o Personal Access Token para salvar dados diretamente no repositório.</div>
+
+        <div class="card">
+          <div class="card-title">Status da Conexão</div>
+          <div class="token-status" id="tokenStatus">
+            <div class="token-dot missing" id="tokenDot"></div>
+            <span id="tokenStatusText">Token não configurado</span>
+          </div>
+          <div style="height:14px"></div>
+          <div class="form-row">
+            <div class="form-label">Personal Access Token</div>
+            <input class="form-input" type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            <button class="btn btn-primary" onclick="salvarToken()">SALVAR TOKEN</button>
+          </div>
+          <div class="form-hint" style="margin-top:4px">
+            GitHub → Settings → Developer Settings → Personal Access Tokens → Tokens (classic) → scope: repo
+          </div>
+          <div style="height:10px"></div>
+          <button class="btn btn-ghost" onclick="testarToken()">🔍 TESTAR CONEXÃO</button>
+          <button class="btn btn-danger" style="margin-left:8px" onclick="limparToken()">REMOVER TOKEN</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Como criar o token</div>
+          <ol style="font-family:'Barlow',sans-serif;font-size:13px;color:var(--mid);line-height:1.9;padding-left:20px;">
+            <li>Acesse <strong style="color:var(--text)">github.com → Settings</strong></li>
+            <li>Role até <strong style="color:var(--text)">Developer Settings</strong> (no final da sidebar)</li>
+            <li>Clique em <strong style="color:var(--text)">Personal Access Tokens → Tokens (classic)</strong></li>
+            <li>Clique em <strong style="color:var(--text)">Generate new token (classic)</strong></li>
+            <li>Nome: <code style="color:var(--accent)">fmc-am-6f-data</code></li>
+            <li>Expiration: <strong style="color:var(--text)">No expiration</strong></li>
+            <li>Scope: marque apenas <strong style="color:var(--text)">repo</strong></li>
+            <li>Clique em <strong style="color:var(--text)">Generate token</strong> e copie o token</li>
+            <li>Cole no campo acima e clique em <strong style="color:var(--accent)">SALVAR TOKEN</strong></li>
+          </ol>
+          <div style="margin-top:10px;padding:10px;background:rgba(232,50,88,.07);border:1px solid rgba(232,50,88,.2);border-radius:6px;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--red);letter-spacing:.08em;">
+              ⚠ O token fica salvo apenas no localStorage do seu browser. Nunca vai para o código nem para o repositório.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Arquivos ── -->
+      <div class="panel" id="panel-files">
+        <div class="panel-title">Arquivos de Dados</div>
+        <div class="panel-desc">Status de todos os arquivos JSON no repositório. Arquivos marcados como "modificado" serão salvos no próximo SALVAR TUDO.</div>
+
+        <div class="card">
+          <div class="card-title">Status dos Arquivos</div>
+          <table class="data-table" id="filesTable">
+            <thead><tr>
+              <th>Arquivo</th><th>Caminho</th><th>Registros</th><th>Status</th><th>Ação</th>
+            </tr></thead>
+            <tbody id="filesTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Backup Manual</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="exportarTudo()">📥 EXPORTAR TUDO (ZIP)</button>
+            <button class="btn btn-ghost" onclick="importarArquivo()">📤 IMPORTAR JSON</button>
+          </div>
+          <div class="form-hint" style="margin-top:8px">
+            Exportar cria um download de todos os JSONs. Importar substitui um arquivo em memória (precisa salvar para persistir no GitHub).
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Patches ── -->
+      <div class="panel" id="panel-patches">
+        <div class="panel-title">Cache de Patches</div>
+        <div class="panel-desc">Todos os 100 patches da G1On. Clique em um patch para editar nome ou ver detalhes.</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <select class="form-select" style="max-width:120px" id="bankFilter" onchange="renderPatches()">
+            <option value="">Todos</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+            <option>F</option><option>G</option><option>H</option><option>I</option><option>J</option>
+          </select>
+          <button class="btn btn-ghost" onclick="renderPatches()">↺ ATUALIZAR</button>
+        </div>
+        <div class="patch-grid" id="patchGrid"></div>
+      </div>
+
+      <!-- ── Cores ── -->
+      <div class="panel" id="panel-colors">
+        <div class="panel-title">Cores</div>
+        <div class="panel-desc">Cores dos bancos e categorias de efeito. Afetam LEDs, scribble strips e tags na GUI.</div>
+
+        <div class="card">
+          <div class="card-title">Cores dos Bancos (A–J)</div>
+          <div class="color-grid" id="bankColorGrid"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="espelharBancos()">↔ ESPELHAR A–E → F–J</button>
+            <button class="btn btn-save" onclick="salvarArquivo('bank-colors')">💾 SALVAR</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Cores das Categorias</div>
+          <div class="color-grid" id="catColorGrid"></div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-save" onclick="salvarArquivo('cat-colors')">💾 SALVAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LEDs ── -->
+      <div class="panel" id="panel-leds">
+        <div class="panel-title">LEDs NeoPixel</div>
+        <div class="panel-desc">Configuração dos 3 LEDs conectados ao Raspberry Pi Pico via GP0.</div>
+
+        <div class="card">
+          <div class="card-title">Brilho Global</div>
+          <div class="form-row">
+            <div class="form-label">Brilho (%)</div>
+            <input type="range" class="form-input" id="ledBrightness" min="0" max="100" value="80"
+              oninput="document.getElementById('ledBrightnessVal').textContent=this.value+'%';ledDirty()">
+            <span id="ledBrightnessVal" style="font-family:'Share Tech Mono',monospace;font-size:12px;
+              color:var(--text);min-width:36px;">80%</span>
+          </div>
+        </div>
+
+        <div class="card" id="ledCardsContainer">
+          <div class="card-title">Configuração por LED</div>
+          <div id="ledCards"></div>
+        </div>
+
+        <button class="btn btn-save" onclick="salvarArquivo('led-config')">💾 SALVAR LEDs</button>
+        <button class="btn btn-ghost" style="margin-left:8px" onclick="gerarMicroPython()">🐍 GERAR main.py</button>
+      </div>
+
+      <!-- ── Timing ── -->
+      <div class="panel" id="panel-timing">
+        <div class="panel-title">Timing MIDI</div>
+        <div class="panel-desc">Ajuste os parâmetros de timing do protocolo. Altere com cuidado — valores incorretos podem causar timeouts na G1On.</div>
+
+        <div class="card" id="timingCard">
+          <div class="card-title">Parâmetros</div>
+          <div id="timingFields"></div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-save" onclick="salvarArquivo('timing')">💾 SALVAR</button>
+            <button class="btn btn-ghost" style="margin-left:8px" onclick="resetarTiming()">↺ RESTAURAR PADRÃO</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Boost ── -->
+      <div class="panel" id="panel-boost">
+        <div class="panel-title">Boost & Volume</div>
+        <div class="panel-desc">Configuração do boost de volume por patch.</div>
+
+        <div class="card">
+          <div class="card-title">Parâmetros de Volume</div>
+          <div id="boostFields"></div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-save" onclick="salvarArquivo('boost')">💾 SALVAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Logs ── -->
+      <div class="panel" id="panel-logs">
+        <div class="panel-title">Logs do Sistema</div>
+        <div class="panel-desc">Registros de todas as operações de leitura e gravação.</div>
+        <div class="card">
+          <div class="card-title">Log Recente</div>
+          <div class="log-area" id="logArea"></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="atualizarLogs()">↺ ATUALIZAR</button>
+            <button class="btn btn-ghost" onclick="limparLogs()">🗑 LIMPAR</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /app-body -->
+</div><!-- /mainApp -->
+
+<!-- Status bar -->
+<div class="status-bar-bottom" id="statusBar">
+  <div class="status-dot off" id="statusDot"></div>
+  <span id="statusText">Aguardando login…</span>
+  <span style="margin-left:auto;font-size:9px;opacity:.4">FMC-AM 6F Settings v1.0</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="importInput" accept=".json" style="display:none" onchange="processarImport(event)">
+
+<script src="fmc-data-manager.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════════
+// Auth: SHA-256 hash comparison — plaintext never stored in code
+const _H = {
+  u: '0331c608d68f3c5dc4c1217af632e80aaa1ad522be9f51affa68631d498a8826',
+  p: '4a78d2105f3db807fd6d46c8ac3b95115af74bee1e656886de2301455149acc6'
+};
+async function _sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function tentarLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginError');
+  const hu = await _sha256(u);
+  const hp = await _sha256(p);
+  if (hu === _H.u && hp === _H.p) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').classList.add('show');
+    iniciarApp();
+  } else {
+    err.classList.add('show');
+    document.getElementById('loginPass').value = '';
+    setTimeout(() => err.classList.remove('show'), 3000);
+  }
+}
+
+// Enter key no login
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') {
+    tentarLogin(); // async — fire and forget
+  }
+});
+
+function fazerLogout() {
+  document.getElementById('mainApp').classList.remove('show');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════════════════════════
+let appIniciado = false;
+
+async function iniciarApp() {
+  if (appIniciado) { atualizarTudo(); return; }
+  appIniciado = true;
+  setStatus('busy', 'Carregando dados do GitHub...');
+  try {
+    await FMCData.init((key, done, loaded, total) => {
+      setStatus('busy', `Carregando ${key}… (${loaded}/${total})`);
+    });
+    setStatus('ok', 'Dados carregados');
+    atualizarTudo();
+    toast('Dados carregados com sucesso ✓');
+  } catch(e) {
+    setStatus('err', 'Erro ao carregar dados: ' + e.message);
+    toast('Erro ao carregar dados', true);
+  }
+}
+
+function atualizarTudo() {
+  atualizarTokenUI();
+  renderFilesTable();
+  renderPatches();
+  renderBankColors();
+  renderCatColors();
+  renderLeds();
+  renderTiming();
+  renderBoost();
+  atualizarLogs();
+}
+
+async function recarregarDados() {
+  appIniciado = false;
+  await iniciarApp();
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TOKEN UI
+// ══════════════════════════════════════════════════════════════
+function atualizarTokenUI() {
+  const has = FMCData.hasToken();
+  document.getElementById('tokenDot').className = 'token-dot ' + (has ? 'ok' : 'missing');
+  document.getElementById('tokenStatusText').textContent = has
+    ? 'Token configurado · GitHub API ativa'
+    : 'Token não configurado · somente leitura';
+}
+
+function salvarToken() {
+  const val = document.getElementById('tokenInput').value.trim();
+  if (!val) { toast('Digite o token primeiro', true); return; }
+  FMCData.setToken(val);
+  document.getElementById('tokenInput').value = '';
+  atualizarTokenUI();
+  toast('Token salvo ✓');
+}
+
+async function testarToken() {
+  setStatus('busy', 'Testando conexão...');
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/angelomiggliori/FMC-AM-6F`,
+      { headers: { 'Authorization': `token ${FMCData.getToken()}` } }
+    );
+    if (res.ok) {
+      const d = await res.json();
+      setStatus('ok', `Conectado: ${d.full_name}`);
+      toast(`GitHub conectado: ${d.full_name} ✓`);
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch(e) {
+    setStatus('err', 'Falha na conexão: ' + e.message);
+    toast('Falha na conexão: ' + e.message, true);
+  }
+}
+
+function limparToken() {
+  FMCData.clearToken();
+  atualizarTokenUI();
+  toast('Token removido');
+}
+
+// ══════════════════════════════════════════════════════════════
+// FILES TABLE
+// ══════════════════════════════════════════════════════════════
+const FILE_INFO = {
+  'fx-db':       { label:'FX Database',       icon:'🎛', countFn: d => Object.keys(d?.effects||{}).length + ' efeitos' },
+  'patch-cache': { label:'Cache de Patches',  icon:'🎸', countFn: d => Object.keys(d?.patches||{}).length + ' patches' },
+  'tap-cache':   { label:'Cache de Tap',       icon:'🥁', countFn: d => Object.keys(d?.cache||{}).length + ' entradas' },
+  'bank-colors': { label:'Cores dos Bancos',   icon:'🎨', countFn: d => Object.keys(d?.colors||{}).length + ' bancos' },
+  'cat-colors':  { label:'Cores Categorias',   icon:'🌈', countFn: d => Object.keys(d?.colors||{}).length + ' cats' },
+  'led-config':  { label:'Config LEDs',        icon:'💡', countFn: d => (d?.leds||[]).length + ' LEDs' },
+  'fs-config':   { label:'Config Footswitches',icon:'👣', countFn: d => 'fs6+fs12' },
+  'timing':      { label:'Timing MIDI',        icon:'⏱', countFn: d => Object.keys(d||{}).filter(k=>!k.startsWith('_')).length + ' params' },
+  'boost':       { label:'Boost & Volume',     icon:'⬆', countFn: d => '4 params' },
+  'meta':        { label:'Meta / Versão',      icon:'ℹ', countFn: d => d?.buildVersion||'—' },
+};
+
+function renderFilesTable() {
+  const tbody = document.getElementById('filesTableBody');
+  tbody.innerHTML = '';
+  const st = FMCData.status();
+  for (const [key, info] of Object.entries(FILE_INFO)) {
+    const data = FMCData.get(key);
+    const isDirty = st.dirty.includes(key);
+    const isLoaded = st.loaded.includes(key);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-name">${info.icon} ${info.label}</td>
+      <td><code style="font-size:9px;color:var(--dim)">data/${key}.json</code></td>
+      <td>${data ? info.countFn(data) : '—'}</td>
+      <td class="td-status"><span class="${isLoaded ? (isDirty?'td-dirty':'td-ok') : 'td-missing'}">
+        ${isLoaded ? (isDirty ? 'modificado' : 'ok') : 'não carregado'}
+      </span></td>
+      <td><button class="btn btn-ghost" style="padding:3px 8px;font-size:9px"
+        onclick="salvarArquivo('${key}')">💾 Salvar</button></td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PATCHES
+// ══════════════════════════════════════════════════════════════
+const BANK_COLORS_DEFAULT = {
+  A:'#00ff66',B:'#ffaa00',C:'#ff0000',D:'#00ffff',E:'#ffffff',
+  F:'#00ff66',G:'#ffaa00',H:'#ff0000',I:'#00ffff',J:'#ffffff'
+};
+
+function renderPatches() {
+  const grid = document.getElementById('patchGrid');
+  const filter = document.getElementById('bankFilter').value;
+  const cache = FMCData.get('patch-cache');
+  const bankColors = FMCData.get('bank-colors')?.colors || BANK_COLORS_DEFAULT;
+  grid.innerHTML = '';
+  if (!cache) { grid.innerHTML = '<div style="color:var(--dim);font-size:12px">Carregando…</div>'; return; }
+  const banks = ['A','B','C','D','E','F','G','H','I','J'];
+  const patches = cache.patches || {};
+  for (const bank of banks) {
+    if (filter && bank !== filter) continue;
+    for (let i = 0; i < 10; i++) {
+      const key = bank + i;
+      const p = patches[key];
+      if (!p) continue;
+      const cor = bankColors[bank] || '#888';
+      const card = document.createElement('div');
+      card.className = 'patch-card';
+      card.style.setProperty('--bank-color', cor);
+      card.innerHTML = `
+        <div class="patch-id-lbl">${key}</div>
+        <div class="patch-name-lbl">${p.nome || '—'}</div>
+        <div class="patch-fx-lbl">${(p.efeitos||[]).map(e=>e.nome).join(' · ').substring(0,40) || 'sem efeitos'}</div>`;
+      grid.appendChild(card);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CORES
+// ══════════════════════════════════════════════════════════════
+function renderBankColors() {
+  const grid = document.getElementById('bankColorGrid');
+  const data = FMCData.get('bank-colors');
+  if (!data) return;
+  grid.innerHTML = '';
+  for (const [bank, cor] of Object.entries(data.colors)) {
+    const item = document.createElement('div');
+    item.className = 'color-item';
+    item.innerHTML = `
+      <div class="color-swatch" id="swatch-bank-${bank}" style="background:${cor}"></div>
+      <div class="color-info">
+        <div class="color-name">Banco ${bank}</div>
+        <div class="color-hex" id="hex-bank-${bank}">${cor}</div>
+      </div>
+      <input type="color" value="${cor}" style="width:32px;height:32px;border:none;background:transparent;cursor:pointer;padding:0"
+        oninput="updateBankColor('${bank}',this.value)">`;
+    grid.appendChild(item);
+  }
+}
+
+function updateBankColor(bank, cor) {
+  document.getElementById('swatch-bank-' + bank).style.background = cor;
+  document.getElementById('hex-bank-' + bank).textContent = cor;
+  FMCData.patch('bank-colors', d => { d.colors[bank] = cor; return d; });
+  markDirty('colors');
+}
+
+function espelharBancos() {
+  const data = FMCData.get('bank-colors');
+  if (!data) return;
+  const map = {F:'A',G:'B',H:'C',I:'D',J:'E'};
+  for (const [dest, src] of Object.entries(map)) {
+    data.colors[dest] = data.colors[src];
+  }
+  FMCData.set('bank-colors', data);
+  renderBankColors();
+  markDirty('colors');
+  toast('Bancos F–J espelhados de A–E');
+}
+
+function renderCatColors() {
+  const grid = document.getElementById('catColorGrid');
+  const data = FMCData.get('cat-colors');
+  if (!data) return;
+  grid.innerHTML = '';
+  for (const [cat, cor] of Object.entries(data.colors)) {
+    const item = document.createElement('div');
+    item.className = 'color-item';
+    item.innerHTML = `
+      <div class="color-swatch" id="swatch-cat-${cat}" style="background:${cor}"></div>
+      <div class="color-info">
+        <div class="color-name">${cat}</div>
+        <div class="color-hex" id="hex-cat-${cat}">${cor}</div>
+      </div>
+      <input type="color" value="${cor}" style="width:32px;height:32px;border:none;background:transparent;cursor:pointer;padding:0"
+        oninput="updateCatColor('${cat}',this.value)">`;
+    grid.appendChild(item);
+  }
+}
+
+function updateCatColor(cat, cor) {
+  document.getElementById('swatch-cat-' + cat).style.background = cor;
+  document.getElementById('hex-cat-' + cat).textContent = cor;
+  FMCData.patch('cat-colors', d => { d.colors[cat] = cor; return d; });
+  markDirty('colors');
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEDs
+// ══════════════════════════════════════════════════════════════
+function renderLeds() {
+  const data = FMCData.get('led-config');
+  if (!data) return;
+  document.getElementById('ledBrightness').value = data.globalBrightness;
+  document.getElementById('ledBrightnessVal').textContent = data.globalBrightness + '%';
+  const container = document.getElementById('ledCards');
+  container.innerHTML = '';
+  const modos = ['solid','flash','pulse','glow','off'];
+  const funcoes = ['bpm','banco','patch','categoria','fixo'];
+  for (const led of data.leds) {
+    const div = document.createElement('div');
+    div.style.cssText = 'margin-bottom:12px;padding:12px;background:rgba(0,0,0,.3);border-radius:7px;border:1px solid var(--border)';
+    div.innerHTML = `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:#fff;margin-bottom:10px">
+        LED ${led.index} <span style="font-size:10px;color:var(--dim);font-family:'Share Tech Mono',monospace">GP0 → NeoPixel ${led.index}</span>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Função</div>
+        <select class="form-select" id="led${led.index}funcao" onchange="ledDirty()">
+          ${funcoes.map(f=>`<option value="${f}" ${f===led.funcao?'selected':''}>${f}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Modo</div>
+        <select class="form-select" id="led${led.index}modo" onchange="ledDirty()">
+          ${modos.map(m=>`<option value="${m}" ${m===led.modo?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-label">Cor Fonte</div>
+        <select class="form-select" id="led${led.index}corFonte" onchange="ledDirty()">
+          ${['banco','categoria','fixo'].map(c=>`<option value="${c}" ${c===led.corFonte?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+
+function ledDirty() { markDirty('leds'); }
+
+function coletarLedConfig() {
+  const data = FMCData.get('led-config');
+  if (!data) return;
+  data.globalBrightness = parseInt(document.getElementById('ledBrightness').value);
+  for (const led of data.leds) {
+    led.funcao   = document.getElementById(`led${led.index}funcao`).value;
+    led.modo     = document.getElementById(`led${led.index}modo`).value;
+    led.corFonte = document.getElementById(`led${led.index}corFonte`).value;
+  }
+  FMCData.set('led-config', data);
+}
+
+function gerarMicroPython() {
+  coletarLedConfig();
+  const data = FMCData.get('led-config');
+  const b = data.globalBrightness / 100;
+  const leds = data.leds.map(l =>
+    `    {'funcao':'${l.funcao}','modo':'${l.modo}','cor_fonte':'${l.corFonte}'}`
+  ).join(',\n');
+  const py = `# FMC-AM 6F · NeoPixel main.py — gerado por fmc-settings
+# Raspberry Pi Pico · GP0 → 3 LEDs NeoPixel em série
+import machine, neopixel, time
+
+PIN = machine.Pin(0)
+N_LEDS = 3
+np = neopixel.NeoPixel(PIN, N_LEDS)
+BRIGHTNESS = ${b.toFixed(2)}
+
+BANK_COLORS = ${JSON.stringify(data.bankColors, null, 2).replace(/"/g,"'")}
+
+LED_CONFIG = [
+${leds}
+]
+
+def aplicar(leds_rgb):
+    for i, rgb in enumerate(leds_rgb):
+        np[i] = tuple(int(c * BRIGHTNESS) for c in rgb)
+    np.write()
+
+# Loop principal recebe comandos via UART/USB
+while True:
+    time.sleep_ms(10)
+`;
+  const blob = new Blob([py], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'main.py';
+  a.click();
+  toast('main.py gerado ✓');
+}
+
+// ══════════════════════════════════════════════════════════════
+// TIMING
+// ══════════════════════════════════════════════════════════════
+const TIMING_DEFAULTS = {
+  sysexIdleMs:50,sysexDelayMs:80,pcToDumpMs:500,holdMs:900,
+  debounceMs:30,tapAvgN:4,tapTimeoutMs:2000,bpmMin:40,bpmMax:250,
+  memCheckMs:5000,tapMaxProbe:8,tapProbeDelay:150,tapTestVal:64,watchdogMs:240000
+};
+const TIMING_LABELS = {
+  sysexIdleMs:'SysEx Idle (ms)',sysexDelayMs:'SysEx Delay (ms)',
+  pcToDumpMs:'PC→Dump (ms)',holdMs:'Hold (ms)',debounceMs:'Debounce (ms)',
+  tapAvgN:'Tap Avg N',tapTimeoutMs:'Tap Timeout (ms)',
+  bpmMin:'BPM Mín',bpmMax:'BPM Máx',memCheckMs:'Mem Check (ms)',
+  tapMaxProbe:'Tap Max Probe',tapProbeDelay:'Probe Delay (ms)',
+  tapTestVal:'Tap Test Val',watchdogMs:'Watchdog (ms)'
+};
+
+function renderTiming() {
+  const data = FMCData.get('timing');
+  if (!data) return;
+  const div = document.getElementById('timingFields');
+  div.innerHTML = '';
+  for (const [key, label] of Object.entries(TIMING_LABELS)) {
+    const row = document.createElement('div');
+    row.className = 'form-row';
+    row.innerHTML = `
+      <div class="form-label">${label}</div>
+      <input class="form-input" type="number" id="timing_${key}"
+        value="${data[key] ?? TIMING_DEFAULTS[key]}"
+        style="max-width:120px" onchange="timingDirty()">
+      <span class="form-hint">padrão: ${TIMING_DEFAULTS[key]}</span>`;
+    div.appendChild(row);
+  }
+}
+
+function timingDirty() {
+  const data = FMCData.get('timing') || {};
+  for (const key of Object.keys(TIMING_LABELS)) {
+    const el = document.getElementById('timing_' + key);
+    if (el) data[key] = parseInt(el.value) || TIMING_DEFAULTS[key];
+  }
+  FMCData.set('timing', data);
+  markDirty('timing');
+}
+
+function resetarTiming() {
+  const data = FMCData.get('timing') || {};
+  for (const [k, v] of Object.entries(TIMING_DEFAULTS)) data[k] = v;
+  FMCData.set('timing', data);
+  renderTiming();
+  markDirty('timing');
+  toast('Timing restaurado ao padrão');
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOOST
+// ══════════════════════════════════════════════════════════════
+function renderBoost() {
+  const data = FMCData.get('boost');
+  if (!data) return;
+  const div = document.getElementById('boostFields');
+  const fields = {boostDelta:'Boost Delta',volDefault:'Volume Default',volMax:'Volume Máx',volOffset:'VOL Offset (dump byte)'};
+  div.innerHTML = '';
+  for (const [key, label] of Object.entries(fields)) {
+    const row = document.createElement('div');
+    row.className = 'form-row';
+    row.innerHTML = `
+      <div class="form-label">${label}</div>
+      <input class="form-input" type="number" id="boost_${key}"
+        value="${data[key]}" style="max-width:100px" onchange="boostDirty()">`;
+    div.appendChild(row);
+  }
+}
+
+function boostDirty() {
+  const data = FMCData.get('boost') || {};
+  ['boostDelta','volDefault','volMax','volOffset'].forEach(k => {
+    const el = document.getElementById('boost_' + k);
+    if (el) data[k] = parseInt(el.value);
+  });
+  FMCData.set('boost', data);
+  markDirty('boost');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SAVE
+// ══════════════════════════════════════════════════════════════
+async function salvarArquivo(key) {
+  if (!FMCData.hasToken()) {
+    toast('Configure o GitHub Token primeiro', true);
+    showPanel('github');
+    return;
+  }
+  setStatus('busy', `Salvando ${key}…`);
+  const ok = await FMCData.save(key);
+  if (ok) {
+    toast(`${key} salvo no GitHub ✓`);
+    setStatus('ok', `${key} salvo`);
+    markDirty(null); // refresh dots
+    renderFilesTable();
+  } else {
+    toast(`Erro ao salvar ${key}`, true);
+    setStatus('err', `Erro ao salvar ${key}`);
+  }
+}
+
+async function salvarTudo() {
+  if (!FMCData.hasToken()) {
+    toast('Configure o GitHub Token primeiro', true);
+    showPanel('github');
+    return;
+  }
+  const btn = document.getElementById('btnSaveAll');
+  btn.classList.add('loading');
+  btn.textContent = '⏳ SALVANDO…';
+  await FMCData.saveAll();
+  btn.classList.remove('loading');
+  btn.textContent = '💾 SALVAR TUDO';
+  toast('Todos os arquivos salvos ✓');
+  renderFilesTable();
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════════
+async function exportarTudo() {
+  // Cria um JSON com todos os dados agrupados
+  const raw = FMCData.raw();
+  const all = {};
+  for (const key of Object.keys(raw)) all[key] = raw[key];
+  const blob = new Blob([JSON.stringify(all, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fmc-am-6f-backup-${new Date().toISOString().substring(0,10)}.json`;
+  a.click();
+  toast('Backup exportado ✓');
+}
+
+function importarArquivo() {
+  document.getElementById('importInput').click();
+}
+
+function processarImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Se tem uma chave conhecida, trata como arquivo único
+      const knownKeys = Object.keys(FILE_INFO);
+      // Se o JSON tem chaves que são nomes de arquivos, importa múltiplos
+      const isMulti = knownKeys.some(k => data[k] !== undefined);
+      if (isMulti) {
+        let count = 0;
+        for (const key of knownKeys) {
+          if (data[key]) { FMCData.set(key, data[key]); count++; }
+        }
+        toast(`${count} arquivos importados (não salvos ainda) ✓`);
+      } else {
+        toast('Formato não reconhecido', true);
+      }
+      atualizarTudo();
+    } catch(err) {
+      toast('Erro ao ler JSON: ' + err.message, true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOGS
+// ══════════════════════════════════════════════════════════════
+function atualizarLogs() {
+  const area = document.getElementById('logArea');
+  const logs = FMCData.getLogs();
+  area.innerHTML = logs.map(l => {
+    const cls = l.level === 'err' ? 'log-err' : l.level === 'warn' ? 'log-warn' : 'log-info';
+    const ts = l.ts.substring(11,19);
+    return `<div class="${cls}">[${ts}] ${l.msg}${l.detail ? ' · ' + l.detail : ''}</div>`;
+  }).join('') || '<div class="log-info">Sem logs ainda.</div>';
+  area.scrollTop = area.scrollHeight;
+}
+
+function limparLogs() {
+  FMCData.getLogs().splice(0);
+  atualizarLogs();
+}
+
+// ══════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════
+function setStatus(state, msg) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('statusText').textContent = msg;
+}
+
+let _toastTimer;
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = isErr ? 'var(--red)' : 'var(--accent)';
+  el.style.color = isErr ? 'var(--red)' : 'var(--accent)';
+  el.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function markDirty(section) {
+  // Atualiza os dots na sidebar
+  const st = FMCData.status();
+  const map = {
+    'colors':  ['bank-colors','cat-colors'],
+    'leds':    ['led-config'],
+    'timing':  ['timing'],
+    'boost':   ['boost'],
+    'patches': ['patch-cache'],
+    'files':   Object.keys(FILE_INFO),
+  };
+  for (const [nav, keys] of Object.entries(map)) {
+    const dot = document.getElementById('dot-' + nav);
+    if (dot) {
+      const isDirty = keys.some(k => st.dirty.includes(k));
+      dot.className = 'nav-dot ' + (isDirty ? 'dirty' : 'saved');
+    }
+  }
+}
+</script>
+</body>
+</html>
