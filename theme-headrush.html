@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>HeadRush Prime · FMC-AM 6F</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   HeadRush Prime · FMC-AM 6F  ·  v5.0-b20260317
+   Visual: dark industrial · 13.6" touch display · 12 footswitches
+   ═══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg:#08080b;
+  --chassis:#111115;
+  --chassis2:#18181e;
+  --border:#252530;
+  --border2:#333342;
+  --accent:#6c55f0;
+  --accent-dim:rgba(108,85,240,.2);
+  --cyan:#00b8e6;
+  --cyan-dim:rgba(0,184,230,.18);
+  --green:#00e87a;
+  --red:#e83258;
+  --yellow:#ffcc30;
+  --orange:#ff7020;
+  --text:#eaeaf4;
+  --text-dim:#60607a;
+  --text-mid:#9090b8;
+  /* OLED scribble strip */
+  --oled-bg:#050509;
+  --oled-border:#151520;
+  /* Footswitch */
+  --fs-h:82px;
+  --fs-radius:8px;
+  /* Display */
+  --display-bg:#05050a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);
+  font-family:'Barlow',sans-serif;overflow:hidden;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+
+/* ── Background carbon fiber ─────────────────────────────────── */
+body::before{content:'';position:fixed;inset:0;
+  background-image:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.006) 0,rgba(255,255,255,.006) 1px,transparent 1px,transparent 9px),
+    repeating-linear-gradient(-45deg,rgba(255,255,255,.006) 0,rgba(255,255,255,.006) 1px,transparent 1px,transparent 9px);
+  pointer-events:none;z-index:0;}
+
+/* ── Chassis ─────────────────────────────────────────────────── */
+.chassis{
+  position:relative;z-index:1;
+  width:min(99vw,960px);
+  background:linear-gradient(180deg,#1e1e26 0%,#111115 20%,#0d0d11 100%);
+  border:1px solid var(--border2);border-radius:16px;
+  padding:14px 16px 12px;
+  box-shadow:0 0 0 1px #07070a,0 0 100px rgba(108,85,240,.06),0 40px 100px rgba(0,0,0,.97),
+    inset 0 1px 0 rgba(255,255,255,.05),inset 0 -1px 0 rgba(0,0,0,.5);
+  display:flex;flex-direction:column;gap:10px;overflow:hidden;}
+/* Purple-cyan top stripe */
+.chassis::before{content:'';position:absolute;top:0;left:100px;right:100px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent) 25%,var(--cyan) 75%,transparent);
+  opacity:.55;pointer-events:none;z-index:2;}
+/* Brushed metal lines */
+.chassis::after{content:'';position:absolute;inset:0;border-radius:16px;
+  background:repeating-linear-gradient(90deg,transparent,transparent 5px,rgba(255,255,255,.003) 5px,rgba(255,255,255,.003) 6px);
+  pointer-events:none;z-index:0;}
+
+/* Corner bolts */
+.bolt{position:absolute;width:13px;height:13px;border-radius:50%;z-index:3;
+  background:radial-gradient(circle at 38% 32%,#2a2a38,#0e0e14);
+  border:1px solid #202030;box-shadow:inset 0 1px 3px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.04);}
+.bolt::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);
+  width:55%;height:1.5px;background:rgba(255,255,255,.12);}
+.bolt.tl{top:7px;left:7px;}.bolt.tr{top:7px;right:7px;}
+.bolt.bl{bottom:7px;left:7px;}.bolt.br{bottom:7px;right:7px;}
+
+/* ── Top bar: logo + header info ─────────────────────────────── */
+.top-bar{position:relative;z-index:1;display:flex;align-items:center;gap:14px;padding:0 4px;}
+
+.logo-wrap{display:flex;flex-direction:column;gap:0;flex-shrink:0;}
+.logo-main{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(18px,2.5vw,26px);
+  letter-spacing:.18em;text-transform:uppercase;color:#fff;line-height:1;white-space:nowrap;}
+.logo-main em{color:var(--accent);font-style:normal;}
+.logo-sub{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:clamp(8px,1vw,10px);
+  letter-spacing:.3em;color:var(--text-dim);text-transform:uppercase;line-height:1;margin-top:1px;}
+
+/* Header info chips */
+.header-chips{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap;}
+.chip{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.06em;
+  padding:3px 8px;border-radius:4px;border:1px solid var(--border);
+  background:rgba(255,255,255,.03);color:var(--text-dim);white-space:nowrap;}
+.chip.active{border-color:rgba(108,85,240,.4);color:var(--accent);background:rgba(108,85,240,.07);}
+
+/* ── MAIN DISPLAY — HeadRush 13.6" touchscreen ──────────────── */
+.main-display{
+  position:relative;z-index:1;
+  background:var(--display-bg);
+  border:1px solid #1a1a2a;border-radius:12px;
+  overflow:hidden;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.8),0 0 0 1px #06060c,
+    0 0 40px rgba(108,85,240,.04);}
+/* CRT scanlines */
+.main-display::before{content:'';position:absolute;inset:0;z-index:10;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,0,0,.055) 2px,rgba(0,0,0,.055) 3px);}
+/* Corner vignette */
+.main-display::after{content:'';position:absolute;inset:0;z-index:9;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%,transparent 60%,rgba(0,0,0,.4) 100%);}
+
+/* ── Patch info strip inside display ─────────────────────────── */
+.patch-strip{
+  position:relative;z-index:11;
+  display:flex;align-items:center;gap:14px;
+  padding:10px 18px;
+  border-bottom:1px solid rgba(255,255,255,.04);}
+/* Bank color bar on left */
+.patch-strip::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  background:var(--bank-color,var(--accent));border-radius:0 3px 3px 0;
+  box-shadow:0 0 12px var(--bank-color,var(--accent));transition:background .25s,box-shadow .25s;}
+
+.vol-display{font-family:'Share Tech Mono',monospace;font-size:clamp(9px,1.2vw,11px);
+  color:var(--text-dim);white-space:nowrap;border-right:1px solid var(--border);
+  padding-right:14px;line-height:1.5;text-align:center;flex-shrink:0;transition:color .3s;}
+.vol-val{font-family:'Barlow Condensed',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;display:block;}
+
+.patch-info{flex:1;min-width:0;padding-left:12px;}
+.patch-id{font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(28px,5vw,48px);font-weight:900;
+  color:var(--bank-color,#fff);
+  text-shadow:0 0 20px var(--bank-color,transparent),0 0 60px var(--bank-color,transparent);
+  letter-spacing:.08em;line-height:1;transition:color .2s,text-shadow .2s;}
+.patch-id.blink{animation:blink-hr .38s linear infinite;}
+@keyframes blink-hr{50%{opacity:.04;}}
+.patch-name{font-family:'Share Tech Mono',monospace;font-size:clamp(9px,1.3vw,11px);
+  color:var(--text-dim);letter-spacing:.07em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;}
+.fx-indicators{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+.fx-tag{font-family:'Share Tech Mono',monospace;font-size:8px;
+  padding:1px 6px;border-radius:2px;border:1px solid;letter-spacing:.07em;transition:all .2s;}
+.fx-tag.delay   {color:#00e5ff;border-color:#00e5ff44;background:rgba(0,229,255,.07);}
+.fx-tag.mod     {color:#b388ff;border-color:#b388ff44;background:rgba(179,136,255,.07);}
+.fx-tag.reverb  {color:#6eb5ff;border-color:#6eb5ff44;background:rgba(110,181,255,.07);}
+.fx-tag.drive   {color:#ff7a50;border-color:#ff7a5044;background:rgba(255,122,80,.07);}
+.fx-tag.dynamics{color:#ffd740;border-color:#ffd74044;background:rgba(255,215,64,.07);}
+.fx-tag.filter  {color:#ff9e30;border-color:#ff9e3044;background:rgba(255,158,48,.07);}
+.fx-tag.amp     {color:#ff6688;border-color:#ff668844;background:rgba(255,102,136,.07);}
+.fx-tag.pitch   {color:#80ffea;border-color:#80ffea44;background:rgba(128,255,234,.07);}
+.fx-tag.special {color:#cc55ff;border-color:#cc55ff44;background:rgba(204,85,255,.07);}
+.fx-tag.unknown {color:#888;border-color:#44444488;background:rgba(80,80,80,.07);}
+.fx-tag.off     {opacity:.2;filter:grayscale(1);}
+
+.bpm-display{font-family:'Share Tech Mono',monospace;font-size:clamp(9px,1.2vw,11px);
+  color:var(--cyan);white-space:nowrap;border-left:1px solid var(--border);
+  padding-left:14px;line-height:1.5;text-align:center;flex-shrink:0;}
+.bpm-val{font-family:'Barlow Condensed',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;display:block;}
+
+/* ══════════════════════════════════════════════════════════════
+   TONEWEBLIB — FX Chain Editor (ocupa o corpo do display)
+   ══════════════════════════════════════════════════════════════ */
+.toneweblib{
+  position:relative;z-index:11;
+  padding:12px 16px 14px;
+  min-height:130px;
+  display:flex;flex-direction:column;gap:8px;}
+
+/* Section label */
+.twl-label{font-family:'Barlow Condensed',sans-serif;font-weight:600;
+  font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--text-dim);opacity:.5;}
+
+/* FX Chain */
+.fx-chain{display:flex;align-items:center;gap:6px;min-height:80px;flex-wrap:nowrap;overflow-x:auto;padding:2px 0 4px;
+  scrollbar-width:none;}
+.fx-chain::-webkit-scrollbar{display:none;}
+
+/* Signal flow arrows */
+.fx-arrow{color:var(--border2);font-size:12px;flex-shrink:0;opacity:.6;}
+.fx-chain-in,.fx-chain-out{
+  font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.1em;
+  color:var(--text-dim);flex-shrink:0;padding:2px 6px;
+  border:1px solid var(--border);border-radius:3px;background:rgba(0,0,0,.3);}
+
+/* FX Block */
+.fx-block{
+  flex-shrink:0;min-width:80px;
+  background:linear-gradient(180deg,#161620 0%,#101016 100%);
+  border:1px solid var(--border2);border-radius:8px;
+  padding:8px 10px;cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:border-color .15s,box-shadow .15s,transform .08s;
+  touch-action:none;-webkit-tap-highlight-color:transparent;}
+.fx-block:active{transform:scale(.96);}
+.fx-block.enabled{border-color:var(--fx-color,var(--accent));}
+.fx-block.enabled::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--fx-color,var(--accent));
+  box-shadow:0 0 8px var(--fx-color,var(--accent));}
+.fx-block.disabled{opacity:.45;border-color:var(--border);}
+.fx-block.editing{border-color:var(--yellow);box-shadow:0 0 14px rgba(255,204,48,.2);}
+.fx-block.editing::after{content:'';position:absolute;inset:0;border-radius:8px;
+  background:rgba(255,204,48,.04);pointer-events:none;}
+/* Dragging */
+.fx-block.dragging{opacity:.5;transform:scale(.95);}
+.fx-block.drag-over{border-color:var(--cyan);box-shadow:0 0 12px var(--cyan-dim);}
+
+.fx-block-cat{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--fx-color,var(--text-dim));opacity:.8;margin-bottom:3px;}
+.fx-block-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:clamp(13px,1.5vw,16px);letter-spacing:.04em;color:#fff;line-height:1;white-space:nowrap;}
+.fx-block-slot{font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--text-dim);
+  margin-top:4px;opacity:.5;}
+/* ON/OFF toggle dot */
+.fx-toggle{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;
+  border:1px solid var(--border2);background:var(--border);transition:all .15s;}
+.fx-block.enabled .fx-toggle{background:var(--fx-color,var(--accent));
+  box-shadow:0 0 5px var(--fx-color,var(--accent));border-color:transparent;}
+
+/* Empty slot */
+.fx-empty{flex-shrink:0;min-width:70px;height:70px;
+  border:1px dashed var(--border);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--border2);
+  letter-spacing:.08em;}
+
+/* ── FX Param Editor (inline, aparece abaixo da chain) ────────── */
+.fx-param-editor{
+  background:rgba(0,0,0,.5);border:1px solid var(--border2);border-radius:8px;
+  padding:10px 12px;display:none;flex-direction:column;gap:8px;
+  max-height:160px;overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:var(--border2) transparent;}
+.fx-param-editor.visible{display:flex;}
+
+.param-editor-header{display:flex;align-items:center;gap:8px;}
+.param-editor-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:14px;color:#fff;letter-spacing:.06em;flex:1;}
+.param-editor-close{font-family:'Share Tech Mono',monospace;font-size:9px;
+  color:var(--text-dim);cursor:pointer;padding:2px 8px;border:1px solid var(--border);
+  border-radius:3px;transition:all .2s;}
+.param-editor-close:hover{border-color:var(--red);color:var(--red);}
+
+.param-rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+
+.param-row{display:flex;flex-direction:column;gap:3px;}
+.param-label{font-family:'Share Tech Mono',monospace;font-size:8px;
+  color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;
+  display:flex;justify-content:space-between;}
+.param-label span{color:var(--text-mid);}
+.param-slider{-webkit-appearance:none;appearance:none;width:100%;height:3px;
+  background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+.param-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--accent);cursor:pointer;
+  box-shadow:0 0 6px var(--accent-dim);}
+.param-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;border:none;}
+
+/* ── Footswitch zone ──────────────────────────────────────────── */
+.fs-zone{position:relative;z-index:1;display:flex;flex-direction:column;gap:5px;}
+.fs-zone-label{font-family:'Barlow Condensed',sans-serif;font-weight:600;
+  font-size:8px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--text-dim);opacity:.4;text-align:center;}
+
+/* ── FS Grid — 6 columns × 2 rows visual ─────────────────────── */
+/* Engine injects 12 .fs-col children; CSS places them 6+6 */
+.fs-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:clamp(5px,1.1vw,9px);
+  width:100%;align-items:end;justify-items:stretch;}
+
+.fs-col{display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;}
+
+/* OLED scribble strip */
+.fs-label{
+  min-height:26px;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 1px,rgba(0,0,0,.18) 1px,rgba(0,0,0,.18) 2px),
+    linear-gradient(180deg,var(--oled-bg) 0%,#040408 100%);
+  border:1px solid var(--oled-border);border-bottom:none;
+  border-radius:4px 4px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Share Tech Mono',monospace;
+  font-size:clamp(7px,1vw,9px);color:var(--text-dim);
+  letter-spacing:.05em;text-align:center;
+  padding:2px 3px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;
+  text-transform:uppercase;transition:color .15s,text-shadow .15s;}
+
+/* ── Footswitch button ────────────────────────────────────────── */
+.fs-btn{
+  width:100%;height:var(--fs-h);
+  background:linear-gradient(180deg,#1e1e28 0%,#141418 55%,#0f0f13 100%);
+  border:1px solid var(--border2);border-top:none;
+  border-radius:0 0 var(--fs-radius) var(--fs-radius);
+  cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(11px,1.5vw,14px);font-weight:700;
+  color:var(--text-dim);letter-spacing:.1em;
+  position:relative;
+  transition:border-color .1s,box-shadow .1s,background .1s,transform .07s;
+  box-shadow:0 4px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04),inset 0 -2px 6px rgba(0,0,0,.4);
+  touch-action:none;-webkit-tap-highlight-color:transparent;flex-shrink:0;overflow:hidden;}
+/* Rubber pad inset */
+.fs-btn::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:64%;height:58%;border-radius:7px;
+  background:radial-gradient(ellipse at 50% 35%,rgba(255,255,255,.035) 0%,transparent 70%);
+  pointer-events:none;}
+.fs-btn:active,.fs-btn.pressed{transform:translateY(2px) scale(.97);
+  box-shadow:0 1px 4px rgba(0,0,0,.9),inset 0 3px 10px rgba(0,0,0,.55);}
+
+/* Active patch — top LED glow */
+.fs-btn.lit-top{
+  border-color:var(--bank-color,var(--green));
+  background:linear-gradient(180deg,#1c1c2e 0%,#141418 65%,#0f0f13 100%);
+  color:#fff;
+  box-shadow:0 -4px 16px -2px var(--bank-color,var(--green)),0 4px 10px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.07);}
+.fs-btn.lit-top::after{content:'';position:absolute;top:0;left:10%;right:10%;height:2px;
+  background:var(--bank-color,var(--green));border-radius:0 0 4px 4px;
+  box-shadow:0 0 10px 2px var(--bank-color,var(--green));}
+/* Scribble strip glow when active */
+.fs-col:has(.lit-top) .fs-label{
+  color:var(--bank-color,var(--green));
+  text-shadow:0 0 7px var(--bank-color,var(--green));}
+
+/* Bank preselect */
+.fs-btn.preselect-mode{border-color:var(--border);color:var(--text-mid);}
+/* Confirmar banco */
+.fs-btn.preselect-mode.lit-top{border-color:var(--bank-color,var(--green));color:#fff;}
+
+/* Tuner ON */
+.fs-btn.tuner-on{border-color:var(--cyan);
+  background:linear-gradient(180deg,#08141e 0%,#050c14 100%);color:var(--cyan);
+  box-shadow:0 0 20px rgba(0,184,230,.18),inset 0 1px 0 rgba(0,184,230,.1);}
+
+/* TAP beat flash */
+.fs-btn.tap-beat{border-color:var(--cyan);box-shadow:0 0 14px var(--cyan-dim);}
+.fs-btn.tap-btn{border-color:#151a25;}
+.fs-btn.tap-btn::before{background:radial-gradient(ellipse at 50% 35%,rgba(0,184,230,.05) 0%,transparent 70%);}
+/* delay/rate sync glow on tap btn */
+.fs-btn.delay-sync.tap-beat{border-color:var(--cyan);box-shadow:0 0 18px rgba(0,184,230,.4);}
+.fs-btn.rate-sync.tap-beat{border-color:var(--accent);box-shadow:0 0 18px var(--accent-dim);}
+
+/* Confirm ring */
+.confirm-ring{position:absolute;inset:0;border-radius:inherit;
+  border:2px solid var(--bank-color,var(--green));
+  animation:confirm-ring-hr .38s ease-out forwards;pointer-events:none;}
+@keyframes confirm-ring-hr{0%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(1.08);}}
+
+/* ── Status row ───────────────────────────────────────────────── */
+.status-row{position:relative;z-index:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 2px;}
+
+.mode-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.16em;padding:3px 10px;border-radius:4px;text-transform:uppercase;flex-shrink:0;transition:all .2s;}
+.mode-badge.normal    {background:#12121a;border:1px solid #222232;color:var(--text-dim);}
+.mode-badge.banksel   {background:#1a1208;border:1px solid var(--orange);color:var(--orange);box-shadow:0 0 8px rgba(255,112,32,.15);}
+.mode-badge.confirming{background:#10101c;border:1px solid var(--accent);color:var(--accent);animation:mode-pulse .6s ease-in-out infinite alternate;}
+.mode-badge.tuner     {background:#060e16;border:1px solid var(--cyan);color:var(--cyan);box-shadow:0 0 8px var(--cyan-dim);}
+@keyframes mode-pulse{from{box-shadow:0 0 4px rgba(108,85,240,.15);}to{box-shadow:0 0 14px rgba(108,85,240,.45);}}
+
+.boost-btn{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:4px;
+  border:1px solid #222232;background:#0c0c14;color:var(--text-dim);
+  cursor:pointer;flex-shrink:0;transition:all .2s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.boost-btn:hover{border-color:var(--yellow);color:var(--yellow);}
+.boost-btn.boost-on{border-color:var(--yellow);color:var(--yellow);background:rgba(255,204,48,.07);
+  box-shadow:0 0 10px rgba(255,204,48,.2);animation:boost-pulse .6s ease-in-out infinite alternate;}
+@keyframes boost-pulse{from{box-shadow:0 0 4px rgba(255,204,48,.15);}to{box-shadow:0 0 14px rgba(255,204,48,.45);}}
+
+.cal-btn{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:4px;
+  border:1px solid #222232;background:#0c0c14;color:var(--text-dim);
+  cursor:pointer;flex-shrink:0;transition:all .2s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.cal-btn:hover{border-color:#00ffcc;color:#00ffcc;}
+.cal-btn.cal-on{border-color:#00ffcc;color:#00ffcc;background:rgba(0,255,204,.06);
+  box-shadow:0 0 8px rgba(0,255,204,.2);animation:cal-pulse .8s ease-in-out infinite alternate;}
+@keyframes cal-pulse{from{box-shadow:0 0 4px rgba(0,255,204,.15);}to{box-shadow:0 0 14px rgba(0,255,204,.45);}}
+
+.build-badge{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.1em;
+  color:var(--text-dim);border:1px solid #1c1c2a;border-radius:3px;
+  padding:1px 6px;background:#08080e;flex-shrink:0;}
+.flash-health{font-family:'Share Tech Mono',monospace;font-size:8px;color:#1e1e2a;
+  letter-spacing:.06em;cursor:pointer;transition:color .3s;white-space:nowrap;}
+.flash-health:hover{color:var(--text-dim);}
+.cache-btn{font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:.08em;
+  cursor:pointer;padding:1px 5px;border:1px solid rgba(108,85,240,.2);border-radius:3px;
+  color:rgba(108,85,240,.5);transition:all .2s;flex-shrink:0;}
+.cache-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Hide legacy indicators */
+.midi-indicator,#midiPortLabel,#memStatus{display:none!important;}
+
+/* ── MIDI bar (outside chassis) ──────────────────────────────── */
+.midi-bar{position:relative;z-index:2;width:min(99vw,960px);
+  background:#06060a;border:1px solid #181824;border-radius:10px;
+  padding:7px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  box-shadow:0 4px 20px rgba(0,0,0,.6);}
+.midi-bar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  background:#18182a;transition:background .3s,box-shadow .3s;}
+.midi-bar-dot.off       {background:#18182a;}
+.midi-bar-dot.aguardando{background:#383850;animation:pulse-wait .9s ease-in-out infinite alternate;}
+.midi-bar-dot.conectado {background:#00ff66;box-shadow:0 0 7px #00ff66;}
+.midi-bar-dot.g1on      {background:#00d4b8;box-shadow:0 0 9px #00d4b8;animation:pulse-g1on 1.2s ease-in-out infinite alternate;}
+.midi-bar-dot.erro      {background:#ff2244;box-shadow:0 0 7px #ff2244;}
+@keyframes pulse-wait{from{opacity:.3;}to{opacity:1;}}
+@keyframes pulse-g1on{from{box-shadow:0 0 5px #00d4b8;}to{box-shadow:0 0 14px #00d4b8;}}
+.midi-bar-texto{font-family:'Share Tech Mono',monospace;font-size:11px;
+  color:#484860;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;}
+.midi-bar-texto strong{color:#8080a8;}
+.midi-bar-texto.g1on{color:#00d4b8;}
+.midi-bar-texto.erro{color:#ff4455;}
+.midi-bar-btn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px 14px;border-radius:6px;
+  border:1px solid #242436;background:#0a0a14;color:#565670;
+  cursor:pointer;flex-shrink:0;transition:all .2s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.midi-bar-btn:hover   {border-color:#383850;color:#8080a8;}
+.midi-bar-btn.loading {border-color:#ff9900;color:#ff9900;animation:pulse-wait .6s ease-in-out infinite alternate;}
+.midi-bar-btn.ok      {border-color:#00ff6633;color:#00ff66;pointer-events:none;}
+.midi-bar-btn.g1on    {border-color:#00d4b855;color:#00d4b8;pointer-events:none;}
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:rgba(8,8,16,.97);border:1px solid var(--accent);color:var(--accent);
+  font-family:'Share Tech Mono',monospace;font-size:11px;
+  padding:7px 20px;border-radius:6px;letter-spacing:.1em;
+  opacity:0;transition:all .28s;pointer-events:none;z-index:500;
+  white-space:nowrap;box-shadow:0 0 24px var(--accent-dim);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media(max-width:700px){
+  :root{--fs-h:62px;}
+  .fs-label{min-height:20px;font-size:7px;}
+  .patch-id{font-size:28px;}
+  .logo-main{font-size:16px;}
+  .toneweblib{padding:8px 10px 10px;min-height:100px;}
+}
+@media(max-width:480px){
+  :root{--fs-h:52px;}
+  .chassis{padding:10px 10px 8px;gap:8px;}
+  .fs-label{min-height:16px;}
+}
+@media(max-height:520px) and (orientation:landscape){
+  :root{--fs-h:50px;}
+  .chassis{padding:8px 12px;gap:6px;}
+  .toneweblib{min-height:80px;padding:6px 10px;}
+  .fs-label{min-height:14px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     CHASSIS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="chassis" id="chassis">
+  <div class="bolt tl"></div><div class="bolt tr"></div>
+  <div class="bolt bl"></div><div class="bolt br"></div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="logo-wrap">
+      <div class="logo-main">Head<em>·</em>Rush</div>
+      <div class="logo-sub">Prime · FMC-AM 6F</div>
+    </div>
+    <div class="header-chips">
+      <div class="chip" id="modeBadge">EXECUÇÃO</div>
+      <button class="boost-btn" id="boostBtn" onclick="toggleBoost()">⬆ BOOST</button>
+      <button class="cal-btn" id="calBtn" onclick="iniciarCalibracaoCompleta()" title="Calibrar Tap Tempo">⚙ CAL</button>
+      <span style="flex:1"></span>
+      <span class="cache-btn" onclick="limparCachePatches()" title="Limpar cache">↺</span>
+      <span class="build-badge">v5.0-b20260317</span>
+      <span class="flash-health" id="flashHealth" onclick="mostrarDetalhesSaude()">◌</span>
+    </div>
+  </div>
+
+  <!-- ══ MAIN DISPLAY — 13.6" touch screen simulation ══ -->
+  <div class="main-display" id="mainDisplay">
+
+    <!-- Patch info strip -->
+    <div class="patch-strip">
+      <div class="vol-display">
+        <span class="vol-val" id="patchVolume">---</span>
+        <span>VOL</span>
+      </div>
+      <div class="patch-info">
+        <div class="patch-id" id="patchId">A0</div>
+        <div class="patch-name" id="patchName">CARREGANDO…</div>
+        <div class="fx-indicators" id="fxIndicators"></div>
+      </div>
+      <div class="bpm-display">
+        <span class="bpm-val" id="bpmVal">120</span>
+        <span>BPM</span>
+      </div>
+    </div>
+
+    <!-- ToneWebLib — FX Chain Editor -->
+    <div class="toneweblib" id="toneWebLib">
+      <div class="twl-label">SIGNAL CHAIN — tap to toggle · double-tap to edit · drag to reorder</div>
+
+      <!-- FX Chain (populated by ToneWebLib JS) -->
+      <div class="fx-chain" id="fxChain">
+        <div class="fx-chain-in">IN</div>
+        <span class="fx-arrow">▶</span>
+        <!-- FX blocks injected here by toneWebLibAtualizar() -->
+        <div class="fx-empty" id="fxChainEmpty" style="display:none">SEM EFEITOS</div>
+        <span class="fx-arrow" id="fxChainArrowOut">▶</span>
+        <div class="fx-chain-out">OUT</div>
+      </div>
+
+      <!-- Param editor (hidden until double-tap) -->
+      <div class="fx-param-editor" id="fxParamEditor">
+        <div class="param-editor-header">
+          <div class="param-editor-title" id="paramEditorTitle">EFEITO</div>
+          <div class="param-editor-close" onclick="twlFecharEditor()">✕ FECHAR</div>
+        </div>
+        <div class="param-rows" id="paramRows"></div>
+      </div>
+    </div>
+
+  </div><!-- /main-display -->
+
+  <!-- ══ Footswitch zone — 12 FS, 6×2 ══ -->
+  <div class="fs-zone">
+    <div class="fs-zone-label">FS1–10: PATCHES · FS11: BANK / TUNER · FS12: TAP TEMPO</div>
+    <!-- Engine populates with 12 .fs-col children (THEME_FS = 12) -->
+    <div class="fs-grid" id="fsGrid"></div>
+  </div>
+
+  <!-- Hidden legacy refs (engine needs these) -->
+  <div class="midi-indicator" id="midiIndicator"></div>
+  <span id="midiPortLabel" style="display:none"></span>
+  <span id="memStatus" style="display:none"></span>
+
+</div><!-- /chassis -->
+
+<!-- MIDI bar outside chassis -->
+<div class="midi-bar" id="midiBar">
+  <div class="midi-bar-dot off" id="midiBarDot"></div>
+  <div class="midi-bar-texto" id="midiBarTexto">MIDI não iniciado</div>
+  <button class="midi-bar-btn" id="midiBarBtn" onclick="conectarMIDI()">CONECTAR MIDI</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TONEWEBLIB — FX Chain Editor Logic
+     Roda antes do engine; expõe toneWebLibAtualizar() que o
+     renderizar() do engine chama após cada mudança de patch.
+     ══════════════════════════════════════════════════════════ -->
+<script>
+/* ─── ToneWebLib v1.0 ─────────────────────────────────────────────
+   Requisitos:
+   - patchAtual (definido pelo engine) com .efeitos[]
+   - midiOut, midiReady, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, CMD_PARAM
+   - sleep(), garantirEditor()
+   - showToast()
+   ─────────────────────────────────────────────────────────────── */
+
+// Categoria → cor
+const TWL_CAT_COLOR = {
+  dynamics:'#ffd740', filter:'#ff9e30', drive:'#ff7a50', amp:'#ff6688',
+  pitch:'#80ffea', mod:'#b388ff', delay:'#00e5ff', reverb:'#6eb5ff',
+  special:'#cc55ff', unknown:'#888888',
+};
+
+// Param names map (híbrido: nomes reais onde conhecemos, genérico p/ o resto)
+const TWL_PARAM_NAMES = {
+  // Delay family
+  delay:  ['Time','Feedback','Mix','Tone','Mod.Depth','Mod.Rate','Tail','—'],
+  mod:    ['Rate','Depth','Mix','Tone','Resonance','Phase','Stereo','—'],
+  reverb: ['Decay','Pre-Delay','Mix','Tone','Diffusion','Mod.','Early','—'],
+  drive:  ['Gain','Tone','Level','Mid','Bass','Treble','—','—'],
+  amp:    ['Gain','Bass','Mid','Treble','Presence','Level','—','—'],
+  dynamics:['Threshold','Ratio','Attack','Release','Level','—','—','—'],
+  filter: ['Freq','Resonance','Mix','Env.Depth','Attack','Release','—','—'],
+  pitch:  ['Pitch','Mix','Tracking','—','—','—','—','—'],
+};
+function twlParamName(cat, idx){
+  const arr = TWL_PARAM_NAMES[cat] || [];
+  return arr[idx] || `P${idx+1}`;
+}
+
+// Estado do editor
+let twlEditingIdx = null;   // índice do fx-block em edição
+let twlLastTap = {};        // { idx: timestamp } para detectar double-tap
+let twlDragSrc = null;      // índice arrastado
+
+// ── Renderiza a chain com os efeitos do patchAtual ────────────
+function toneWebLibAtualizar(){
+  // patchAtual pode não existir antes do engine iniciar
+  if(typeof patchAtual === 'undefined') return;
+
+  const chain = document.getElementById('fxChain');
+  const emptyEl = document.getElementById('fxChainEmpty');
+  const arrowOut = document.getElementById('fxChainArrowOut');
+  if(!chain) return;
+
+  // Remove blocos anteriores (preserva IN, arrows, empty, OUT)
+  const blocks = chain.querySelectorAll('.fx-block,.fx-arrow.fx-mid');
+  blocks.forEach(b => b.remove());
+
+  const efeitos = patchAtual.efeitos || [];
+
+  if(efeitos.length === 0){
+    if(emptyEl) emptyEl.style.display = 'flex';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+
+  // Insere antes do arrowOut
+  efeitos.forEach((ef, i) => {
+    // Arrow inter-bloco
+    if(i > 0){
+      const arr = document.createElement('span');
+      arr.className = 'fx-arrow fx-mid'; arr.textContent = '▶';
+      chain.insertBefore(arr, arrowOut);
+    }
+    // Bloco
+    const block = criarFxBlock(ef, i);
+    chain.insertBefore(block, arrowOut);
+  });
+
+  // Fecha editor se efeito sumiu
+  if(twlEditingIdx !== null && twlEditingIdx >= efeitos.length){
+    twlFecharEditor();
+  }
+}
+
+function criarFxBlock(ef, i){
+  const cor = TWL_CAT_COLOR[ef.cat] || '#888';
+  const block = document.createElement('div');
+  block.className = 'fx-block ' + (ef.enabled ? 'enabled' : 'disabled');
+  block.style.setProperty('--fx-color', cor);
+  if(twlEditingIdx === i) block.classList.add('editing');
+  block.dataset.idx = i;
+
+  block.innerHTML = `
+    <div class="fx-block-cat">${ef.cat||'—'}</div>
+    <div class="fx-block-name">${ef.nome||'—'}</div>
+    <div class="fx-block-slot">SLOT ${ef.slot}</div>
+    <div class="fx-toggle"></div>`;
+
+  // Tap = toggle on/off | Double-tap = param editor
+  block.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const now = Date.now();
+    const last = twlLastTap[i] || 0;
+    if(now - last < 350){
+      // Double-tap → param editor
+      twlAbrirEditor(i);
+      twlLastTap[i] = 0;
+    } else {
+      twlLastTap[i] = now;
+      // Single-tap fires on pointerup after timeout
+      setTimeout(() => {
+        if(twlLastTap[i] === now){
+          // Foi single-tap — toggle on/off
+          twlToggleFx(i);
+        }
+      }, 360);
+    }
+  });
+
+  // Drag & drop reorder
+  block.setAttribute('draggable', true);
+  block.addEventListener('dragstart', e => {
+    twlDragSrc = i;
+    block.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  block.addEventListener('dragend', () => block.classList.remove('dragging'));
+  block.addEventListener('dragover', e => {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    block.classList.add('drag-over');
+  });
+  block.addEventListener('dragleave', () => block.classList.remove('drag-over'));
+  block.addEventListener('drop', e => {
+    e.preventDefault();
+    block.classList.remove('drag-over');
+    if(twlDragSrc !== null && twlDragSrc !== i) twlReorder(twlDragSrc, i);
+  });
+
+  return block;
+}
+
+// ── Toggle FX on/off ──────────────────────────────────────────
+async function twlToggleFx(idx){
+  if(typeof patchAtual === 'undefined') return;
+  const ef = patchAtual.efeitos[idx];
+  if(!ef) return;
+  ef.enabled = !ef.enabled;
+  // Envia SysEx: CMD_PARAM, slotIdx, rawIdx=0 (enabled flag em rawSlot[0])
+  // O bit 0 de rawSlot[0] é o flag enabled — ajustamos e enviamos o param
+  if(typeof midiOut !== 'undefined' && midiOut && typeof midiReady !== 'undefined' && midiReady){
+    if(typeof garantirEditor === 'function') await garantirEditor();
+    // rawSlot[0] = (enabled << (bit posição)) | resto — simplificamos:
+    // Envia param index 0 com valor que seta/limpa enabled via rawSlot
+    const rs = ef.rawSlot;
+    if(rs && rs.length > 0){
+      // Altera bit 0 de raw[0]: enabled=bit0
+      const raw0new = ef.enabled ? (rs[0] | 0x80) : (rs[0] & 0x7F);
+      const lo = raw0new & 0x7F, hi = (raw0new >> 7) & 0x7F;
+      try{
+        midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, CMD_PARAM,
+                      ef.slotIdx, 0, lo, hi, 0xF7]);
+      }catch(err){}
+    }
+  }
+  toneWebLibAtualizar();
+  if(typeof showToast === 'function') showToast(`${ef.nome} ${ef.enabled?'ON':'OFF'}`);
+}
+
+// ── Reorder slots via drag & drop ────────────────────────────
+function twlReorder(from, to){
+  if(typeof patchAtual === 'undefined') return;
+  const arr = patchAtual.efeitos;
+  if(from < 0 || to < 0 || from >= arr.length || to >= arr.length) return;
+  const item = arr.splice(from, 1)[0];
+  arr.splice(to, 0, item);
+  // Atualiza slotIdx conforme nova ordem
+  arr.forEach((ef, i) => { ef.slot = i+1; ef.slotIdx = i; });
+  if(twlEditingIdx === from) twlEditingIdx = to;
+  toneWebLibAtualizar();
+  if(typeof showToast === 'function') showToast(`${item.nome} → slot ${to+1}`);
+  // TODO: enviar nova ordem para G1On via SysEx quando protocolo confirmar
+}
+
+// ── Param editor ─────────────────────────────────────────────
+function twlAbrirEditor(idx){
+  if(typeof patchAtual === 'undefined') return;
+  const ef = patchAtual.efeitos[idx];
+  if(!ef) return;
+
+  twlEditingIdx = idx;
+  const editor = document.getElementById('fxParamEditor');
+  const title  = document.getElementById('paramEditorTitle');
+  const rows   = document.getElementById('paramRows');
+  if(!editor||!title||!rows) return;
+
+  title.textContent = `${ef.nome.toUpperCase()}  ·  SLOT ${ef.slot}`;
+  rows.innerHTML = '';
+
+  // Gera sliders para os params disponíveis em rawSlot[3..]
+  const rawSlot = ef.rawSlot || [];
+  const PARAM_OFFSET = 3; // rawSlot[3] = Param 0
+  const numParams = Math.min(8, rawSlot.length - PARAM_OFFSET);
+
+  for(let p = 0; p < numParams; p++){
+    const val = rawSlot[PARAM_OFFSET + p] || 0;
+    const label = twlParamName(ef.cat, p);
+    if(label === '—') continue;
+
+    const row = document.createElement('div');
+    row.className = 'param-row';
+    row.innerHTML = `
+      <div class="param-label">${label}<span id="pv_${idx}_${p}">${val}</span></div>
+      <input type="range" class="param-slider" min="0" max="127" value="${val}"
+             data-idx="${idx}" data-param="${p}">`;
+    rows.appendChild(row);
+
+    const slider = row.querySelector('input');
+    slider.addEventListener('input', async function(){
+      const newVal = parseInt(this.value);
+      const pIdx = parseInt(this.dataset.idx);
+      const paramI = parseInt(this.dataset.param);
+      const eff = patchAtual.efeitos[pIdx];
+      if(!eff) return;
+      // Atualiza rawSlot local
+      if(eff.rawSlot) eff.rawSlot[PARAM_OFFSET + paramI] = newVal;
+      // Atualiza display
+      const lbl = document.getElementById(`pv_${pIdx}_${paramI}`);
+      if(lbl) lbl.textContent = newVal;
+      // Envia para G1On
+      if(typeof midiOut!=='undefined' && midiOut && typeof midiReady!=='undefined' && midiReady){
+        const lo = newVal & 0x7F, hi = (newVal >> 7) & 0x7F;
+        try{
+          midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, CMD_PARAM,
+                        eff.slotIdx, paramI, lo, hi, 0xF7]);
+        }catch(err){}
+      }
+    });
+  }
+
+  if(rows.children.length === 0){
+    rows.innerHTML = '<div style="font-family:Share Tech Mono,monospace;font-size:9px;color:#555;padding:8px">Parâmetros não mapeados para este efeito.</div>';
+  }
+
+  editor.classList.add('visible');
+  toneWebLibAtualizar(); // re-render com highlight
+}
+
+function twlFecharEditor(){
+  twlEditingIdx = null;
+  const editor = document.getElementById('fxParamEditor');
+  if(editor) editor.classList.remove('visible');
+  toneWebLibAtualizar();
+}
+</script>
+
+<!-- Engine — THEME_FS = 12, zero lógica MIDI acima desta linha -->
+<script>
+  const THEME_NAME = 'HeadRush Prime · FMC-AM 6F';
+  const THEME_FS   = 12;
+</script>
+<script src="fmc-engine.js"></script>
+</body>
+</html>
