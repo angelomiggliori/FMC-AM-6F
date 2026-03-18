@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "descricao": "Cores por categoria de efeito"
+  },
+  "colors": {
+    "dynamics": "#ffd740",
+    "filter": "#ff9e30",
+    "drive": "#ff7a50",
+    "amp": "#ff6688",
+    "pitch": "#80ffea",
+    "mod": "#b388ff",
+    "delay": "#00e5ff",
+    "reverb": "#6eb5ff",
+    "special": "#cc55ff",
+    "unknown": "#888888"
+  }
+}

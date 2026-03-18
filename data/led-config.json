@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "descricao": "Configura\u00e7\u00e3o dos LEDs NeoPixel (Pico)"
+  },
+  "globalBrightness": 80,
+  "leds": [
+    {
+      "index": 0,
+      "funcao": "bpm",
+      "modo": "flash",
+      "corFonte": "banco",
+      "corFixa": null
+    },
+    {
+      "index": 1,
+      "funcao": "banco",
+      "modo": "solid",
+      "corFonte": "banco",
+      "corFixa": null
+    },
+    {
+      "index": 2,
+      "funcao": "patch",
+      "modo": "solid",
+      "corFonte": "banco",
+      "corFixa": null
+    }
+  ],
+  "bankColors": {
+    "A": [
+      0,
+      255,
+      100
+    ],
+    "B": [
+      255,
+      170,
+      0
+    ],
+    "C": [
+      255,
+      0,
+      0
+    ],
+    "D": [
+      0,
+      220,
+      255
+    ],
+    "E": [
+      255,
+      255,
+      255
+    ],
+    "F": [
+      0,
+      255,
+      100
+    ],
+    "G": [
+      255,
+      170,
+      0
+    ],
+    "H": [
+      255,
+      0,
+      0
+    ],
+    "I": [
+      0,
+      220,
+      255
+    ],
+    "J": [
+      255,
+      255,
+      255
+    ]
+  }
+}

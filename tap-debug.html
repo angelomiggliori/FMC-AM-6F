@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FMC TAP DEBUG — rawIdx Finder</title>
+<style>
+  body { background:#111; color:#eee; font-family:monospace; padding:20px; }
+  h2 { color:#ff8800; }
+  .btn { background:#333; color:#eee; border:1px solid #555; padding:10px 18px; 
+         margin:5px; cursor:pointer; border-radius:6px; font-size:14px; }
+  .btn:hover { background:#444; }
+  .btn.active { background:#ff8800; color:#000; }
+  .section { margin:20px 0; padding:15px; border:1px solid #333; border-radius:8px; }
+  label { display:block; margin:8px 0 3px; color:#aaa; font-size:12px; }
+  input[type=number], select { background:#222; color:#eee; border:1px solid #444; 
+    padding:6px; border-radius:4px; width:100px; }
+  .log { background:#0a0a0a; padding:10px; border-radius:6px; height:300px; 
+         overflow-y:auto; font-size:12px; line-height:1.6; }
+  .log .tx { color:#00ff88; }
+  .log .rx { color:#88aaff; }
+  .log .info { color:#ffaa00; }
+  .log .err { color:#ff4444; }
+  #toast { position:fixed; top:20px; right:20px; background:#ff8800; color:#000;
+            padding:12px 20px; border-radius:8px; font-weight:bold; font-size:14px;
+            display:none; z-index:999; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .rawbtn { background:#222; border:1px solid #444; color:#eee; padding:12px;
+             border-radius:6px; cursor:pointer; text-align:center; font-size:13px; }
+  .rawbtn:hover { background:#333; }
+  .rawbtn.ok { background:#00aa44; border-color:#00ff66; }
+  .rawbtn.no { background:#440000; border-color:#ff4444; }
+  .status { color:#888; font-size:12px; margin-top:5px; }
+</style>
+</head>
+<body>
+<h2>🔧 FMC TAP DEBUG — Encontrar rawIdx correto</h2>
+<div id="toast"></div>
+
+<div class="section">
+  <strong>MIDI</strong>
+  <div style="margin:10px 0">
+    <select id="midiSel"><option>-- selecione MIDI OUT --</option></select>
+    <button class="btn" onclick="initMidi()">Conectar</button>
+    <span id="midiStatus" class="status">desconectado</span>
+  </div>
+</div>
+
+<div class="section">
+  <strong>PATCH ATUAL</strong>
+  <p style="color:#888;font-size:12px">Navegue para o patch com delay na pedaleira, depois clique "Dump"</p>
+  <button class="btn" onclick="dumpAtual()">📥 Dump</button>
+  <div id="dumpInfo" style="margin-top:10px;color:#888;font-size:12px">Sem dump</div>
+</div>
+
+<div class="section">
+  <strong>TESTE DE rawIdx</strong>
+  <p style="color:#888;font-size:12px">
+    Escolha o slot onde está o delay, o valor fixo a enviar, e clique em cada rawIdx.<br>
+    Observe o ToneLib — qual rawIdx muda o parâmetro "Time"?
+  </p>
+  <div style="margin-bottom:10px">
+    <label>Slot (1-5):</label>
+    <input type="number" id="testSlot" value="3" min="1" max="5">
+    <label>Valor a enviar (0-127):</label>
+    <input type="number" id="testVal" value="64" min="0" max="127">
+  </div>
+  <div class="grid" id="rawBtns"></div>
+  <div style="margin-top:10px">
+    <button class="btn" onclick="testarTodos()">▶ Testar todos (0→12) com delay de 1s</button>
+    <button class="btn" onclick="pararTeste()">⏹ Parar</button>
+  </div>
+</div>
+
+<div class="section">
+  <strong>TESTE ESPECÍFICO — Delay Time</strong>
+  <div style="margin-bottom:10px">
+    <label>BPM:</label>
+    <input type="number" id="testBpm" value="120" min="40" max="250">
+    <label>rawIdx a usar:</label>
+    <input type="number" id="testRaw" value="0" min="0" max="17">
+    <label>Escala (ms/unit):</label>
+    <input type="number" id="testEscala" value="31.49" step="0.01">
+    <button class="btn" onclick="testarTap()" style="margin-top:8px">▶ Enviar TAP</button>
+  </div>
+</div>
+
+<div class="section">
+  <strong>LOG</strong>
+  <button class="btn" style="font-size:11px;padding:5px 10px" onclick="document.getElementById('log').innerHTML=''">Limpar</button>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+let midiOut = null;
+let midiReady = false;
+let testando = false;
+let patchAtual = null;
+
+const ZOOM_MFR = 0x52, ZOOM_DEV = 0x00, ZOOM_MODEL = 0x63;
+const CMD_EDIT_ON=0x50, CMD_DUMP_REQ=0x29, CMD_DUMP_RES=0x28;
+
+function log(tipo, msg) {
+  const d = document.getElementById('log');
+  const ts = new Date().toTimeString().slice(0,8);
+  d.innerHTML += `<div class="${tipo}">[${ts}] ${msg}</div>`;
+  d.scrollTop = d.scrollHeight;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(()=>t.style.display='none', 3000);
+}
+
+async function initMidi() {
+  try {
+    const access = await navigator.requestMIDIAccess({sysex:true});
+    const sel = document.getElementById('midiSel');
+    sel.innerHTML = '<option value="">-- selecione --</option>';
+    access.outputs.forEach((out,id) => {
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = out.name;
+      sel.appendChild(opt);
+    });
+    access.inputs.forEach(inp => {
+      inp.onmidimessage = onMidi;
+    });
+    document.getElementById('midiStatus').textContent = 'OK — selecione o dispositivo';
+    document.getElementById('midiStatus').style.color = '#00ff66';
+    log('info','MIDI iniciado');
+    
+    sel.onchange = () => {
+      midiOut = access.outputs.get(sel.value);
+      midiReady = !!midiOut;
+      log('info', `MIDI OUT: ${midiOut ? midiOut.name : 'nenhum'}`);
+    };
+  } catch(e) {
+    log('err', `MIDI erro: ${e.message}`);
+  }
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function onMidi(ev) {
+  const data = Array.from(ev.data);
+  const hex = data.map(b=>`${b.toString(16).padStart(2,'0').toUpperCase()}`).join(' ');
+  if(data[0]===0xF0 && data[4]===CMD_DUMP_RES) {
+    log('rx', `DUMP recebido (${data.length} bytes)`);
+    parseDump(data);
+  } else {
+    log('rx', hex.slice(0,80) + (hex.length>80?'...':''));
+  }
+}
+
+function unpack7bit(data, start) {
+  const out = [];
+  let i = start;
+  while(i < data.length - 1) {
+    const msbs = data[i++];
+    for(let bit=0; bit<7; bit++, i++) {
+      if(i >= data.length) break;
+      out.push(data[i] | (((msbs>>bit)&1)<<7));
+    }
+  }
+  return out;
+}
+
+function parseDump(data) {
+  const up = unpack7bit(data, 5);
+  const SLOT_SIZE = 18;
+  patchAtual = {slots:[]};
+  
+  let infoHtml = '<table style="font-size:11px;border-collapse:collapse">';
+  infoHtml += '<tr><th style="padding:3px 8px;color:#ff8800">Slot</th><th>ID</th><th>Habilitado</th><th>rawSlot[0..11]</th></tr>';
+  
+  for(let i=0; i<5; i++) {
+    const off = i * SLOT_SIZE;
+    if(off + 5 >= up.length) break;
+    const b3 = up[off+3];
+    const b4 = up[off+4];
+    const id = ((b3 & 0x7F) << 7) | (b4 & 0x7F);
+    const en = (b3 >> 7) & 1;
+    const raw = up.slice(off, off + SLOT_SIZE);
+    const rawHex = raw.map((b,idx)=>`<span style="color:${idx===3||idx===4?'#ffaa00':idx===5?'#44ff88':'#888'}">${b.toString(16).padStart(2,'0')}</span>`).join(' ');
+    
+    patchAtual.slots.push({id, en, raw, slotIdx:i});
+    
+    infoHtml += `<tr>
+      <td style="padding:3px 8px;color:#ff8800">S${i+1}</td>
+      <td>0x${id.toString(16).toUpperCase()} ${en?'✅':'❌'}</td>
+      <td>${en?'ON':'off'}</td>
+      <td style="font-size:10px">${rawHex}</td>
+    </tr>`;
+  }
+  infoHtml += '</table>';
+  infoHtml += '<p style="font-size:10px;color:#666">🟡=b3/b4 (ID), 🟢=r2 (discriminador), ⬜=parâmetros</p>';
+  document.getElementById('dumpInfo').innerHTML = infoHtml;
+  
+  // Gerar botões de rawIdx
+  buildRawBtns();
+  log('info','Dump parsed — veja os slots acima');
+}
+
+function buildRawBtns() {
+  const div = document.getElementById('rawBtns');
+  div.innerHTML = '';
+  for(let r=0; r<=17; r++) {
+    const btn = document.createElement('div');
+    btn.className = 'rawbtn';
+    btn.id = `raw_${r}`;
+    btn.innerHTML = `<strong>raw[${r}]</strong><br>Param ${r+1}?`;
+    btn.onclick = () => enviarRaw(r);
+    div.appendChild(btn);
+  }
+}
+
+async function enviarRaw(rawIdx) {
+  if(!midiOut) { toast('Sem MIDI OUT'); return; }
+  const slot = parseInt(document.getElementById('testSlot').value) - 1;
+  const val = parseInt(document.getElementById('testVal').value);
+  const lo = val & 0x7F, hi = (val>>7)&0x7F;
+  
+  // Garantir editor
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x50, 0xF7]);
+  await sleep(50);
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x33, 0xF7]);
+  await sleep(50);
+  
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x31, slot, rawIdx, lo, hi, 0xF7]);
+  
+  const hex = `F0 52 00 63 31 0${slot} ${rawIdx.toString(16).padStart(2,'0')} ${lo.toString(16).padStart(2,'0')} ${hi.toString(16).padStart(2,'0')} F7`;
+  log('tx', `raw[${rawIdx}] → slot=${slot+1} val=${val} | ${hex}`);
+  toast(`Enviado: raw[${rawIdx}] val=${val} → slot ${slot+1}`);
+  
+  // Highlight do botão
+  document.querySelectorAll('.rawbtn').forEach(b=>b.style.border='1px solid #444');
+  const btn = document.getElementById(`raw_${rawIdx}`);
+  if(btn) btn.style.border = '2px solid #ff8800';
+}
+
+let testeTimer = null;
+async function testarTodos() {
+  testando = true;
+  for(let r=0; r<=12; r++) {
+    if(!testando) break;
+    log('info', `--- Testando raw[${r}] ---`);
+    await enviarRaw(r);
+    await sleep(1200);
+  }
+  log('info','Teste completo — quais mudaram o Time?');
+}
+
+function pararTeste() { testando = false; log('info','Teste parado'); }
+
+async function testarTap() {
+  if(!midiOut) { toast('Sem MIDI OUT'); return; }
+  const bpm = parseInt(document.getElementById('testBpm').value);
+  const rawIdx = parseInt(document.getElementById('testRaw').value);
+  const escala = parseFloat(document.getElementById('testEscala').value);
+  const slot = parseInt(document.getElementById('testSlot').value) - 1;
+  
+  const ms = Math.round(60000 / bpm);
+  const val = Math.min(127, Math.max(0, Math.round(ms / escala)));
+  
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x50, 0xF7]);
+  await sleep(50);
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x33, 0xF7]);
+  await sleep(50);
+  
+  const lo = val & 0x7F, hi = (val>>7)&0x7F;
+  midiOut.send([0xF0, ZOOM_MFR, ZOOM_DEV, ZOOM_MODEL, 0x31, slot, rawIdx, lo, hi, 0xF7]);
+  
+  log('tx', `TAP ${bpm}bpm → ${ms}ms → val=${val} (escala=${escala}) raw[${rawIdx}] slot${slot+1}`);
+  toast(`TAP ${bpm}bpm · ${ms}ms → val=${val}`);
+}
+
+// Iniciar MIDI automaticamente
+window.onload = () => {
+  buildRawBtns();
+  initMidi();
+};
+</script>
+</body>
+</html>
