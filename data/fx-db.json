@@ -1,0 +1,712 @@
+{
+    "0x070C":  {
+                   "tap":  null,
+                   "nome":  "RtCloset",
+                   "cat":  "special"
+               },
+    "0x090D":  {
+                   "tap":  null,
+                   "nome":  "Rvb0D",
+                   "cat":  "special"
+               },
+    "0x0103":  {
+                   "tap":  null,
+                   "nome":  "Dyn03",
+                   "cat":  "special"
+               },
+    "0x060C":  {
+                   "tap":  "Rate",
+                   "nome":  "SuperCho",
+                   "cat":  "special"
+               },
+    "0x080E":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x80E",
+                   "cat":  "special"
+               },
+    "0x080D":  {
+                   "tap":  null,
+                   "nome":  "Dly0D",
+                   "cat":  "special"
+               },
+    "0x0304":  {
+                   "tap":  null,
+                   "nome":  "Drv04",
+                   "cat":  "special"
+               },
+    "0x290E":  {
+                   "tap":  null,
+                   "nome":  "Rvb0Eb",
+                   "cat":  "special"
+               },
+    "0x2405":  {
+                   "tap":  null,
+                   "nome":  "Amp05b",
+                   "cat":  "special"
+               },
+    "0x280B":  {
+                   "tap":  "Time",
+                   "nome":  "Delay",
+                   "cat":  "special"
+               },
+    "0x2314":  {
+                   "tap":  null,
+                   "nome":  "Drv14b",
+                   "cat":  "special"
+               },
+    "0x0311":  {
+                   "tap":  null,
+                   "nome":  "Fuzz",
+                   "cat":  "special"
+               },
+    "0x2109":  {
+                   "tap":  null,
+                   "nome":  "Dyn09b",
+                   "cat":  "special"
+               },
+    "0x2900":  {
+                   "tap":  null,
+                   "nome":  "Rvb00b",
+                   "cat":  "special"
+               },
+    "0x0018":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x18",
+                   "cat":  "special"
+               },
+    "0x240C":  {
+                   "tap":  null,
+                   "nome":  "CARDrive",
+                   "cat":  "special"
+               },
+    "0x240E":  {
+                   "tap":  null,
+                   "nome":  "USBlues",
+                   "cat":  "special"
+               },
+    "0x2860":  {
+                   "tap":  null,
+                   "nome":  "CarbonDly",
+                   "cat":  "special"
+               },
+    "0x0407":  {
+                   "tap":  null,
+                   "nome":  "Matchless",
+                   "cat":  "special"
+               },
+    "0x2301":  {
+                   "tap":  null,
+                   "nome":  "Drv01b",
+                   "cat":  "special"
+               },
+    "0x0414":  {
+                   "tap":  null,
+                   "nome":  "MSDrive",
+                   "cat":  "special"
+               },
+    "0x2101":  {
+                   "tap":  null,
+                   "nome":  "OptComp",
+                   "cat":  "special"
+               },
+    "0x0614":  {
+                   "tap":  "Rate",
+                   "nome":  "Tremolo",
+                   "cat":  "special"
+               },
+    "0x2902":  {
+                   "tap":  null,
+                   "nome":  "Hall",
+                   "cat":  "special"
+               },
+    "0x0105":  {
+                   "tap":  null,
+                   "nome":  "SlowAtck",
+                   "cat":  "special"
+               },
+    "0x0305":  {
+                   "tap":  null,
+                   "nome":  "Drv05",
+                   "cat":  "special"
+               },
+    "0x2203":  {
+                   "tap":  null,
+                   "nome":  "Flt03b",
+                   "cat":  "special"
+               },
+    "0x0409":  {
+                   "tap":  null,
+                   "nome":  "Amp09",
+                   "cat":  "special"
+               },
+    "0x240D":  {
+                   "tap":  null,
+                   "nome":  "TWRock",
+                   "cat":  "special"
+               },
+    "0x2303":  {
+                   "tap":  null,
+                   "nome":  "Drv03b",
+                   "cat":  "special"
+               },
+    "0x070F":  {
+                   "tap":  null,
+                   "nome":  "Spc0F",
+                   "cat":  "special"
+               },
+    "0x040F":  {
+                   "tap":  null,
+                   "nome":  "ALIEN",
+                   "cat":  "special"
+               },
+    "0x090F":  {
+                   "tap":  null,
+                   "nome":  "Rvb0F",
+                   "cat":  "special"
+               },
+    "0x2004":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x2004",
+                   "cat":  "special"
+               },
+    "0x0107":  {
+                   "tap":  null,
+                   "nome":  "Dyn07",
+                   "cat":  "special"
+               },
+    "0x0314":  {
+                   "tap":  null,
+                   "nome":  "Amp",
+                   "cat":  "special"
+               },
+    "0x2604":  {
+                   "tap":  null,
+                   "nome":  "PitchSHFT",
+                   "cat":  "special"
+               },
+    "0x290F":  {
+                   "tap":  null,
+                   "nome":  "Rvb0Fb",
+                   "cat":  "special"
+               },
+    "0x0020":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x20",
+                   "cat":  "special"
+               },
+    "0x2869":  {
+                   "tap":  null,
+                   "nome":  "Dly69b",
+                   "cat":  "special"
+               },
+    "0x0869":  {
+                   "tap":  null,
+                   "nome":  "Dly69",
+                   "cat":  "special"
+               },
+    "0x0601":  {
+                   "tap":  null,
+                   "nome":  "HPS",
+                   "cat":  "special"
+               },
+    "0x240A":  {
+                   "tap":  null,
+                   "nome":  "Amp0Ab",
+                   "cat":  "special"
+               },
+    "0x0030":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x30",
+                   "cat":  "special"
+               },
+    "0x2100":  {
+                   "tap":  null,
+                   "nome":  "Dyn00b",
+                   "cat":  "special"
+               },
+    "0x2309":  {
+                   "tap":  null,
+                   "nome":  "Drv09b",
+                   "cat":  "special"
+               },
+    "0x010D":  {
+                   "tap":  null,
+                   "nome":  "Dyn0D",
+                   "cat":  "special"
+               },
+    "0x090A":  {
+                   "tap":  null,
+                   "nome":  "ParticleR",
+                   "cat":  "special"
+               },
+    "0x2317":  {
+                   "tap":  null,
+                   "nome":  "Drv17b",
+                   "cat":  "special"
+               },
+    "0x0010":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x10",
+                   "cat":  "special"
+               },
+    "0x030F":  {
+                   "tap":  null,
+                   "nome":  "Drive",
+                   "cat":  "special"
+               },
+    "0x0415":  {
+                   "tap":  null,
+                   "nome":  "BGNDrive",
+                   "cat":  "special"
+               },
+    "0x010A":  {
+                   "tap":  null,
+                   "nome":  "Dyn0A",
+                   "cat":  "special"
+               },
+    "0x0901":  {
+                   "tap":  null,
+                   "nome":  "Rvb01",
+                   "cat":  "special"
+               },
+    "0x040C":  {
+                   "tap":  null,
+                   "nome":  "VXJimi",
+                   "cat":  "special"
+               },
+    "0x030A":  {
+                   "tap":  null,
+                   "nome":  "Squeak",
+                   "cat":  "special"
+               },
+    "0x2613":  {
+                   "tap":  null,
+                   "nome":  "Mod13b",
+                   "cat":  "special"
+               },
+    "0x2202":  {
+                   "tap":  null,
+                   "nome":  "Flt02b",
+                   "cat":  "special"
+               },
+    "0x210C":  {
+                   "tap":  null,
+                   "nome":  "Dyn0Cb",
+                   "cat":  "special"
+               },
+    "0x0202":  {
+                   "tap":  null,
+                   "nome":  "ParaEQ",
+                   "cat":  "special"
+               },
+    "0x2901":  {
+                   "tap":  null,
+                   "nome":  "Rvb01b",
+                   "cat":  "special"
+               },
+    "0x0106":  {
+                   "tap":  null,
+                   "nome":  "Dyn06",
+                   "cat":  "special"
+               },
+    "0x270B":  {
+                   "tap":  null,
+                   "nome":  "Spc0Bb",
+                   "cat":  "special"
+               },
+    "0x0302":  {
+                   "tap":  null,
+                   "nome":  "Drv02",
+                   "cat":  "special"
+               },
+    "0x2404":  {
+                   "tap":  null,
+                   "nome":  "Amp04b",
+                   "cat":  "special"
+               },
+    "0x2200":  {
+                   "tap":  null,
+                   "nome":  "Flt00b",
+                   "cat":  "special"
+               },
+    "0x0317":  {
+                   "tap":  null,
+                   "nome":  "Drv17",
+                   "cat":  "special"
+               },
+    "0x0410":  {
+                   "tap":  null,
+                   "nome":  "REVO1",
+                   "cat":  "special"
+               },
+    "0x0908":  {
+                   "tap":  null,
+                   "nome":  "Rvb08",
+                   "cat":  "special"
+               },
+    "0x0408":  {
+                   "tap":  null,
+                   "nome":  "Amp08",
+                   "cat":  "special"
+               },
+    "0x0019":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x19",
+                   "cat":  "special"
+               },
+    "0x0100":  {
+                   "tap":  null,
+                   "nome":  "Dyn00",
+                   "cat":  "special"
+               },
+    "0x2412":  {
+                   "tap":  null,
+                   "nome":  "Amp12b",
+                   "cat":  "special"
+               },
+    "0x240B":  {
+                   "tap":  null,
+                   "nome":  "DZDrive",
+                   "cat":  "special"
+               },
+    "0x0300":  {
+                   "tap":  null,
+                   "nome":  "Drv00",
+                   "cat":  "special"
+               },
+    "0x2909":  {
+                   "tap":  null,
+                   "nome":  "Rvb09b",
+                   "cat":  "special"
+               },
+    "0x0600":  {
+                   "tap":  null,
+                   "nome":  "MonoPitch",
+                   "cat":  "special"
+               },
+    "0x290A":  {
+                   "tap":  null,
+                   "nome":  "Rvb0Ab",
+                   "cat":  "special"
+               },
+    "0x2310":  {
+                   "tap":  null,
+                   "nome":  "Drv10b",
+                   "cat":  "special"
+               },
+    "0x2416":  {
+                   "tap":  null,
+                   "nome":  "Amp16b",
+                   "cat":  "special"
+               },
+    "0x0303":  {
+                   "tap":  null,
+                   "nome":  "Drv03",
+                   "cat":  "special"
+               },
+    "0x010B":  {
+                   "tap":  null,
+                   "nome":  "Dyn0B",
+                   "cat":  "special"
+               },
+    "0x2409":  {
+                   "tap":  null,
+                   "nome":  "Amp09b",
+                   "cat":  "special"
+               },
+    "0x2318":  {
+                   "tap":  null,
+                   "nome":  "Drv18b",
+                   "cat":  "special"
+               },
+    "0x2105":  {
+                   "tap":  null,
+                   "nome":  "Dyn05b",
+                   "cat":  "special"
+               },
+    "0x0902":  {
+                   "tap":  null,
+                   "nome":  "Plate",
+                   "cat":  "special"
+               },
+    "0x0101":  {
+                   "tap":  null,
+                   "nome":  "Comp",
+                   "cat":  "special"
+               },
+    "0x040B":  {
+                   "tap":  null,
+                   "nome":  "Amp0B",
+                   "cat":  "special"
+               },
+    "0x0301":  {
+                   "tap":  null,
+                   "nome":  "Drv01",
+                   "cat":  "special"
+               },
+    "0x0201":  {
+                   "tap":  null,
+                   "nome":  "SeqFilter",
+                   "cat":  "special"
+               },
+    "0x0914":  {
+                   "tap":  null,
+                   "nome":  "HDHall",
+                   "cat":  "special"
+               },
+    "0x290C":  {
+                   "tap":  null,
+                   "nome":  "Rvb0Cb",
+                   "cat":  "special"
+               },
+    "0x270C":  {
+                   "tap":  null,
+                   "nome":  "Spc0Cb",
+                   "cat":  "special"
+               },
+    "0x0400":  {
+                   "tap":  null,
+                   "nome":  "Amp00",
+                   "cat":  "special"
+               },
+    "0x0900":  {
+                   "tap":  null,
+                   "nome":  "Rvb00",
+                   "cat":  "special"
+               },
+    "0x0109":  {
+                   "tap":  null,
+                   "nome":  "160Comp",
+                   "cat":  "special"
+               },
+    "0x0309":  {
+                   "tap":  null,
+                   "nome":  "Drv09",
+                   "cat":  "special"
+               },
+    "0x0405":  {
+                   "tap":  null,
+                   "nome":  "Amp05",
+                   "cat":  "special"
+               },
+    "0x0905":  {
+                   "tap":  null,
+                   "nome":  "Rvb05",
+                   "cat":  "special"
+               },
+    "0x0007":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x7",
+                   "cat":  "special"
+               },
+    "0x2603":  {
+                   "tap":  null,
+                   "nome":  "Mod03b",
+                   "cat":  "special"
+               },
+    "0x2904":  {
+                   "tap":  null,
+                   "nome":  "TiledRoom",
+                   "cat":  "special"
+               },
+    "0x2204":  {
+                   "tap":  null,
+                   "nome":  "AutoWah",
+                   "cat":  "special"
+               },
+    "0x2608":  {
+                   "tap":  null,
+                   "nome":  "Detune",
+                   "cat":  "special"
+               },
+    "0x210A":  {
+                   "tap":  null,
+                   "nome":  "Dyn0Ab",
+                   "cat":  "special"
+               },
+    "0x2906":  {
+                   "tap":  null,
+                   "nome":  "Rvb06b",
+                   "cat":  "special"
+               },
+    "0x0907":  {
+                   "tap":  null,
+                   "nome":  "Rvb07",
+                   "cat":  "special"
+               },
+    "0x230F":  {
+                   "tap":  null,
+                   "nome":  "Drv0Fb",
+                   "cat":  "special"
+               },
+    "0x0411":  {
+                   "tap":  null,
+                   "nome":  "Tangerine",
+                   "cat":  "special"
+               },
+    "0x0860":  {
+                   "tap":  null,
+                   "nome":  "Dly60",
+                   "cat":  "special"
+               },
+    "0x2907":  {
+                   "tap":  null,
+                   "nome":  "Rvb07b",
+                   "cat":  "special"
+               },
+    "0x2206":  {
+                   "tap":  null,
+                   "nome":  "Flt06b",
+                   "cat":  "special"
+               },
+    "0x2903":  {
+                   "tap":  null,
+                   "nome":  "Rvb03b",
+                   "cat":  "special"
+               },
+    "0x0911":  {
+                   "tap":  null,
+                   "nome":  "Rvb11",
+                   "cat":  "special"
+               },
+    "0x2406":  {
+                   "tap":  null,
+                   "nome":  "Amp06b",
+                   "cat":  "special"
+               },
+    "0x0404":  {
+                   "tap":  null,
+                   "nome":  "Amp04",
+                   "cat":  "special"
+               },
+    "0x2108":  {
+                   "tap":  null,
+                   "nome":  "Dyn08b",
+                   "cat":  "special"
+               },
+    "0x0604":  {
+                   "tap":  null,
+                   "nome":  "Mod04",
+                   "cat":  "special"
+               },
+    "0x2006":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x2006",
+                   "cat":  "special"
+               },
+    "0x2102":  {
+                   "tap":  null,
+                   "nome":  "NoiseGate",
+                   "cat":  "special"
+               },
+    "0x0102":  {
+                   "tap":  null,
+                   "nome":  "Dyn02",
+                   "cat":  "special"
+               },
+    "0x090B":  {
+                   "tap":  null,
+                   "nome":  "Rvb0B",
+                   "cat":  "special"
+               },
+    "0x040A":  {
+                   "tap":  null,
+                   "nome":  "Amp0A",
+                   "cat":  "special"
+               },
+    "0x030C":  {
+                   "tap":  null,
+                   "nome":  "Drv0C",
+                   "cat":  "special"
+               },
+    "0x040E":  {
+                   "tap":  null,
+                   "nome":  "MS1959",
+                   "cat":  "special"
+               },
+    "0x0108":  {
+                   "tap":  null,
+                   "nome":  "Dyn08",
+                   "cat":  "special"
+               },
+    "0x0903":  {
+                   "tap":  null,
+                   "nome":  "EarlyRef",
+                   "cat":  "special"
+               },
+    "0x240F":  {
+                   "tap":  null,
+                   "nome":  "BlackBrth",
+                   "cat":  "special"
+               },
+    "0x2413":  {
+                   "tap":  null,
+                   "nome":  "Amp13b",
+                   "cat":  "special"
+               },
+    "0x0406":  {
+                   "tap":  null,
+                   "nome":  "FDCombo",
+                   "cat":  "special"
+               },
+    "0x040D":  {
+                   "tap":  null,
+                   "nome":  "HWStar",
+                   "cat":  "special"
+               },
+    "0x0028":  {
+                   "tap":  null,
+                   "nome":  "UNK_0x28",
+                   "cat":  "special"
+               },
+    "0x2908":  {
+                   "tap":  null,
+                   "nome":  "Spring63",
+                   "cat":  "special"
+               },
+    "0x2106":  {
+                   "tap":  null,
+                   "nome":  "Dyn06b",
+                   "cat":  "special"
+               },
+    "0x2411":  {
+                   "tap":  null,
+                   "nome":  "Amp11b",
+                   "cat":  "special"
+               },
+    "0x0306":  {
+                   "tap":  null,
+                   "nome":  "Drv06",
+                   "cat":  "special"
+               },
+    "0x000C":  {
+                   "tap":  null,
+                   "nome":  "UNK_0xC",
+                   "cat":  "special"
+               },
+    "0x2407":  {
+                   "tap":  null,
+                   "nome":  "VXCombo",
+                   "cat":  "special"
+               },
+    "0x0412":  {
+                   "tap":  null,
+                   "nome":  "MSCrunch",
+                   "cat":  "special"
+               },
+    "0x0204":  {
+                   "tap":  null,
+                   "nome":  "Flt04",
+                   "cat":  "special"
+               },
+    "0x0008":  {
+                   "tap":  null,
+                   "nome":  "GraphicEQ",
+                   "cat":  "special"
+               },
+    "0x290B":  {
+                   "tap":  null,
+                   "nome":  "Rvb0Bb",
+                   "cat":  "special"
+               }
+}
