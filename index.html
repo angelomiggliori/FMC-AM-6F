@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FMC-AM 6F · Hub</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600&display=swap');
+
+:root {
+  --bg:      #0a0a0c;  --surface: #111116;  --border: #2a2a35;
+  --accent:  #e8e8e8;  --orange:  #ff6b00;  --green:  #00ff66;
+  --cyan:    #00ccff;  --red:     #ff2244;  --amber:  #ffb930;
+  --purple:  #7c6aff;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100%;background:var(--bg);color:var(--accent);
+  font-family:'Rajdhani',sans-serif;user-select:none;-webkit-user-select:none;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");}
+.page{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 24px 60px;}
+
+/* Header */
+.title{font-family:'Orbitron',sans-serif;font-size:clamp(24px,5vw,44px);font-weight:900;
+  letter-spacing:.14em;color:#fff;text-align:center;}
+.title span{color:var(--orange);}
+.subtitle{font-family:'Share Tech Mono',monospace;font-size:clamp(9px,2vw,12px);
+  color:#444456;letter-spacing:.22em;text-align:center;margin-top:8px;text-transform:uppercase;}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:28px 0;}
+.build{font-family:'Share Tech Mono',monospace;font-size:10px;color:#333344;
+  text-align:center;letter-spacing:.15em;margin-top:6px;}
+
+/* Section labels */
+.section-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.2em;
+  color:#333344;text-transform:uppercase;margin-bottom:14px;padding-left:2px;}
+
+/* Card grids */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:28px;}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:20px 20px 18px;cursor:pointer;transition:all .18s;text-decoration:none;
+  display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
+}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--card-accent,var(--border));opacity:0;transition:opacity .18s;}
+.card:hover{border-color:var(--card-accent,var(--border));transform:translateY(-1px);}
+.card:hover::before{opacity:1;}
+.card-icon{font-size:22px;margin-bottom:2px;}
+.card-title{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:.08em;color:#fff;}
+.card-desc{font-size:13px;color:#555570;line-height:1.5;}
+.card-badge{position:absolute;top:10px;right:10px;font-family:'Share Tech Mono',monospace;
+  font-size:9px;letter-spacing:.1em;padding:2px 7px;border-radius:2px;
+  border:1px solid currentColor;}
+.badge-new{color:var(--green);}
+.badge-tool{color:var(--cyan);}
+.badge-doc{color:var(--amber);}
+
+/* Status strip */
+.status-strip{
+  background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:14px 20px;display:flex;gap:24px;flex-wrap:wrap;margin-bottom:28px;
+  font-family:'Share Tech Mono',monospace;font-size:11px;color:#444456;
+}
+.status-item{display:flex;align-items:center;gap:7px;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);}
+.status-dot.warn{background:var(--amber);box-shadow:0 0 6px var(--amber);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="title">FMC<span>·</span>AM 6F</div>
+  <div class="subtitle">Controladora MIDI Virtual · Zoom G1On · fw 1.21</div>
+  <div class="build">v4.2-b20260316-final · Angelo Miggliori</div>
+  <div class="divider"></div>
+
+  <div class="status-strip">
+    <div class="status-item"><div class="status-dot"></div>Model ID: 0x63</div>
+    <div class="status-item"><div class="status-dot"></div>VOL offset: byte[110]</div>
+    <div class="status-item"><div class="status-dot"></div>72 efeitos mapeados</div>
+    <div class="status-item"><div class="status-dot warn"></div>Tap: CarbonDly escala a confirmar</div>
+  </div>
+
+  <div class="section-label">◈ Interfaces de Controle</div>
+  <div class="card-grid">
+    <a class="card" href="pedalboard-v4.html" style="--card-accent:var(--orange);">
+      <div class="card-icon">🎸</div>
+      <div class="card-title">PEDALBOARD V4</div>
+      <div class="card-desc">Interface principal. 6 footswitches, display ao vivo, tap tempo, tuner, boost.</div>
+    </a>
+    <a class="card" href="theme-boss.html" style="--card-accent:#e00;">
+      <div class="card-icon">🔴</div>
+      <div class="card-title">BOSS ME-90</div>
+      <div class="card-desc">Tema estilo Boss. Mesmo engine, identidade visual diferente.</div>
+    </a>
+    <a class="card" href="theme-headrush.html" style="--card-accent:var(--cyan);">
+      <div class="card-icon">🔵</div>
+      <div class="card-title">HEADRUSH</div>
+      <div class="card-desc">Tema estilo Headrush. Display minimalista e cores frias.</div>
+    </a>
+    <a class="card" href="theme-kemper.html" style="--card-accent:var(--amber);">
+      <div class="card-icon">🟡</div>
+      <div class="card-title">KEMPER</div>
+      <div class="card-desc">Tema estilo Kemper Profiler. Fonte monoespaçada e layout denso.</div>
+    </a>
+    <a class="card" href="theme-zoom.html" style="--card-accent:var(--green);">
+      <div class="card-icon">🟢</div>
+      <div class="card-title">ZOOM NATIVO</div>
+      <div class="card-desc">Tema que imita a estética da própria Zoom. Verde neon sobre preto.</div>
+    </a>
+  </div>
+
+  <div class="section-label">◈ Configuração</div>
+  <div class="card-grid">
+    <a class="card" href="fmc-editor.html" style="--card-accent:var(--purple);">
+      <div class="card-badge badge-new">NOVO</div>
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">EDITOR DE CONFIGURAÇÃO</div>
+      <div class="card-desc">Edite nomes de efeitos, referências reais, cores de bancos/categorias, LEDs NeoPixel e footswitches. Exporta JSON e patch para o engine.</div>
+    </a>
+  </div>
+
+  <div class="section-label">◈ Ferramentas de Diagnóstico</div>
+  <div class="card-grid">
+    <a class="card" href="full-dump.html" style="--card-accent:var(--green);">
+      <div class="card-badge badge-tool">DUMP</div>
+      <div class="card-icon">📦</div>
+      <div class="card-title">FULL DUMP A0→J9</div>
+      <div class="card-desc">Varre todos os 100 patches, exporta JSON e injeta no cache da controladora.</div>
+    </a>
+    <a class="card" href="auto-dump.html" style="--card-accent:var(--cyan);">
+      <div class="card-badge badge-tool">DUMP</div>
+      <div class="card-icon">🔄</div>
+      <div class="card-title">AUTO DUMP</div>
+      <div class="card-desc">Dump rápido do banco ativo. Útil para capturar patches editados.</div>
+    </a>
+    <a class="card" href="dump-e0e9.html" style="--card-accent:var(--amber);">
+      <div class="card-badge badge-tool">DUMP</div>
+      <div class="card-icon">🔬</div>
+      <div class="card-title">DUMP BANCO E (deep)</div>
+      <div class="card-desc">Dump profundo do banco E com visualização byte a byte. Usado para engenharia reversa do protocolo.</div>
+    </a>
+    <a class="card" href="midi-sniffer.html" style="--card-accent:var(--red);">
+      <div class="card-badge badge-tool">SNIFFER</div>
+      <div class="card-icon">📡</div>
+      <div class="card-title">MIDI SNIFFER</div>
+      <div class="card-desc">Monitor MIDI em tempo real. Log de todos os bytes SysEx, PC e CC recebidos e enviados.</div>
+    </a>
+  </div>
+
+  <div class="section-label">◈ Documentação</div>
+  <div class="card-grid">
+    <a class="card" href="FMC-AM-6F-MANUAL.md" style="--card-accent:var(--amber);">
+      <div class="card-badge badge-doc">MANUAL</div>
+      <div class="card-icon">📖</div>
+      <div class="card-title">MANUAL COMPLETO</div>
+      <div class="card-desc">Documentação técnica completa: protocolo MIDI, parser, cache, tap tempo, LEDs, arquitetura e como contribuir.</div>
+    </a>
+  </div>
+
+</div>
+</body>
+</html>
