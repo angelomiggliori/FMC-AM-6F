@@ -3,11 +3,11 @@
  * Gerenciamento de conexão Web MIDI API e roteamento de mensagens
  *
  * Responsabilidades:
- *  - Solicitar acesso Web MIDI com SysEx
- *  - Listar e popular seletores de portas
- *  - Conectar input/output selecionados
- *  - Enviar mensagens MIDI / SysEx
- *  - Rotear mensagens recebidas para os handlers corretos
+ * - Solicitar acesso Web MIDI com SysEx
+ * - Listar e popular seletores de portas
+ * - Conectar input/output selecionados
+ * - Enviar mensagens MIDI / SysEx
+ * - Rotear mensagens recebidas para os handlers corretos
  */
 
 import { state } from '../engine/state_manager.js';
@@ -32,6 +32,7 @@ import { sysexLog }        from '../ui/sysex_log.js';
 import { notify }          from '../ui/notifications.js';
 
 let _midiAccess = null;
+let _isSyncRequest = false; // Flag para separar auto-fetch/sync do clique do usuário
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -171,7 +172,8 @@ export function sendRaw(bytes) {
 }
 
 /** Solicita dump do patch atual da pedaleira */
-export function requestCurrentPatch() {
+export function requestCurrentPatch(isSync = false) {
+  _isSyncRequest = isSync;
   if (!sendRaw(buildPatchDumpRequest())) {
     notify('Sem conexão MIDI', 'err');
   }
@@ -228,7 +230,9 @@ function _onMidiMessage(e) {
 }
 
 function _handleIdentityResponse(data) {
-  notify('G1on identificado ✓', 'ok');
+  notify('G1on identificada ✓ Puxando dados...', 'ok');
+  // Auto-fetch: pede o patch atual assim que conecta
+  requestCurrentPatch(false); 
 }
 
 function _handleZoomSysex(data) {
@@ -240,8 +244,17 @@ function _handleZoomSysex(data) {
       // Resposta de dump de patch
       const patch = decodePatch(body, state.currentIndex);
       if (patch) {
-        state.setPatch(state.currentIndex, patch);
-        notify('Patch recebido: ' + patch.name, 'ok');
+        if (_isSyncRequest) {
+          // Se foi o Data Guardian que pediu, manda pra ele e não mexe na tela
+          if (window._ui && window._ui.onPatchReceivedForSync) {
+            window._ui.onPatchReceivedForSync(patch);
+          }
+          _isSyncRequest = false;
+        } else {
+          // Se foi auto-fetch ou usuário clicando, atualiza a tela
+          state.setPatch(state.currentIndex, patch);
+          notify('Patch atualizado: ' + patch.name, 'ok');
+        }
       }
       break;
     }
