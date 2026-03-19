@@ -1,1029 +1,333 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>G1on Editor</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<meta charset="UTF-8">
+<title>FMC-AM 6F - GOD MONOLITH</title>
+
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:         #0d0d14;
-  --bg2:        #13131f;
-  --bg3:        #1a1a2e;
-  --surface:    #1e1e30;
-  --surface2:   #252540;
-  --border:     rgba(255,255,255,0.07);
-  --border2:    rgba(255,255,255,0.13);
-  --accent:     #ff3c6e;
-  --accent2:    #7c3aed;
-  --accent3:    #06b6d4;
-  --text:       #e8e8f0;
-  --text2:      #9090b0;
-  --text3:      #5a5a7a;
-  --green:      #10b981;
-  --amber:      #f59e0b;
-  --red:        #ef4444;
-  --blue:       #3b82f6;
-  --r:          6px;
-  --r2:         10px;
-  --mono:       'Space Mono', monospace;
-  --sans:       'DM Sans', sans-serif;
-}
-
 body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: 56px 52px 1fr;
-  grid-template-columns: 280px 1fr;
-  grid-template-areas:
-    "hdr hdr"
-    "bar bar"
-    "side main";
-  height: 100vh;
-  overflow: hidden;
+    margin:0;
+    background:#0b0b0b;
+    color:#0f0;
+    font-family:monospace;
 }
 
-/* ── HEADER ───────────────────────────────────────────────────────────── */
-header {
-  grid-area: hdr;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 14px;
-}
-.logo {
-  font-family: var(--mono);
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 2px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.logo-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-.logo-dot.off { background: var(--text3); box-shadow: none; animation: none; }
-
-#device-badge {
-  font-size: 0.72rem;
-  font-family: var(--mono);
-  color: var(--text2);
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  padding: 3px 10px;
-  border-radius: 20px;
-  margin-left: 4px;
-}
-#status-pill {
-  margin-left: auto;
-  font-size: 0.72rem;
-  font-family: var(--mono);
-  padding: 4px 12px;
-  border-radius: 20px;
-  transition: all .3s;
-}
-.pill-info    { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.3); }
-.pill-success { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
-.pill-error   { background: rgba(239,68,68,.15);  color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
-.pill-warning { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
-
-/* ── TOOLBAR ─────────────────────────────────────────────────────────── */
-.toolbar {
-  grid-area: bar;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  gap: 8px;
-}
-.btn {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: .5px;
-  padding: 6px 14px;
-  border-radius: var(--r);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all .15s;
-  white-space: nowrap;
-}
-.btn:disabled { opacity: .3; cursor: not-allowed; pointer-events: none; }
-.btn-connect  { background: var(--accent);  color: #fff; border-color: var(--accent); }
-.btn-read     { background: transparent; color: var(--blue);  border-color: rgba(59,130,246,.4); }
-.btn-backup   { background: transparent; color: var(--green); border-color: rgba(16,185,129,.4); }
-.btn-restore  { background: transparent; color: var(--amber); border-color: rgba(245,158,11,.4); }
-.btn:not(:disabled):hover { filter: brightness(1.2); transform: translateY(-1px); }
-
-.progress-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; margin: 0 10px; }
-.progress-track { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
-.progress-fill  { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent3)); width: 0; transition: width .2s; border-radius: 2px; }
-#progress-text  { font-size: 0.65rem; font-family: var(--mono); color: var(--text3); }
-
-/* ── SIDEBAR ─────────────────────────────────────────────────────────── */
-#sidebar {
-  grid-area: side;
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.sidebar-head {
-  padding: 12px 16px 8px;
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--text3);
-  letter-spacing: 1.5px;
-  border-bottom: 1px solid var(--border);
-  text-transform: uppercase;
-}
-#patch-list {
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--surface2) transparent;
-}
-.patch-item {
-  display: grid;
-  grid-template-columns: 30px 1fr 28px;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--border);
-  transition: background .1s;
-  position: relative;
-}
-.patch-item::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 2px;
-  background: var(--accent);
-  opacity: 0;
-  transition: opacity .15s;
-}
-.patch-item:hover { background: rgba(255,255,255,.025); }
-.patch-item.active { background: rgba(255,60,110,.06); }
-.patch-item.active::before { opacity: 1; }
-.pn { font-family: var(--mono); font-size: 0.65rem; color: var(--text3); }
-.pm { font-size: 0.82rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pm.empty { color: var(--text3); font-style: italic; font-weight: 300; }
-.pfx {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  color: var(--text3);
-  background: var(--surface2);
-  border-radius: 4px;
-  padding: 1px 5px;
-  text-align: center;
+#top {
+    padding:10px;
+    border-bottom:1px solid #0f0;
 }
 
-/* ── MAIN EDITOR ─────────────────────────────────────────────────────── */
-#main {
-  grid-area: main;
-  overflow-y: auto;
-  padding: 20px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--surface2) transparent;
-}
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 12px;
-  color: var(--text3);
-}
-.empty-icon { font-size: 3rem; opacity: .3; }
-.empty-state p { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 1px; }
-
-/* Editor content */
-.editor-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.patch-slot-num {
-  font-family: var(--mono);
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--accent);
-  min-width: 40px;
-}
-.patch-name-input {
-  font-family: var(--mono);
-  font-size: 0.95rem;
-  font-weight: 700;
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  padding: 7px 12px;
-  border-radius: var(--r);
-  width: 180px;
-  letter-spacing: 1px;
-  transition: border-color .15s;
-}
-.patch-name-input:focus { outline: none; border-color: var(--accent2); }
-.btn-send    { background: var(--accent);  color: #fff; border-color: var(--accent); font-family: var(--mono); font-size: 0.72rem; padding: 7px 16px; border-radius: var(--r); border: none; cursor: pointer; transition: all .15s; }
-.btn-select  { background: transparent; color: var(--accent3); border: 1px solid rgba(6,182,212,.3); font-family: var(--mono); font-size: 0.72rem; padding: 7px 16px; border-radius: var(--r); cursor: pointer; transition: all .15s; }
-.btn-send:hover, .btn-select:hover { filter: brightness(1.15); transform: translateY(-1px); }
-
-/* FX Chain */
-.fx-chain-label {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--text3);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-.fx-chain {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+button {
+    background:#000;
+    color:#0f0;
+    border:1px solid #0f0;
+    padding:6px;
+    margin:3px;
+    cursor:pointer;
 }
 
-/* FX Slot */
-.fx-slot {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r2);
-  padding: 12px;
-  transition: border-color .2s, opacity .2s;
-  position: relative;
-  overflow: hidden;
-}
-.fx-slot::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent2), var(--accent3));
-  opacity: 0;
-  transition: opacity .2s;
-}
-.fx-slot.enabled { border-color: rgba(124,58,237,.3); }
-.fx-slot.enabled::before { opacity: 1; }
-.fx-slot.disabled { opacity: .45; }
-
-.fx-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 8px;
-}
-.fx-toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  flex: 1;
-  min-width: 0;
-}
-.fx-toggle-label input[type=checkbox] { display: none; }
-.toggle-track {
-  width: 28px; height: 15px;
-  background: var(--surface2);
-  border-radius: 10px;
-  position: relative;
-  transition: background .2s;
-  flex-shrink: 0;
-  border: 1px solid var(--border2);
-}
-.toggle-track::after {
-  content: '';
-  position: absolute;
-  left: 2px; top: 2px;
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  background: var(--text3);
-  transition: all .2s;
-}
-.fx-toggle-label input:checked + .toggle-track { background: var(--accent2); border-color: var(--accent2); }
-.fx-toggle-label input:checked + .toggle-track::after { left: 15px; background: #fff; }
-
-.fx-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fx-cat {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  color: var(--text3);
-  background: var(--bg3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
+#chain {
+    display:flex;
+    gap:10px;
+    padding:10px;
+    overflow-x:auto;
 }
 
-.fx-params { display: flex; flex-direction: column; gap: 7px; }
-.param-row {
-  display: grid;
-  grid-template-columns: 70px 1fr 28px;
-  align-items: center;
-  gap: 6px;
-}
-.param-label { font-size: 0.68rem; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.param-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 3px;
-  background: var(--surface2);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  transition: background .15s;
-}
-.param-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 11px; height: 11px;
-  border-radius: 50%;
-  background: var(--accent2);
-  box-shadow: 0 0 4px var(--accent2);
-  cursor: pointer;
-  transition: transform .1s;
-}
-.param-slider:hover { background: var(--surface2); }
-.param-slider::-webkit-slider-thumb:hover { transform: scale(1.3); }
-.param-val {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--text2);
-  text-align: right;
+.fx {
+    border:2px solid #0f0;
+    padding:10px;
+    min-width:120px;
+    cursor:grab;
 }
 
-/* ── SCROLLBARS ──────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+.fx.active {
+    background:#0f0;
+    color:#000;
+}
+
+#editor {
+    padding:10px;
+    border-top:1px solid #0f0;
+}
+
+.knob {
+    display:inline-block;
+    margin:10px;
+    text-align:center;
+}
+
+.knobCircle {
+    width:60px;
+    height:60px;
+    border:2px solid #0f0;
+    border-radius:50%;
+    position:relative;
+    cursor:pointer;
+}
+
+.knobIndicator {
+    width:2px;
+    height:25px;
+    background:#0f0;
+    position:absolute;
+    top:5px;
+    left:50%;
+    transform-origin:bottom;
+}
+
+#library {
+    border-top:1px solid #0f0;
+    padding:10px;
+    max-height:150px;
+    overflow:auto;
+}
 </style>
 </head>
+
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-dot off" id="conn-dot"></div>
-    G1ON
-  </div>
-  <span id="device-badge">no device</span>
-  <span id="status-pill" class="pill-info">ready</span>
-</header>
-
-<div class="toolbar">
-  <button class="btn btn-connect" id="btn-connect">CONNECT</button>
-  <button class="btn btn-read"    id="btn-read"    disabled>READ ALL</button>
-  <button class="btn btn-backup"  id="btn-backup"  disabled>BACKUP</button>
-  <button class="btn btn-restore" id="btn-restore" disabled>RESTORE</button>
-  <input type="file" id="file-restore" accept=".json" style="display:none" />
-  <div class="progress-wrap">
-    <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
-    <span id="progress-text"></span>
-  </div>
+<div id="top">
+    <button onclick="connect()">CONNECT</button>
+    <button onclick="read()">READ</button>
+    <button onclick="save()">SEND</button>
+    <button onclick="addFX()">+FX</button>
+    <button onclick="removeFX()">-FX</button>
+    <button onclick="saveLocal()">SAVE LIB</button>
+    <button onclick="exportJSON()">EXPORT</button>
+    <input type="file" onchange="importJSON(event)">
 </div>
 
-<div id="sidebar">
-  <div class="sidebar-head">PATCHES</div>
-  <div id="patch-list"></div>
-</div>
-
-<div id="main">
-  <div class="empty-state" id="empty-state">
-    <div class="empty-icon">⬡</div>
-    <p>CONNECT YOUR ZOOM PEDAL VIA USB</p>
-    <p style="font-size:.65rem;opacity:.5">requires chrome or edge · allow midi access when prompted</p>
-  </div>
-  <div id="editor-content" style="display:none"></div>
-</div>
+<div id="chain"></div>
+<div id="editor"></div>
+<div id="library"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════
-//  PROTOCOL — Zoom SysEx
-//  Based on binary analysis of ToneLib-Zoom.exe
-// ═══════════════════════════════════════════════════════════════════════
 
-const ZOOM_MFR = 0x52;
+// =====================
+// ESTADO
+// =====================
+let midiOut=null, midiIn=null;
+let patch=null;
+let selectedFX=0;
+let dragIndex=null;
+let sendTimer=null;
 
-const DEVICES = {
-  0x61: { key:'G1on',    name:'Zoom G1on',    category:'guitar', fxSlots:5, presets:50 },
-  0x62: { key:'G1Xon',   name:'Zoom G1Xon',   category:'guitar', fxSlots:5, presets:50 },
-  0x63: { key:'G1Xon_K', name:'Zoom G1Xon-K', category:'guitar', fxSlots:5, presets:50 },
-  0x64: { key:'G1four',  name:'Zoom G1 FOUR', category:'guitar', fxSlots:5, presets:50 },
-  0x65: { key:'G1Xfour', name:'Zoom G1X FOUR',category:'guitar', fxSlots:5, presets:50 },
-  0x6E: { key:'G3n',     name:'Zoom G3n',     category:'guitar', fxSlots:7, presets:60 },
-  0x73: { key:'G5n',     name:'Zoom G5n',     category:'guitar', fxSlots:7, presets:60 },
-  0x5F: { key:'B1on',    name:'Zoom B1on',    category:'bass',   fxSlots:5, presets:50 },
-  0x66: { key:'B1Xon',   name:'Zoom B1Xon',   category:'bass',   fxSlots:5, presets:50 },
-  0x71: { key:'B1four',  name:'Zoom B1 FOUR', category:'bass',   fxSlots:5, presets:50 },
-  0x58: { key:'MS50G',   name:'Zoom MS-50G',  category:'guitar', fxSlots:6, presets:50 },
-};
+let library = JSON.parse(localStorage.getItem("lib")||"[]");
 
-const ZOOM_PORTS = [
-  'zoom g1on','zoom g1xon','zoom g3n','zoom g3xn','zoom g5n',
-  'zoom b1on','zoom b1xon','zoom b3n','zoom ms-50','zoom ms-60','zoom ms-70',
-  'zoom g1 four','zoom g1x four','zoom b1 four','zoom b1x four',
-];
+// =====================
+// MIDI
+// =====================
+async function connect(){
+    const access = await navigator.requestMIDIAccess({sysex:true});
+    midiOut=[...access.outputs.values()][0];
+    midiIn=[...access.inputs.values()][0];
 
-const EFFECTS = {
-  0x00: { name:'Empty',    cat:null },
-  // Compressors
-  0x01: { name:'OptComp',  cat:'COMP',  params:['Level','Sensitivity','Tone','Attack'] },
-  0x02: { name:'D Comp',   cat:'COMP',  params:['Sustain','Level','Attack','Tone'] },
-  0x03: { name:'M Comp',   cat:'COMP',  params:['Lo Ratio','Hi Ratio','Attack','Release','Level'] },
-  0x04: { name:'160 Comp', cat:'COMP',  params:['Threshold','Ratio','Attack','Release','Level'] },
-  0x05: { name:'GrayComp', cat:'COMP',  params:['Sustain','Level'] },
-  0x07: { name:'RackComp', cat:'COMP',  params:['Threshold','Ratio','Attack','Release','Level'] },
-  0x08: { name:'DualComp', cat:'COMP',  params:['Sensitivity','Level','Tone'] },
-  0x09: { name:'Limiter',  cat:'COMP',  params:['Threshold','Release','Level'] },
-  0x0A: { name:'Exciter',  cat:'COMP',  params:['Frequency','Mix','Level'] },
-  // Drive
-  0x10: { name:'Booster',   cat:'DRIVE', params:['Gain','Tone','Level'] },
-  0x11: { name:'OverDrive', cat:'DRIVE', params:['Drive','Tone','Level'] },
-  0x12: { name:'Dist 1',    cat:'DRIVE', params:['Gain','Tone','Level'] },
-  0x13: { name:'Dist+',     cat:'DRIVE', params:['Gain','Tone','Output'] },
-  0x14: { name:'TS Drive',  cat:'DRIVE', params:['Drive','Tone','Level'] },
-  0x15: { name:'TS Boost',  cat:'DRIVE', params:['Drive','Tone','Level'] },
-  0x16: { name:'RC Boost',  cat:'DRIVE', params:['Volume','Bass','Treble','Bright'] },
-  0x18: { name:'FuzzSmile', cat:'DRIVE', params:['Fuzz','Volume','Tone'] },
-  0x19: { name:'OctFuzz',   cat:'DRIVE', params:['Fuzz','Volume','Oct Mix'] },
-  0x1A: { name:'DynDrive',  cat:'DRIVE', params:['Gain','Tone','Level','Sensitivity'] },
-  0x1B: { name:'BassDrive', cat:'DRIVE', params:['Gain','Bass','Treble','Level'] },
-  // Mod
-  0x20: { name:'Chorus',   cat:'MOD', params:['Rate','Depth','Pre Dly','Level'] },
-  0x21: { name:'Flanger',  cat:'MOD', params:['Rate','Depth','Resonance','Level'] },
-  0x22: { name:'Phaser',   cat:'MOD', params:['Rate','Depth','Resonance','Level'] },
-  0x23: { name:'4-Phaser', cat:'MOD', params:['Rate','Depth','Resonance','Level'] },
-  0x24: { name:'8-Phaser', cat:'MOD', params:['Rate','Depth','Resonance','Level'] },
-  0x25: { name:'Tremolo',  cat:'MOD', params:['Rate','Depth','Wave','Level'] },
-  0x26: { name:'Vibrato',  cat:'MOD', params:['Rate','Depth','Level'] },
-  // Delay
-  0x30: { name:'Delay',    cat:'DELAY', params:['Time','Feedback','Mix','Level'] },
-  0x31: { name:'Delay 3S', cat:'DELAY', params:['Time','Feedback','Mix','Level'] },
-  0x32: { name:'ModDelay', cat:'DELAY', params:['Time','Feedback','Rate','Depth','Mix'] },
-  0x33: { name:'PitchDly', cat:'DELAY', params:['Time','Feedback','Pitch','Mix'] },
-  0x34: { name:'DynDelay', cat:'DELAY', params:['Time','Feedback','Sensitivity','Mix'] },
-  // Reverb
-  0x38: { name:'HD Reverb', cat:'REVERB', params:['Time','Pre Dly','Mix','Level'] },
-  0x39: { name:'ModReverb', cat:'REVERB', params:['Time','Rate','Depth','Mix'] },
-  // Filter/Wah
-  0x40: { name:'AutoWah',  cat:'WAH', params:['Sensitivity','Freq','Resonance','Mix'] },
-  0x41: { name:'PedalWah', cat:'WAH', params:['Freq','Resonance','Mix'] },
-  0x42: { name:'A-Filter', cat:'WAH', params:['Sensitivity','Freq','Resonance','Level'] },
-  0x43: { name:'M-Filter', cat:'WAH', params:['Freq','Resonance','Mix','Level'] },
-  0x44: { name:'EgFilter', cat:'WAH', params:['Sensitivity','Freq','Attack','Mix'] },
-  0x45: { name:'SeqFLTR',  cat:'WAH', params:['Rate','Depth','Resonance','Step','Level'] },
-  0x47: { name:'Z Tron',   cat:'WAH', params:['Sensitivity','Freq','Mix'] },
-  0x48: { name:'Cry',      cat:'WAH', params:['Freq','Resonance','Mix'] },
-  // Pitch
-  0x50: { name:'Octave',   cat:'PITCH', params:['Oct1','Oct2','Direct','Level'] },
-  0x51: { name:'MonoPitch',cat:'PITCH', params:['Shift','Fine','Level'] },
-  0x52: { name:'PitchSHFT',cat:'PITCH', params:['Shift','Fine','Level'] },
-  0x53: { name:'PDL Pitch',cat:'PITCH', params:['Range','Level'] },
-  // EQ
-  0x60: { name:'ParaEQ',   cat:'EQ', params:['Low','Mid','High','Level'] },
-  0x61: { name:'GraphicEQ',cat:'EQ', params:['80Hz','250Hz','800Hz','2.5k','8kHz','Level'] },
-  0x62: { name:'GT GEQ',   cat:'EQ', params:['100Hz','400Hz','1kHz','4kHz','8kHz','Level'] },
-  0x64: { name:'High EQ',  cat:'EQ', params:['Freq','Gain','Level'] },
-  0x65: { name:'Low EQ',   cat:'EQ', params:['Freq','Gain','Level'] },
-  // Bass
-  0x70: { name:'BassWah',  cat:'BASS', params:['Sensitivity','Freq','Mix'] },
-  0x71: { name:'Ba AutoWah',cat:'BASS',params:['Sensitivity','Freq','Resonance','Mix'] },
-  0x72: { name:'Ba Octave',cat:'BASS', params:['Oct1','Oct2','Direct','Level'] },
-  0x73: { name:'Ba Pitch', cat:'BASS', params:['Shift','Fine','Level'] },
-  0x74: { name:'Black Wah',cat:'BASS', params:['Sensitivity','Freq','Mix'] },
-  0x76: { name:'Ba GEQ',   cat:'BASS', params:['60Hz','250Hz','800Hz','3.2k','8kHz','Level'] },
-  0x77: { name:'Ba PEQ',   cat:'BASS', params:['Low','Mid','High','Level'] },
-};
+    if(midiIn) midiIn.onmidimessage=onMIDI;
 
-function getEffect(id) {
-  return EFFECTS[id] || { name: `FX 0x${id.toString(16).toUpperCase()}`, cat:'?', params:[] };
+    alert("MIDI conectado");
 }
 
-function isZoomPort(name) {
-  const n = name.toLowerCase();
-  return ZOOM_PORTS.some(p => n.includes(p));
+function send(d){ if(midiOut) midiOut.send(d); }
+
+// =====================
+// SYS
+// =====================
+function read(){
+    send([0xF0,0x52,0x00,0x61,0x08,0xF7]);
 }
 
-// SysEx builders
-function sysex(deviceId, payload) {
-  return new Uint8Array([0xF0, ZOOM_MFR, 0x00, deviceId, ...payload, 0xF7]);
-}
-function identityRequest() { return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]); }
-function readPatchMsg(deviceId, slot) {
-  return sysex(deviceId, [0x28, slot & 0x7F, (slot >> 7) & 0x7F]);
-}
-function writePatchMsg(deviceId, slot, patch) {
-  const fxSlots = patch.effects.length;
-  const bytes = [];
-  for (const fx of patch.effects) {
-    bytes.push(fx.enabled ? fx.fxId : 0x00);
-    for (let i = 0; i < 6; i++) bytes.push(fx.params[i] ?? 0x00);
-  }
-  for (let i = 0; i < 10; i++) {
-    bytes.push(i < patch.name.length ? patch.name.charCodeAt(i) & 0x7F : 0x20);
-  }
-  return sysex(deviceId, [0x28, slot & 0x7F, (slot >> 7) & 0x7F, ...bytes]);
-}
-function programChange(slot) { return new Uint8Array([0xC0, slot & 0x7F]); }
-
-// Parsers
-function parseIdentity(data) {
-  if (data.length < 10) return null;
-  if (data[0]!==0xF0||data[1]!==0x7E||data[3]!==0x06||data[4]!==0x02||data[5]!==ZOOM_MFR) return null;
-  return { deviceId: data[7], fw: `${data[8]}.${String(data[9]).padStart(2,'0')}` };
-}
-function parsePatch(data, deviceId) {
-  if (!data||data.length<10) return null;
-  if (data[0]!==0xF0||data[1]!==ZOOM_MFR||data[4]!==0x28) return null;
-  const slot    = data[5] | (data[6] << 7);
-  const dev     = DEVICES[deviceId] || { fxSlots: 5 };
-  const payload = data.slice(7, -1);
-  const effects = [];
-  let off = 0;
-  for (let i = 0; i < dev.fxSlots; i++) {
-    if (off + 7 > payload.length) break;
-    effects.push({ fxId: payload[off], params: Array.from(payload.slice(off+1, off+7)), enabled: payload[off] !== 0x00 });
-    off += 7;
-  }
-  const nameBytes = payload.slice(off, off + 10);
-  const name = String.fromCharCode(...nameBytes).replace(/\s+$/, '');
-  return { slot, name, effects };
+function save(){
+    clearTimeout(sendTimer);
+    sendTimer=setTimeout(()=>{
+        send(build(patch));
+    },80);
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  MIDI MANAGER
-// ═══════════════════════════════════════════════════════════════════════
+function build(p){
+    let d=[0xF0,0x52,0x00,0x61,0x09];
+    d.push(0,0);
 
-let midiAccess  = null;
-let midiInput   = null;
-let midiOutput  = null;
-let deviceInfo  = null;
-let pendingReply = null;
-const listeners = {};
+    p.effects.forEach(f=> d.push(f.id,...f.params));
 
-function emit(ev, data) {
-  (listeners[ev] || []).forEach(fn => fn(data));
-}
-function on(ev, fn) {
-  if (!listeners[ev]) listeners[ev] = [];
-  listeners[ev].push(fn);
+    let name="PATCH".padEnd(10," ");
+    for(let c of name) d.push(c.charCodeAt(0));
+
+    d.push(0xF7);
+    return d;
 }
 
-function waitForReply(ms = 3000) {
-  return new Promise((resolve, reject) => {
-    if (pendingReply) { pendingReply.reject(new Error('superseded')); }
-    const t = setTimeout(() => { pendingReply = null; reject(new Error('Device response timeout')); }, ms);
-    pendingReply = { resolve, reject, t };
-  });
-}
-
-function onMidiMessage(e) {
-  const data = new Uint8Array(e.data);
-  if (pendingReply) {
-    clearTimeout(pendingReply.t);
-    pendingReply.resolve(data);
-    pendingReply = null;
-  }
-  if (data[0]===0xF0 && data[1]===ZOOM_MFR && data[4]===0x28) {
-    const patch = parsePatch(data, deviceInfo?.deviceId);
-    if (patch) emit('patchupdate', patch);
-  }
-}
-
-async function midiConnect() {
-  if (!navigator.requestMIDIAccess) throw new Error('Web MIDI API not supported. Use Chrome or Edge.');
-  try {
-    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
-  } catch(e) {
-    throw new Error('MIDI access denied. Click "Allow" when prompted by the browser.');
-  }
-
-  const inputs  = Array.from(midiAccess.inputs.values());
-  const outputs = Array.from(midiAccess.outputs.values());
-
-  if (outputs.length === 0 || inputs.length === 0)
-    throw new Error('No MIDI ports found. Connect the pedal via USB and power it on.');
-
-  // Auto-detect: broadcast Identity Request to ALL ports.
-  // Whoever replies with Zoom manufacturer ID (0x52) is our device.
-  setStatus(`scanning ${outputs.length} port(s)...`, 'info');
-  const found = await probeAllPorts(inputs, outputs);
-  if (!found) throw new Error('No Zoom device responded. Connect via USB, power it on, and close other MIDI apps.');
-
-  midiInput  = found.input;
-  midiOutput = found.output;
-  midiInput.onmidimessage = onMidiMessage;
-
-  const id  = found.identity;
-  const dev = DEVICES[id.deviceId] || {
-    key: 'unknown',
-    name: `Zoom (ID=0x${id.deviceId.toString(16).toUpperCase()}) · ${found.input.name}`,
-    fxSlots: 5, presets: 50, category: 'guitar'
-  };
-  deviceInfo = { ...dev, deviceId: id.deviceId, firmware: id.fw };
-
-  midiAccess.onstatechange = e => {
-    if ((e.port === midiInput || e.port === midiOutput) && e.port.state === 'disconnected') {
-      midiDisconnect();
+// =====================
+// PARSER
+// =====================
+function onMIDI(msg){
+    let d=[...msg.data];
+    if(d[3]===0x28){
+        patch=parse(d);
+        render();
     }
-  };
-  return deviceInfo;
 }
 
-// Probe every output/input combo looking for a Zoom Identity Response.
-// No port name matching — pure SysEx protocol detection.
-async function probeAllPorts(inputs, outputs) {
-  for (const output of outputs) {
-    const result = await probeOutput(output, inputs);
-    if (result) return result;
-  }
-  return null;
+function parse(data){
+    let p={effects:[]};
+    let i=7;
+
+    while(i < data.length-11){
+        let id=data[i++];
+        let params=data.slice(i,i+6);
+        i+=6;
+        p.effects.push({id,params});
+    }
+
+    return p;
 }
 
-async function probeOutput(output, inputs) {
-  return new Promise(resolve => {
-    const originals = inputs.map(i => i.onmidimessage);
-    const done = (result) => {
-      inputs.forEach((i, idx) => { i.onmidimessage = originals[idx]; });
-      clearTimeout(timer);
-      resolve(result);
+// =====================
+// UI
+// =====================
+function render(){
+
+    if(!patch) return;
+
+    // CHAIN
+    let c="";
+    patch.effects.forEach((fx,i)=>{
+        c+=`<div class="fx ${i===selectedFX?"active":""}"
+                draggable="true"
+                ondragstart="dragStart(${i})"
+                ondragover="event.preventDefault()"
+                ondrop="dropFX(${i})"
+                onclick="selectFX(${i})">
+                FX ${i}<br>ID:${fx.id}
+            </div>`;
+    });
+    chain.innerHTML=c;
+
+    // EDITOR
+    let fx=patch.effects[selectedFX];
+    let e="";
+
+    fx.params.forEach((p,i)=>{
+        let angle = (p/127)*270 -135;
+
+        e+=`
+        <div class="knob">
+            <div class="knobCircle"
+                onmousedown="knobStart(event,${i})">
+                <div class="knobIndicator"
+                    style="transform:rotate(${angle}deg)">
+                </div>
+            </div>
+            <div>${p}</div>
+        </div>`;
+    });
+
+    editor.innerHTML=e;
+
+    // LIBRARY
+    let l="";
+    library.forEach((p,i)=>{
+        l+=`<div onclick="loadLib(${i})">Preset ${i}</div>`;
+    });
+    libraryDiv.innerHTML=l;
+}
+
+// =====================
+// DRAG
+// =====================
+function dragStart(i){ dragIndex=i; }
+
+function dropFX(i){
+    let tmp = patch.effects[dragIndex];
+    patch.effects.splice(dragIndex,1);
+    patch.effects.splice(i,0,tmp);
+    save();
+    render();
+}
+
+// =====================
+// FX
+// =====================
+function selectFX(i){ selectedFX=i; render(); }
+
+function addFX(){
+    patch.effects.push({id:1,params:[0,0,0,0,0,0]});
+    render();
+}
+
+function removeFX(){
+    patch.effects.splice(selectedFX,1);
+    selectedFX=0;
+    render();
+}
+
+// =====================
+// KNOB
+// =====================
+let activeKnob=null;
+
+function knobStart(e,i){
+    activeKnob=i;
+    document.onmousemove = knobMove;
+    document.onmouseup = knobEnd;
+}
+
+function knobMove(e){
+    if(activeKnob===null) return;
+
+    let val = patch.effects[selectedFX].params[activeKnob];
+    val += (e.movementY * -1);
+
+    val = Math.max(0,Math.min(127,val));
+
+    patch.effects[selectedFX].params[activeKnob]=val;
+
+    save();
+    render();
+}
+
+function knobEnd(){
+    activeKnob=null;
+    document.onmousemove=null;
+}
+
+// =====================
+// LIBRARY
+// =====================
+function saveLocal(){
+    library.push(JSON.parse(JSON.stringify(patch)));
+    localStorage.setItem("lib",JSON.stringify(library));
+    render();
+}
+
+function loadLib(i){
+    patch = JSON.parse(JSON.stringify(library[i]));
+    render();
+}
+
+function exportJSON(){
+    let blob=new Blob([JSON.stringify(library)],{type:"application/json"});
+    let a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="presets.json";
+    a.click();
+}
+
+function importJSON(e){
+    let file=e.target.files[0];
+    let r=new FileReader();
+    r.onload=()=>{
+        library=JSON.parse(r.result);
+        localStorage.setItem("lib",JSON.stringify(library));
+        render();
     };
-    const timer = setTimeout(() => done(null), 700);
-
-    inputs.forEach(input => {
-      input.onmidimessage = (e) => {
-        const data = new Uint8Array(e.data);
-        // Universal Identity Response: F0 7E xx 06 02 [mfr_id] ...
-        if (data.length >= 6 &&
-            data[0] === 0xF0 && data[1] === 0x7E &&
-            data[3] === 0x06 && data[4] === 0x02 &&
-            data[5] === ZOOM_MFR) {
-          done({ input, output, identity: parseIdentity(data) });
-        }
-      };
-    });
-
-    try { output.send(identityRequest()); } catch { done(null); }
-  });
+    r.readAsText(file);
 }
 
-function midiDisconnect() {
-  if (midiInput) midiInput.onmidimessage = null;
-  midiInput = midiOutput = deviceInfo = null;
-  emit('disconnected');
-}
+// =====================
+const chain=document.getElementById("chain");
+const editor=document.getElementById("editor");
+const libraryDiv=document.getElementById("library");
 
-async function midiSend(msg, waitReply = false) {
-  if (!midiOutput) throw new Error('Not connected');
-  const p = waitReply ? waitForReply() : null;
-  midiOutput.send(msg);
-  return waitReply ? p : null;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  APP STATE
-// ═══════════════════════════════════════════════════════════════════════
-
-let patches      = [];
-let currentSlot  = -1;
-let isReading    = false;
-
-// ═══════════════════════════════════════════════════════════════════════
-//  UI REFS
-// ═══════════════════════════════════════════════════════════════════════
-
-const $ = id => document.getElementById(id);
-const btnConnect  = $('btn-connect');
-const btnRead     = $('btn-read');
-const btnBackup   = $('btn-backup');
-const btnRestore  = $('btn-restore');
-const fileRestore = $('file-restore');
-const statusPill  = $('status-pill');
-const deviceBadge = $('device-badge');
-const connDot     = $('conn-dot');
-const progressBar = $('progress-bar');
-const progressTxt = $('progress-text');
-const patchList   = $('patch-list');
-const mainEl      = $('main');
-const emptyState  = $('empty-state');
-const editorContent = $('editor-content');
-
-// ═══════════════════════════════════════════════════════════════════════
-//  STATUS
-// ═══════════════════════════════════════════════════════════════════════
-
-function setStatus(msg, type='info') {
-  statusPill.textContent = msg;
-  statusPill.className = `pill-${type}`;
-}
-
-function setProgress(cur, total) {
-  const pct = total ? Math.round(cur/total*100) : 0;
-  progressBar.style.width = pct + '%';
-  progressTxt.textContent = total ? `${cur} / ${total}` : '';
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  CONNECT / DISCONNECT
-// ═══════════════════════════════════════════════════════════════════════
-
-btnConnect.addEventListener('click', async () => {
-  if (deviceInfo) { midiDisconnect(); return; }
-  setStatus('connecting...', 'info');
-  btnConnect.disabled = true;
-  try {
-    const info = await midiConnect();
-    onConnected(info);
-  } catch(e) {
-    setStatus(e.message, 'error');
-  } finally {
-    btnConnect.disabled = false;
-  }
-});
-
-function onConnected(info) {
-  connDot.classList.remove('off');
-  deviceBadge.textContent = `${info.name} · fw ${info.firmware}`;
-  btnConnect.textContent = 'DISCONNECT';
-  btnConnect.classList.replace('btn-connect','btn-disconnect');
-  btnConnect.style.background = 'transparent';
-  btnConnect.style.color = 'var(--red)';
-  btnConnect.style.borderColor = 'rgba(239,68,68,.4)';
-  btnRead.disabled = btnBackup.disabled = btnRestore.disabled = false;
-  patches = new Array(info.presets).fill(null);
-  setStatus(`connected · ${info.presets} patches`, 'success');
-  emptyState.innerHTML = `
-    <div class="empty-icon">⬡</div>
-    <p>${info.name.toUpperCase()} CONNECTED</p>
-    <p style="font-size:.65rem;opacity:.5">click READ ALL to load patches from the pedal</p>
-  `;
-}
-
-on('disconnected', () => {
-  connDot.classList.add('off');
-  deviceBadge.textContent = 'no device';
-  btnConnect.textContent = 'CONNECT';
-  btnConnect.classList.replace('btn-disconnect','btn-connect');
-  btnConnect.style.background = '';
-  btnConnect.style.color = '';
-  btnConnect.style.borderColor = '';
-  btnRead.disabled = btnBackup.disabled = btnRestore.disabled = true;
-  patches = []; currentSlot = -1;
-  patchList.innerHTML = '';
-  emptyState.innerHTML = `
-    <div class="empty-icon">⬡</div>
-    <p>DEVICE DISCONNECTED</p>
-    <p style="font-size:.65rem;opacity:.5">reconnect your zoom pedal via usb</p>
-  `;
-  emptyState.style.display = 'flex';
-  editorContent.style.display = 'none';
-  setStatus('disconnected', 'warning');
-  setProgress(0, 0);
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-//  READ ALL PATCHES
-// ═══════════════════════════════════════════════════════════════════════
-
-btnRead.addEventListener('click', async () => {
-  if (!deviceInfo || isReading) return;
-  isReading = true;
-  btnRead.disabled = true;
-  setProgress(0, deviceInfo.presets);
-  setStatus('reading patches...', 'info');
-
-  try {
-    for (let slot = 0; slot < deviceInfo.presets; slot++) {
-      const msg   = readPatchMsg(deviceInfo.deviceId, slot);
-      const reply = await midiSend(msg, true);
-      const patch = parsePatch(reply, deviceInfo.deviceId);
-      if (patch) {
-        patches[slot] = patch;
-        renderPatchItem(slot, patch);
-      }
-      setProgress(slot + 1, deviceInfo.presets);
-      await sleep(60);
-    }
-    setStatus(`${deviceInfo.presets} patches loaded`, 'success');
-  } catch(e) {
-    setStatus(e.message, 'error');
-  } finally {
-    isReading = false;
-    btnRead.disabled = false;
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-//  PATCH LIST
-// ═══════════════════════════════════════════════════════════════════════
-
-function renderPatchItem(slot, patch) {
-  let el = document.querySelector(`[data-slot="${slot}"]`);
-  if (!el) {
-    el = document.createElement('div');
-    el.className = 'patch-item';
-    el.dataset.slot = slot;
-    el.addEventListener('click', () => openEditor(slot));
-    // Insert in order
-    const items = patchList.querySelectorAll('.patch-item');
-    let inserted = false;
-    for (const item of items) {
-      if (parseInt(item.dataset.slot) > slot) { patchList.insertBefore(el, item); inserted = true; break; }
-    }
-    if (!inserted) patchList.appendChild(el);
-  }
-  const fxCount = patch.effects.filter(f => f.enabled).length;
-  const isEmpty = !patch.name || patch.name.trim() === '' || patch.name.toLowerCase().includes('empty');
-  el.innerHTML = `
-    <span class="pn">${String(slot+1).padStart(2,'0')}</span>
-    <span class="pm${isEmpty?' empty':''}">${esc(patch.name||'empty')}</span>
-    <span class="pfx">${fxCount}</span>
-  `;
-  if (slot === currentSlot) el.classList.add('active');
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  PATCH EDITOR
-// ═══════════════════════════════════════════════════════════════════════
-
-function openEditor(slot) {
-  const patch = patches[slot];
-  if (!patch) return;
-  currentSlot = slot;
-
-  // Highlight in list
-  document.querySelectorAll('.patch-item').forEach(el => el.classList.remove('active'));
-  const item = document.querySelector(`[data-slot="${slot}"]`);
-  if (item) item.classList.add('active');
-
-  emptyState.style.display = 'none';
-  editorContent.style.display = 'block';
-
-  editorContent.innerHTML = `
-    <div class="editor-top">
-      <span class="patch-slot-num">${String(slot+1).padStart(2,'0')}</span>
-      <input class="patch-name-input" id="pname" type="text" maxlength="10" value="${esc(patch.name)}" spellcheck="false" />
-      <button class="btn-send"   id="btn-send">WRITE TO PEDAL</button>
-      <button class="btn-select" id="btn-sel">SELECT ON PEDAL</button>
-    </div>
-    <div class="fx-chain-label">FX CHAIN · ${patch.effects.length} SLOTS</div>
-    <div class="fx-chain" id="fx-chain"></div>
-  `;
-
-  const chain = $('fx-chain');
-  patch.effects.forEach((fx, idx) => {
-    chain.appendChild(buildFxSlot(fx, idx, patch));
-  });
-
-  $('btn-send').addEventListener('click', async () => {
-    patch.name = $('pname').value.slice(0, 10);
-    try {
-      const msg = writePatchMsg(deviceInfo.deviceId, slot, patch);
-      await midiSend(msg, true);
-      setStatus(`patch ${slot+1} written`, 'success');
-      renderPatchItem(slot, patch);
-    } catch(e) { setStatus(e.message, 'error'); }
-  });
-
-  $('btn-sel').addEventListener('click', async () => {
-    try {
-      await midiSend(programChange(slot));
-      setStatus(`switched to patch ${slot+1}`, 'info');
-    } catch(e) { setStatus(e.message, 'error'); }
-  });
-}
-
-function buildFxSlot(fx, idx, patch) {
-  const info = getEffect(fx.fxId);
-  const div  = document.createElement('div');
-  div.className = `fx-slot ${fx.enabled ? 'enabled' : 'disabled'}`;
-
-  const cbId = `fx-cb-${idx}`;
-  div.innerHTML = `
-    <div class="fx-head">
-      <label class="fx-toggle-label" for="${cbId}">
-        <input type="checkbox" id="${cbId}" ${fx.enabled ? 'checked' : ''} />
-        <span class="toggle-track"></span>
-        <span class="fx-name">${esc(info.name)}</span>
-      </label>
-      ${info.cat ? `<span class="fx-cat">${info.cat}</span>` : ''}
-    </div>
-    <div class="fx-params">
-      ${(info.params || []).map((pname, pi) => `
-        <div class="param-row">
-          <span class="param-label">${esc(pname)}</span>
-          <input type="range" class="param-slider" min="0" max="127"
-            value="${fx.params[pi] ?? 0}" data-idx="${idx}" data-pi="${pi}" />
-          <span class="param-val" id="pv-${idx}-${pi}">${fx.params[pi] ?? 0}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  div.querySelector(`#${cbId}`).addEventListener('change', e => {
-    fx.enabled = e.target.checked;
-    patch.effects[idx].enabled = fx.enabled;
-    div.className = `fx-slot ${fx.enabled ? 'enabled' : 'disabled'}`;
-  });
-
-  div.querySelectorAll('.param-slider').forEach(input => {
-    input.addEventListener('input', e => {
-      const pi  = parseInt(e.target.dataset.pi);
-      const val = parseInt(e.target.value);
-      patch.effects[idx].params[pi] = val;
-      document.getElementById(`pv-${idx}-${pi}`).textContent = val;
-    });
-  });
-
-  return div;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  BACKUP / RESTORE
-// ═══════════════════════════════════════════════════════════════════════
-
-btnBackup.addEventListener('click', () => {
-  if (!deviceInfo) return;
-  const backup = {
-    version: '1.0',
-    timestamp: new Date().toISOString(),
-    device: { key: deviceInfo.key, name: deviceInfo.name, deviceId: deviceInfo.deviceId, firmware: deviceInfo.firmware },
-    patches,
-  };
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = `${deviceInfo.name.replace(/\s+/g,'_')}_backup_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  setStatus('backup downloaded', 'success');
-});
-
-btnRestore.addEventListener('click', () => fileRestore.click());
-fileRestore.addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  fileRestore.value = '';
-  const text = await file.text();
-  let backup;
-  try { backup = JSON.parse(text); } catch { setStatus('invalid backup file', 'error'); return; }
-  if (!backup.version || !backup.device || !backup.patches) { setStatus('invalid backup format', 'error'); return; }
-  if (backup.device.deviceId !== deviceInfo.deviceId) {
-    setStatus(`backup is for ${backup.device.name}, connected device is ${deviceInfo.name}`, 'error'); return;
-  }
-  if (!confirm(`Restore ${backup.patches.filter(Boolean).length} patches from backup?\nThis will overwrite patches on the pedal.`)) return;
-
-  setStatus('restoring...', 'info');
-  const total = backup.patches.length;
-  try {
-    for (let slot = 0; slot < total; slot++) {
-      const patch = backup.patches[slot];
-      if (!patch) continue;
-      const msg = writePatchMsg(deviceInfo.deviceId, slot, patch);
-      await midiSend(msg, true);
-      patches[slot] = patch;
-      renderPatchItem(slot, patch);
-      setProgress(slot+1, total);
-      await sleep(80);
-    }
-    setStatus('restore complete', 'success');
-  } catch(e) { setStatus(e.message, 'error'); }
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════════════════════════════
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function esc(s) {
-  return String(s||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 </script>
 </body>
 </html>
