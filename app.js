@@ -3,12 +3,12 @@
  * Bootstrap principal da aplicação G1on Editor
  *
  * Ordem de inicialização:
- *  1. Storage     → carrega patches salvos ou usa defaults
- *  2. State       → inicializa com o banco de patches
- *  3. MIDI        → solicita acesso Web MIDI
- *  4. DataGuardian → WAL recovery, snapshot de sessão, timers de proteção
- *  5. UI          → inicializa todos os módulos de interface
- *  6. Events      → atalhos de teclado, listeners globais
+ * 1. Storage     → carrega patches salvos ou usa defaults
+ * 2. State       → inicializa com o banco de patches
+ * 3. MIDI        → solicita acesso Web MIDI
+ * 4. DataGuardian → WAL recovery, snapshot de sessão, timers de proteção
+ * 5. UI          → inicializa todos os módulos de interface
+ * 6. Events      → atalhos de teclado, listeners globais
  */
 
 import { state }                    from './engine/state_manager.js';
@@ -79,7 +79,8 @@ function _loadStorage() {
 
 function _initGuardian() {
   initDataGuardian({
-    onSendDumpRequest: () => requestCurrentPatch(),
+    // Passa 'true' para sinalizar que é uma checagem de background
+    onSendDumpRequest: () => requestCurrentPatch(true), 
     config: {
       autoSaveDebounceMs:    3000,   // salva 3s após última edição
       consistencyIntervalMs: 30000,  // varredura cada 30s
@@ -228,8 +229,18 @@ function _cmdSave() {
   const patch = state.currentPatch;
   const idx   = state.currentIndex;
   patch.dirty = false;
+  
+  // 1. Salva no LittleFS local (navegador)
   savePatch({ ...patch, slot: idx });
-  if (state.midi.connected) savePatchToSlot(idx);
+  
+  // 2. Salva na pedaleira física (se conectada)
+  if (state.midi.connected) {
+    sendPatch(patch); // Envia o patch pro buffer primeiro!
+    setTimeout(() => {
+      savePatchToSlot(idx); // Manda gravar no slot permanentemente
+    }, 50); // Delay de 50ms para a pedaleira respirar
+  }
+  
   setSetting('lastPatchIndex', idx);
   notify(`P${String(idx).padStart(2,'0')} salvo ✓`, 'ok');
   state.dispatchEvent(new CustomEvent('state:patch-changed', { detail:{ patchIndex:idx, patch } }));
