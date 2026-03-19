@@ -387,17 +387,16 @@ header {
 #debug-panel {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: #0a0a10;
-  border-top: 1px solid var(--accent2);
+  border-top: 2px solid var(--accent2);
   padding: 8px 16px;
   font-family: var(--mono);
   font-size: 0.65rem;
   color: var(--text2);
-  max-height: 160px;
+  max-height: 200px;
   overflow-y: auto;
   display: none;
   z-index: 999;
 }
-#debug-panel.visible { display: block; }
 .dbg-row { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
 .dbg-row span { color: var(--accent3); margin-right: 8px; }
 .dbg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -1048,71 +1047,101 @@ function esc(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+
+
 // ═══════════════════════════════════════════════════════════════════════
-//  DEBUG PANEL
+//  DEBUG PANEL — uses existing midiAccess if available
 // ═══════════════════════════════════════════════════════════════════════
-const dbgPanel = $('debug-panel');
-const dbgLog   = $('dbg-log');
-const btnDebug = $('btn-debug');
 
-btnDebug.addEventListener('click', async () => {
-  dbgPanel.classList.toggle('visible');
-  if (!dbgPanel.classList.contains('visible')) return;
+document.addEventListener('DOMContentLoaded', () => {
+  const dbgPanel  = document.getElementById('debug-panel');
+  const dbgLog    = document.getElementById('dbg-log');
+  const btnDebug  = document.getElementById('btn-debug');
+  const dbgClose  = document.getElementById('dbg-close');
+  const dbgSend   = document.getElementById('dbg-send-btn');
+  let   dbgActive = false;
 
-  dbgLog.innerHTML = '<div class="dbg-row"><span>info</span>requesting MIDI access with sysex...</div>';
-
-  let acc;
-  try {
-    acc = await navigator.requestMIDIAccess({ sysex: true });
-  } catch(e) {
-    dbgLog.innerHTML += `<div class="dbg-row"><span>error</span>${e.message}</div>`;
-    return;
+  function dbgLine(tag, msg, color) {
+    const row = document.createElement('div');
+    row.className = 'dbg-row';
+    row.innerHTML = `<span style="color:${color||'var(--accent3)'}">${tag}</span>${esc(msg)}`;
+    dbgLog.appendChild(row);
+    dbgLog.scrollTop = dbgLog.scrollHeight;
   }
 
-  const ins  = Array.from(acc.inputs.values());
-  const outs = Array.from(acc.outputs.values());
-  dbgLog.innerHTML += `<div class="dbg-row"><span>ports</span>${ins.length} input(s), ${outs.length} output(s)</div>`;
-  ins.forEach(i  => dbgLog.innerHTML += `<div class="dbg-row"><span>in</span>${i.name} · state:${i.state}</div>`);
-  outs.forEach(o => dbgLog.innerHTML += `<div class="dbg-row"><span>out</span>${o.name} · state:${o.state}</div>`);
+  async function startDebug() {
+    dbgLog.innerHTML = '';
+    dbgLine('info', 'opening MIDI access...', 'var(--text2)');
 
-  // Listen on ALL inputs and log every SysEx byte
-  ins.forEach(input => {
-    const prev = input.onmidimessage;
-    input.onmidimessage = (e) => {
-      if (prev) prev(e);
-      const bytes = Array.from(new Uint8Array(e.data))
-        .map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-      const row = document.createElement('div');
-      row.className = 'dbg-row';
-      row.innerHTML = `<span>${input.name.slice(0,20)}</span>${bytes}`;
-      dbgLog.appendChild(row);
-      dbgLog.scrollTop = dbgLog.scrollHeight;
-    };
-  });
-
-  // Send Identity Request to ALL outputs
-  outs.forEach(out => {
+    let acc;
     try {
-      out.send([0xF0,0x7E,0x00,0x06,0x01,0xF7]);
-      dbgLog.innerHTML += `<div class="dbg-row"><span>sent→</span>${out.name.slice(0,20)} · F0 7E 00 06 01 F7</div>`;
+      acc = midiAccess || await navigator.requestMIDIAccess({ sysex: true });
     } catch(e) {
-      dbgLog.innerHTML += `<div class="dbg-row"><span>err</span>${out.name}: ${e.message}</div>`;
+      dbgLine('error', e.message, 'var(--red)'); return;
     }
-  });
-  dbgLog.innerHTML += '<div class="dbg-row"><span>wait</span>waiting for responses (3s)...</div>';
-});
 
-$('dbg-close').addEventListener('click', () => dbgPanel.classList.remove('visible'));
+    const ins  = Array.from(acc.inputs.values());
+    const outs = Array.from(acc.outputs.values());
+    dbgLine('ports', `${ins.length} input(s) · ${outs.length} output(s)`, 'var(--text2)');
+    ins.forEach(i  => dbgLine('in ',  `${i.name} [${i.state}]`, 'var(--green)'));
+    outs.forEach(o => dbgLine('out', `${o.name} [${o.state}]`, 'var(--amber)'));
+
+    // Hook all inputs to log every incoming message
+    ins.forEach(input => {
+      const prev = input.onmidimessage;
+      input.onmidimessage = (e) => {
+        if (prev) prev(e);
+        const bytes = Array.from(new Uint8Array(e.data))
+          .map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+        dbgLine('←rx', `${input.name.slice(0,18)}  ${bytes}`, 'var(--accent3)');
+      };
+    });
+
+    dbgActive = true;
+
+    // Auto-send identity request
+    sendIdentity(acc, outs);
+  }
+
+  function sendIdentity(acc, outs) {
+    if (!outs) {
+      if (!midiAccess) { dbgLine('error', 'not connected', 'var(--red)'); return; }
+      outs = Array.from(midiAccess.outputs.values());
+    }
+    outs.forEach(out => {
+      try {
+        out.send([0xF0,0x7E,0x00,0x06,0x01,0xF7]);
+        dbgLine('→tx', `${out.name.slice(0,18)}  F0 7E 00 06 01 F7`, 'var(--accent2)');
+      } catch(e) {
+        dbgLine('err', `${out.name}: ${e.message}`, 'var(--red)');
+      }
+    });
+  }
+
+  btnDebug.addEventListener('click', () => {
+    const visible = dbgPanel.style.display === 'block';
+    dbgPanel.style.display = visible ? 'none' : 'block';
+    if (!visible) startDebug();
+  });
+
+  dbgClose.addEventListener('click', () => { dbgPanel.style.display = 'none'; });
+  dbgSend.addEventListener('click',  () => sendIdentity(null, null));
+});
 
 </script>
 
+
+
+
 <div id="debug-panel">
   <div class="dbg-head">
-    <span class="dbg-title">MIDI RAW LOG</span>
-    <span class="dbg-close" id="dbg-close">✕ close</span>
+    <span class="dbg-title">◈ MIDI RAW LOG</span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="dbg-send-btn" style="cursor:pointer;color:var(--accent3);font-size:0.65rem">SEND IDENTITY REQ</span>
+      <span id="dbg-close" style="cursor:pointer;color:var(--text3)">✕</span>
+    </div>
   </div>
   <div id="dbg-log"></div>
 </div>
-
 </body>
 </html>
