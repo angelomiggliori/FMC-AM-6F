@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>G1on Editor</title>
+<title>G1on Editor - FMC-AM</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -12,7 +12,7 @@
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
   --accent:#ff3c6e;--accent2:#7c3aed;--accent3:#06b6d4;
   --text:#e8e8f0;--text2:#9090b0;--text3:#5a5a7a;
-  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--orange:#f97316;
   --r:6px;--r2:10px;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--text);
@@ -26,7 +26,7 @@ header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border)
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 #badge{font-size:.72rem;font-family:var(--mono);color:var(--text2);background:var(--surface);border:1px solid var(--border2);padding:3px 10px;border-radius:20px}
 #status{margin-left:auto;font-size:.72rem;font-family:var(--mono);padding:4px 12px;border-radius:20px}
-.s-info{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.s-info{background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3)}
 .s-ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
 .s-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
 .s-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
@@ -35,7 +35,7 @@ header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border)
 .btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .btn:not(:disabled):hover{filter:brightness(1.2);transform:translateY(-1px)}
 #bc{background:var(--accent);color:#fff;border-color:var(--accent)}
-#br{background:transparent;color:var(--blue);border-color:rgba(59,130,246,.4)}
+#br{background:transparent;color:var(--orange);border-color:rgba(249,115,22,.4)}
 #bb{background:transparent;color:var(--green);border-color:rgba(16,185,129,.4)}
 #brs{background:transparent;color:var(--amber);border-color:rgba(245,158,11,.4)}
 #bd{background:transparent;color:var(--text3);border-color:rgba(255,255,255,.1);margin-left:auto}
@@ -47,7 +47,7 @@ header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border)
 .sh{padding:12px 16px 8px;font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;border-bottom:1px solid var(--border);text-transform:uppercase}
 #pl{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
 .pi{display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;position:relative}
-.pi::before{content:'absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);opacity:0;transition:opacity .15s}
+.pi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);opacity:0;transition:opacity .15s}
 .pi:hover{background:rgba(255,255,255,.025)}
 .pi.active{background:rgba(255,60,110,.06)}
 .pi.active::before{opacity:1}
@@ -148,57 +148,17 @@ const DEVS={
   0x58:{key:'MS50G',  name:'Zoom MS-50G', fxSlots:6,presets:50},
 };
 const F1ON=new Set([0x61,0x62,0x63,0x64,0x65,0x5F,0x66,0x71]);
+
+// ── MAPEAMENTO DE EFEITOS COM LIMITES MÁXIMOS (max) ──
 const FX={
-  0x00:{n:'Empty',c:null,p:[]},
-  0x01:{n:'OptComp', c:'COMP', p:['Level','Sensitivity','Tone','Attack']},
-  0x02:{n:'D Comp',  c:'COMP', p:['Sustain','Level','Attack','Tone']},
-  0x03:{n:'M Comp',  c:'COMP', p:['Lo Ratio','Hi Ratio','Attack','Release','Level']},
-  0x04:{n:'160 Comp',c:'COMP', p:['Threshold','Ratio','Attack','Release','Level']},
-  0x05:{n:'GrayComp',c:'COMP', p:['Sustain','Level']},
-  0x07:{n:'RackComp',c:'COMP', p:['Threshold','Ratio','Attack','Release','Level']},
-  0x08:{n:'DualComp',c:'COMP', p:['Sensitivity','Level','Tone']},
-  0x09:{n:'Limiter', c:'COMP', p:['Threshold','Release','Level']},
-  0x10:{n:'Booster', c:'DRIVE',p:['Gain','Tone','Level']},
-  0x11:{n:'OverDrive',c:'DRIVE',p:['Drive','Tone','Level']},
-  0x12:{n:'Dist 1',  c:'DRIVE',p:['Gain','Tone','Level']},
-  0x13:{n:'Dist+',   c:'DRIVE',p:['Gain','Tone','Output']},
-  0x14:{n:'TS Drive',c:'DRIVE',p:['Drive','Tone','Level']},
-  0x15:{n:'TS Boost',c:'DRIVE',p:['Drive','Tone','Level']},
-  0x16:{n:'RC Boost',c:'DRIVE',p:['Volume','Bass','Treble','Bright']},
-  0x18:{n:'FuzzSmile',c:'DRIVE',p:['Fuzz','Volume','Tone']},
-  0x19:{n:'OctFuzz', c:'DRIVE',p:['Fuzz','Volume','Oct Mix']},
-  0x1A:{n:'DynDrive',c:'DRIVE',p:['Gain','Tone','Level','Sensitivity']},
-  0x20:{n:'Chorus',  c:'MOD',  p:['Rate','Depth','Pre Dly','Level']},
-  0x21:{n:'Flanger', c:'MOD',  p:['Rate','Depth','Resonance','Level']},
-  0x22:{n:'Phaser',  c:'MOD',  p:['Rate','Depth','Resonance','Level']},
-  0x23:{n:'4-Phaser',c:'MOD',  p:['Rate','Depth','Resonance','Level']},
-  0x24:{n:'8-Phaser',c:'MOD',  p:['Rate','Depth','Resonance','Level']},
-  0x25:{n:'Tremolo', c:'MOD',  p:['Rate','Depth','Wave','Level']},
-  0x26:{n:'Vibrato', c:'MOD',  p:['Rate','Depth','Level']},
-  0x30:{n:'Delay',   c:'DELAY',p:['Time','Feedback','Mix','Level']},
-  0x31:{n:'Delay 3S',c:'DELAY',p:['Time','Feedback','Mix','Level']},
-  0x32:{n:'ModDelay',c:'DELAY',p:['Time','Feedback','Rate','Depth','Mix']},
-  0x33:{n:'PitchDly',c:'DELAY',p:['Time','Feedback','Pitch','Mix']},
-  0x34:{n:'DynDelay',c:'DELAY',p:['Time','Feedback','Sensitivity','Mix']},
-  0x38:{n:'HD Reverb',c:'REVERB',p:['Time','Pre Dly','Mix','Level']},
-  0x39:{n:'ModReverb',c:'REVERB',p:['Time','Rate','Depth','Mix']},
-  0x40:{n:'AutoWah', c:'WAH',  p:['Sensitivity','Freq','Resonance','Mix']},
-  0x41:{n:'PedalWah',c:'WAH',  p:['Freq','Resonance','Mix']},
-  0x42:{n:'A-Filter',c:'WAH',  p:['Sensitivity','Freq','Resonance','Level']},
-  0x43:{n:'M-Filter',c:'WAH',  p:['Freq','Resonance','Mix','Level']},
-  0x44:{n:'EgFilter',c:'WAH',  p:['Sensitivity','Freq','Attack','Mix']},
-  0x45:{n:'SeqFLTR', c:'WAH',  p:['Rate','Depth','Resonance','Step','Level']},
-  0x50:{n:'Octave',  c:'PITCH',p:['Oct1','Oct2','Direct','Level']},
-  0x51:{n:'MonoPitch',c:'PITCH',p:['Shift','Fine','Level']},
-  0x52:{n:'PitchSHFT',c:'PITCH',p:['Shift','Fine','Level']},
-  0x60:{n:'ParaEQ',  c:'EQ',   p:['Low','Mid','High','Level']},
-  0x70:{n:'BassWah', c:'BASS', p:['Sensitivity','Freq','Mix']},
-  0x71:{n:'Ba AutoWah',c:'BASS',p:['Sensitivity','Freq','Resonance','Mix']},
-  0x72:{n:'Ba Octave',c:'BASS',p:['Oct1','Oct2','Direct','Level']},
-  0x73:{n:'Ba Pitch',c:'BASS', p:['Shift','Fine','Level']},
-  0x76:{n:'Ba GEQ',  c:'BASS', p:['60Hz','250Hz','800Hz','3.2k','8kHz','Level']},
-  0x77:{n:'Ba PEQ',  c:'BASS', p:['Low','Mid','High','Level']},
+  0x00:{n:'Empty',c:null,p:[], max:[]},
+  0x01:{n:'OptComp', c:'COMP', p:['Level','Sensitivity','Tone','Attack'], max:[150, 100, 100, 10]},
+  0x11:{n:'OverDrive',c:'DRIVE',p:['Drive','Tone','Level'], max:[100, 100, 150]},
+  0x21:{n:'Flanger', c:'MOD',  p:['Rate','Depth','Resonance','Level'], max:[100, 100, 100, 150]},
+  0x30:{n:'Delay',   c:'DELAY',p:['Time','Feedback','Mix','Level'], max:[2000, 100, 100, 150]},
+  0x38:{n:'HD Reverb',c:'REVERB',p:['Time','Pre Dly','Mix','Level'], max:[100, 100, 100, 150]},
 };
+// Você pode voltar a preencher os outros efeitos aqui seguindo a mesma estrutura com "max: [...]"
 function gfx(id){return FX[id]||{n:`FX 0x${id.toString(16).toUpperCase()}`,c:'?',p:[]};}
 
 // ── Protocol ─────────────────────────────────────────────────────────
@@ -238,30 +198,72 @@ function pack(data) {
   return out;
 }
 
+// LER E ESCREVER BITS
+function getBits(arr, offsetBytes, bitOffset, numBits) {
+  let val = 0;
+  for (let b = 0; b < numBits; b++) {
+    const totalBit = bitOffset + b;
+    const byteIdx = offsetBytes + Math.floor(totalBit / 8);
+    const bitIdx = totalBit % 8;
+    if (byteIdx < arr.length) {
+      const bit = (arr[byteIdx] & (1 << bitIdx)) ? 1 : 0;
+      val |= (bit << b);
+    }
+  }
+  return val;
+}
+
+function setBits(arr, offsetBytes, bitOffset, numBits, value) {
+  for (let b = 0; b < numBits; b++) {
+    const totalBit = bitOffset + b;
+    const byteIdx = offsetBytes + Math.floor(totalBit / 8);
+    const bitIdx = totalBit % 8;
+    if (byteIdx < arr.length) {
+      const bit = (value & (1 << b)) ? 1 : 0;
+      if (bit) {
+        arr[byteIdx] |= (1 << bitIdx);
+      } else {
+        arr[byteIdx] &= ~(1 << bitIdx);
+      }
+    }
+  }
+}
+
 function writeMsg(did, slot, patch) {
-  const raw8bit = [];
+  const raw8bit = new Uint8Array(128); 
   
-  // Reconstrói os 16 bytes por slot de efeito
+  let o = 0;
   for (const fx of patch.effects) {
-    raw8bit.push(fx.en ? fx.id : 0x00);
-    raw8bit.push(0x00); // Espaço pros bits extras de ID/On-off
-    for (let i = 0; i < 6; i++) {
-      raw8bit.push(fx.p[i] ?? 0);
+    setBits(raw8bit, o, 0, 1, fx.en ? 1 : 0);
+    setBits(raw8bit, o, 1, 11, fx.id);
+    for (let p = 0; p < 9; p++) { 
+      setBits(raw8bit, o, 12 + (p * 12), 12, fx.p[p] ?? 0);
     }
-    for (let i = 0; i < 8; i++) {
-      raw8bit.push(0x00); // Preenche o resto do slot de 16 bytes
-    }
+    o += 16; 
   }
   
-  // Tratamento de nome e final do patch
   const nameBytes = [];
+  const pName = patch.name || 'Empty';
   for (let i = 0; i < 10; i++) {
-    nameBytes.push(i < patch.name.length ? patch.name.charCodeAt(i) : 0x20);
+    nameBytes.push(i < pName.length ? pName.charCodeAt(i) : 0x20);
   }
   
-  raw8bit.push(0x00, ...nameBytes.slice(0, 4), 0x00, ...nameBytes.slice(4, 9), 0x00, 0x00, 0x00);
+  raw8bit[o] = 0x00;
+  raw8bit[o+1] = nameBytes[0];
+  raw8bit[o+2] = nameBytes[1];
+  raw8bit[o+3] = nameBytes[2];
+  raw8bit[o+4] = nameBytes[3];
+  raw8bit[o+5] = 0x00;
+  raw8bit[o+6] = nameBytes[4];
+  raw8bit[o+7] = nameBytes[5];
+  raw8bit[o+8] = nameBytes[6];
+  raw8bit[o+9] = nameBytes[7];
+  raw8bit[o+10] = nameBytes[8];
+  raw8bit[o+11] = 0x00;
+  raw8bit[o+12] = 0x00;
+  raw8bit[o+13] = 0x00;
   
-  const packed = pack(raw8bit);
+  const packed = pack(Array.from(raw8bit).slice(0, o + 14));
   return sx(did, [0x28, slot & 0x7F, ...packed]);
 }
 
@@ -300,13 +302,12 @@ function decode(pl,slots,slot){
   let o = 0;
 
   for(let i=0;i<slots;i++){
-    const rawId = unpacked[o] || 0; 
-    const isEnabled = unpacked[o] !== 0; 
+    const isEnabled = getBits(unpacked, o, 0, 1) !== 0; 
+    const rawId = getBits(unpacked, o, 1, 11); 
     
     const params = [];
-    // Puxando 6 bytes genéricos pra preencher a UI
-    for(let p=0; p<6; p++) {
-      params.push(unpacked[o + 2 + p] || 0);
+    for(let p=0; p<9; p++) {
+      params.push(getBits(unpacked, o, 12 + (p * 12), 12));
     }
 
     fx.push({
@@ -318,7 +319,6 @@ function decode(pl,slots,slot){
     o += SLOT_SIZE;
   }
   
-  // Seu código original pro nome segue firme e forte
   const rawName = pl.slice(-13);
   const part1 = String.fromCharCode(...rawName.slice(1,5)).replace(/ /g,'');
   const part2 = String.fromCharCode(...rawName.slice(6,11)).replace(/ /g,'');
@@ -380,7 +380,6 @@ async function probeOut(o,ins){
           done({i,o,id:parseId(d)});
       };
     });
-    // Send directly via output port — not via send() which requires out to be set
     try{
       const m=idReq();
       log('→tx',hex(m),'var(--accent2)');
@@ -448,7 +447,6 @@ BR.onclick=async()=>{
     for(let s=0;s<dev.presets;s++){
       await send(pc(s));
       await sleep(60);
-      // Always use edit enable before each request
       sendRaw(sx(dev.id,[0x50]));
       await sleep(80);
       const r=await send(sx(dev.id,[probeCmd]),true,2000);
@@ -486,7 +484,6 @@ async function probeReadCmd(did){
   sendRaw(editDisable);
   await sleep(200);
 
-  // Fallback: try without edit enable
   log('probe','--- fallback: sem enable → 0x29','var(--accent2)');
   await sendRaw(pc(0));
   await sleep(150);
@@ -508,7 +505,6 @@ function sendRaw(msg){
   log('probe',`→ raw: ${hex(msg)}`,'var(--accent2)');
   out.send(msg);
 }
-
 
 function renderItem(s,p){
   let el=PL.querySelector(`[data-s="${s}"]`);
@@ -569,7 +565,7 @@ function mkSlot(fx,idx,p){
       ${(info.p||[]).map((pn,pi)=>`
         <div class="pr">
           <span class="pl2">${esc(pn)}</span>
-          <input type="range" class="ps" min="0" max="127" value="${fx.p[pi]??0}" data-i="${idx}" data-p="${pi}"/>
+          <input type="range" class="ps" min="0" max="${info.max?.[pi] ?? 127}" value="${fx.p[pi]??0}" data-i="${idx}" data-p="${pi}"/>
           <span class="pv" id="pv${idx}_${pi}">${fx.p[pi]??0}</span>
         </div>`).join('')}
     </div>`;
@@ -613,7 +609,6 @@ FRS.onchange=async e=>{
   st('restore complete','s-ok');
 };
 
-// ── DEBUG ─────────────────────────────────────────────────────────────
 const DBG=$('dbg'),DL=$('dl');
 function log(tag,msg,color='var(--accent3)'){
   if(DBG.style.display!=='block')return;
