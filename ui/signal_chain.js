@@ -143,7 +143,7 @@ export function startKnobDrag(e, slotIdx, paramIdx) {
   const patch = state.currentPatch;
   if (!patch.effects[slotIdx]) return;
 
-  window._ui?.setInteracting(true); // Trava o auto-sync do Guardian
+  window._ui?.setInteracting(true);
 
   _knobDrag = { slotIdx, paramIdx, startY: e.clientY, startVal: patch.effects[slotIdx].params[paramIdx] ?? 64 };
   if (state.selectedSlot !== slotIdx) state.selectSlot(slotIdx);
@@ -163,7 +163,7 @@ function _onKnobMove(e) {
 
 function _onKnobUp() {
   _knobDrag = null;
-  window._ui?.setInteracting(false); // Libera o auto-sync do Guardian
+  window._ui?.setInteracting(false);
   window.removeEventListener('mousemove', _onKnobMove);
   window.removeEventListener('mouseup',   _onKnobUp);
 }
@@ -194,11 +194,9 @@ export function onDrop(e, i) {
   
   if (_dragFrom === null || _dragFrom === i) { _dragFrom = null; return; }
   
-  // Realiza a mudança de posição
   state.reorderEffects(_dragFrom, i);
   _dragFrom = null;
 
-  // ENVIA O PATCH COMPLETO para a pedaleira refletir o drag&drop na hora
   if (window._ui && window._ui.sendPatch) {
     window._ui.sendPatch();
   }

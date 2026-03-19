@@ -219,7 +219,7 @@ function _runConsistencyCheck() {
 function _requestSyncCheck() {
   if (!_g.onSendDumpRequest || !state.midi?.connected) return;
   
-  // O SEGREDO TÁ AQUI: se o Angelo estiver mexendo nos sliders, cancela o auto-sync por enquanto!
+  // Cancela o auto-sync se o usuário estiver arrastando um knob
   if (state.isInteracting) {
     console.info('[guardian] Usuário interagindo. Sync adiado.');
     return;
