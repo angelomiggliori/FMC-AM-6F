@@ -378,40 +378,94 @@ BR.onclick=async()=>{
 };
 
 async function probeReadCmd(did){
-  // Commands to try, each with variations: [cmd] alone, [cmd, 0x00], [cmd, 0x00, 0x00]
-  const variants=[
-    // cmd, ...extra bytes
-    [0x28],[0x28,0x00],[0x28,0x00,0x00],
-    [0x08],[0x08,0x00],[0x08,0x00,0x00],
-    [0x0e],[0x0e,0x00],[0x0e,0x00,0x00],
-    [0x09],[0x09,0x00],[0x09,0x00,0x00],
-    [0x05],[0x05,0x00],[0x05,0x00,0x00],
-    [0x50,0x50],
-    [0x0b],[0x0b,0x00],
-    [0x33],[0x33,0x00],
-  ];
-  log('────','sondando variações de comando...','var(--text3)');
-  await send(pc(0));
-  await sleep(100);
-  for(const v of variants){
-    const msg=sx(did,v);
-    const label=v.map(b=>'0x'+b.toString(16).toUpperCase().padStart(2,'0')).join(' ');
-    log('probe',`→ [${label}]  ${hex(msg)}`,'var(--accent2)');
-    let reply=null;
-    try{ reply=await send(msg,true,800); }catch{}
-    if(reply){
-      log('probe',`← ${hex(reply)}`,'var(--green)');
-      if(reply.length>7){
-        log('probe',`  ✓ resposta longa! usando cmd 0x${v[0].toString(16).toUpperCase()}`,'var(--green)');
-        return v[0];
-      }
-      log('probe',`  (${reply.length}b — curto, próximo...)`,'var(--amber)');
-    }else{
-      log('probe','  sem resposta','var(--text3)');
-    }
+  log('────','testando sequências de handshake...','var(--text3)');
+
+  // Sequence 1: 0x50 0x50 ping, then 0x28
+  log('probe','--- seq 1: ping 0x50 50 → 0x28','var(--accent2)');
+  await sendRaw(sx(did,[0x50,0x50]));
+  await sleep(200);
+  {
+    const msg=sx(did,[0x28]);
+    log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+    let r=null; try{r=await send(msg,true,1000);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
+  }
+  await sleep(200);
+
+  // Sequence 2: 0x05 handshake, then 0x28
+  log('probe','--- seq 2: 0x05 → 0x28','var(--accent2)');
+  {let r=null;try{r=await send(sx(did,[0x05]),true,500);}catch{}
+   if(r)log('probe',`← 0x05: ${hex(r)}`,'var(--amber)');}
+  await sleep(150);
+  {
+    const msg=sx(did,[0x28]);
+    log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+    let r=null; try{r=await send(msg,true,1000);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
+  }
+  await sleep(200);
+
+  // Sequence 3: PC, wait longer, then 0x28
+  log('probe','--- seq 3: PC → wait 300ms → 0x28','var(--accent2)');
+  await sendRaw(pc(0));
+  await sleep(300);
+  {
+    const msg=sx(did,[0x28]);
+    log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+    let r=null; try{r=await send(msg,true,2000);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
+  }
+  await sleep(200);
+
+  // Sequence 4: 0x50 50 → wait → PC → wait → 0x28
+  log('probe','--- seq 4: ping → PC → 0x28','var(--accent2)');
+  await sendRaw(sx(did,[0x50,0x50]));
+  await sleep(200);
+  await sendRaw(pc(0));
+  await sleep(300);
+  {
+    const msg=sx(did,[0x28]);
+    log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+    let r=null; try{r=await send(msg,true,2000);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
+  }
+  await sleep(200);
+
+  // Sequence 5: try 0x28 with slot byte (maybe it DOES need slot)
+  log('probe','--- seq 5: 0x28 com byte de slot','var(--accent2)');
+  for(const slot of [0x00,0x01,0x02]){
+    const msg=sx(did,[0x28,slot]);
+    log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+    let r=null; try{r=await send(msg,true,800);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
     await sleep(150);
   }
+
+  // Sequence 6: try 0x45 (ZDL info) then 0x28
+  log('probe','--- seq 6: 0x45 → 0x28','var(--accent2)');
+  {let r=null;try{r=await send(sx(did,[0x45]),true,500);}catch{}
+   if(r)log('probe',`← 0x45: ${hex(r)}`,'var(--amber)');}
+  await sleep(150);
+  {
+    const msg=sx(did,[0x28]);
+    let r=null; try{r=await send(msg,true,1000);}catch{}
+    if(r){log('probe',`← ${hex(r)}`,'var(--green)'); if(r.length>7)return 0x28;}
+    else log('probe','  sem resposta','var(--text3)');
+  }
+
+  log('probe','nenhuma sequência funcionou','var(--red)');
   return null;
+}
+
+function sendRaw(msg){
+  if(!out)return;
+  log('probe',`→ ${hex(msg)}`,'var(--accent2)');
+  out.send(msg);
 }
 
 
