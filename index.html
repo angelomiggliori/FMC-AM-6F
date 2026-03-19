@@ -288,7 +288,7 @@ async function probeOut(o,ins){
   return new Promise(res=>{
     const orig=ins.map(i=>i.onmidimessage);
     const done=r=>{ins.forEach((i,x)=>{i.onmidimessage=orig[x];});clearTimeout(t);res(r);};
-    const t=setTimeout(()=>done(null),700);
+    const t=setTimeout(()=>done(null),1200);
     ins.forEach(i=>{
       i.onmidimessage=e=>{
         const d=new Uint8Array(e.data);
@@ -297,7 +297,12 @@ async function probeOut(o,ins){
           done({i,o,id:parseId(d)});
       };
     });
-    try{send(idReq());}catch{done(null);}
+    // Send directly via output port — not via send() which requires out to be set
+    try{
+      const m=idReq();
+      log('→tx',hex(m),'var(--accent2)');
+      o.send(m);
+    }catch(e){done(null);}
   });
 }
 function disconnect(){if(inp)inp.onmidimessage=null;inp=out=dev=null;em('dc');}
