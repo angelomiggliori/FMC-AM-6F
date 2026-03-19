@@ -1,52 +1,20 @@
 /**
  * app.js
  * Bootstrap principal da aplicação G1on Editor
- *
- * Ordem de inicialização:
- * 1. Storage     → carrega patches salvos ou usa defaults
- * 2. State       → inicializa com o banco de patches
- * 3. MIDI        → solicita acesso Web MIDI
- * 4. DataGuardian → WAL recovery, snapshot de sessão, timers de proteção
- * 5. UI          → inicializa todos os módulos de interface
- * 6. Events      → atalhos de teclado, listeners globais
  */
 
 import { state }                    from './engine/state_manager.js';
-import { initMidi, connectMidi, disconnectMidi,
-         requestCurrentPatch, sendPatch,
-         savePatchToSlot, sendParamChange,
-         selectPatchOnDevice }       from './midi/midi_manager.js';
-import { hasStoredData, loadPatchBank,
-         savePatch, savePatchBank,
-         exportBankJSON, importBankJSON,
-         getStorageStats }           from './storage/patch_storage.js';
+import { initMidi, connectMidi, disconnectMidi, requestCurrentPatch, sendPatch, savePatchToSlot, sendParamChange, selectPatchOnDevice } from './midi/midi_manager.js';
+import { hasStoredData, loadPatchBank, savePatch, savePatchBank, exportBankJSON, importBankJSON, getStorageStats } from './storage/patch_storage.js';
 import { getSetting, setSetting }    from './storage/settings_storage.js';
 import { buildInitialPatchBank }     from './data/default_patches.js';
-import { initDataGuardian,
-         restoreFromBackup,
-         listBackups,
-         listSessionSnapshots,
-         restoreSessionSnapshot,
-         getGuardianStats,
-         getDivergences,
-         onPatchReceivedForSync }    from './storage/data_guardian.js';
+import { initDataGuardian, restoreFromBackup, listBackups, listSessionSnapshots, restoreSessionSnapshot, getGuardianStats, getDivergences, onPatchReceivedForSync } from './storage/data_guardian.js';
 import { initPatchList }             from './ui/patch_list.js';
-import { initSignalChain,
-         startKnobDrag,
-         onDragStart, onDragOver,
-         onDragLeave, onDrop }       from './ui/signal_chain.js';
-import { initParamEditor,
-         onParamSlider, onTapTempo } from './ui/param_editor.js';
-import { initEffectBrowser,
-         openBrowser, closeBrowser,
-         pickEffect,
-         setCat as setBrowserCat }   from './ui/effect_browser.js';
+import { initSignalChain, startKnobDrag, onDragStart, onDragOver, onDragLeave, onDrop } from './ui/signal_chain.js';
+import { initParamEditor, onParamSlider, onTapTempo } from './ui/param_editor.js';
+import { initEffectBrowser, openBrowser, closeBrowser, pickEffect, setCat as setBrowserCat } from './ui/effect_browser.js';
 import { sysexLog }                  from './ui/sysex_log.js';
 import { notify }                    from './ui/notifications.js';
-
-// ═══════════════════════════════════════════════════════
-//  BOOT
-// ═══════════════════════════════════════════════════════
 
 window.addEventListener('DOMContentLoaded', async () => {
   _loadStorage();
@@ -61,66 +29,40 @@ window.addEventListener('DOMContentLoaded', async () => {
   console.info('[app] Boot concluído ✓');
 });
 
-// ═══════════════════════════════════════════════════════
-//  STORAGE LOAD
-// ═══════════════════════════════════════════════════════
-
 function _loadStorage() {
   const patches = hasStoredData() ? loadPatchBank(100) : buildInitialPatchBank();
   state.loadPatchBank(patches);
   const lastIdx = getSetting('lastPatchIndex') || 0;
   state.selectPatch(Math.min(lastIdx, patches.length - 1));
-  console.info('[app] Patches carregados:', patches.length);
 }
-
-// ═══════════════════════════════════════════════════════
-//  DATA GUARDIAN
-// ═══════════════════════════════════════════════════════
 
 function _initGuardian() {
   initDataGuardian({
-    // Passa 'true' para sinalizar que é uma checagem de background
     onSendDumpRequest: () => requestCurrentPatch(true), 
     config: {
-      autoSaveDebounceMs:    3000,   // salva 3s após última edição
-      consistencyIntervalMs: 30000,  // varredura cada 30s
-      syncCheckIntervalMs:   60000,  // sync com pedaleira cada 60s
-      backupOnEveryNSaves:   5,      // backup rotativo a cada 5 saves
+      autoSaveDebounceMs:    3000,
+      consistencyIntervalMs: 30000,
+      syncCheckIntervalMs:   60000,
+      backupOnEveryNSaves:   5,
       enabled:               true,
     },
   });
-  console.info('[app] DataGuardian ativo ✓');
 }
 
 function _bindGuardianEvents() {
-  // Conflito: estado local ≠ pedaleira
   document.addEventListener('guardian:sync-conflict', ({ detail }) => {
     _showSyncConflictDialog(detail.divergence, detail.localPatch, detail.devicePatch);
   });
 }
 
-/**
- * Dialog de resolução de conflito local vs pedaleira.
- */
 function _showSyncConflictDialog(divergence, localPatch, devicePatch) {
   document.getElementById('syncConflictDialog')?.remove();
-
   const d = document.createElement('div');
   d.id    = 'syncConflictDialog';
-  d.style.cssText = [
-    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)',
-    'background:#161920;border:1px solid #ff3d5a;border-radius:4px',
-    'padding:24px;z-index:500;width:440px;max-width:95vw',
-    "font-family:'Share Tech Mono',monospace;box-shadow:0 20px 60px rgba(0,0,0,.85)",
-  ].join(';');
-
+  d.style.cssText = ['position:fixed;top:50%;left:50%;transform:translate(-50%,-50%)','background:#161920;border:1px solid #ff3d5a;border-radius:4px','padding:24px;z-index:500;width:440px;max-width:95vw',"font-family:'Share Tech Mono',monospace;box-shadow:0 20px 60px rgba(0,0,0,.85)",].join(';');
   d.innerHTML = `
-    <div style="color:#ff3d5a;font-size:11px;letter-spacing:2px;margin-bottom:14px">
-      ⚠ CONFLITO — SLOT ${divergence.slot}
-    </div>
-    <div style="color:#7a8090;font-size:11px;margin-bottom:16px;line-height:1.9">
-      O patch local e o da pedaleira estão diferentes.<br>Qual versão manter?
-    </div>
+    <div style="color:#ff3d5a;font-size:11px;letter-spacing:2px;margin-bottom:14px">⚠ CONFLITO — SLOT ${divergence.slot}</div>
+    <div style="color:#7a8090;font-size:11px;margin-bottom:16px;line-height:1.9">O patch local e o da pedaleira estão diferentes.<br>Qual versão manter?</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
       <div style="background:#111318;border:1px solid #2a2d36;padding:11px;border-radius:3px">
         <div style="color:#00e5ff;font-size:9px;letter-spacing:2px;margin-bottom:5px">LOCAL · EDITOR</div>
@@ -138,47 +80,24 @@ function _showSyncConflictDialog(divergence, localPatch, devicePatch) {
       <button id="cfl-device" style="flex:1;background:#ffcc00;color:#000;border:none;padding:9px;font-family:inherit;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:3px">USAR PEDALEIRA</button>
       <button id="cfl-ignore" style="flex:1;background:transparent;color:#7a8090;border:1px solid #2a2d36;padding:9px;font-family:inherit;font-size:10px;cursor:pointer;border-radius:3px">IGNORAR</button>
     </div>`;
-
   document.body.appendChild(d);
 
-  d.querySelector('#cfl-local').onclick = () => {
-    sendPatch(localPatch);
-    savePatchToSlot(divergence.slot);
-    notify('Local mantido · reenviado para pedaleira', 'ok');
-    d.remove();
-  };
-  d.querySelector('#cfl-device').onclick = () => {
-    state.setPatch(divergence.slot, devicePatch);
-    savePatch(devicePatch);
-    notify('Pedaleira adotada localmente', 'ok');
-    d.remove();
-  };
+  d.querySelector('#cfl-local').onclick = () => { sendPatch(localPatch); savePatchToSlot(divergence.slot); notify('Local mantido', 'ok'); d.remove(); };
+  d.querySelector('#cfl-device').onclick = () => { state.setPatch(divergence.slot, devicePatch); savePatch(devicePatch); notify('Pedaleira adotada localmente', 'ok'); d.remove(); };
   d.querySelector('#cfl-ignore').onclick = () => d.remove();
 }
 
-// ═══════════════════════════════════════════════════════
-//  UI INIT
-// ═══════════════════════════════════════════════════════
-
 function _initUI() {
-  initPatchList();
-  initSignalChain();
-  initParamEditor();
-  initEffectBrowser();
-  _updatePatchHeader();
+  initPatchList(); initSignalChain(); initParamEditor(); initEffectBrowser(); _updatePatchHeader();
 }
 
 function _bindStateToHeader() {
-  state.addEventListener('state:patch-changed', ({ detail }) => {
-    _updatePatchHeader(detail.patchIndex, detail.patch);
-  });
+  state.addEventListener('state:patch-changed', ({ detail }) => { _updatePatchHeader(detail.patchIndex, detail.patch); });
   state.addEventListener('state:midi-status', ({ detail }) => {
     const dot  = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     if (dot)  dot.className   = 'status-dot' + (detail.connected ? ' connected' : '');
-    if (text) text.textContent = detail.connected
-      ? '● ' + detail.portName.substring(0, 18).toUpperCase()
-      : 'DESCONECTADO';
+    if (text) text.textContent = detail.connected ? '● ' + detail.portName.substring(0, 18).toUpperCase() : 'DESCONECTADO';
   });
 }
 
@@ -190,10 +109,6 @@ function _updatePatchHeader(idx, patch) {
   if (badge) badge.textContent = 'P' + String(idx).padStart(2, '0');
   if (input && document.activeElement !== input) input.value = patch?.name || '';
 }
-
-// ═══════════════════════════════════════════════════════
-//  KEYBOARD SHORTCUTS
-// ═══════════════════════════════════════════════════════
 
 function _registerKeyboard() {
   document.addEventListener('keydown', e => {
@@ -208,37 +123,25 @@ function _registerKeyboard() {
 
     if (!inInput) {
       if (e.key === 'ArrowUp' && state.currentIndex > 0) {
-        e.preventDefault();
-        state.selectPatch(state.currentIndex - 1);
-        selectPatchOnDevice(state.currentIndex);
+        e.preventDefault(); state.selectPatch(state.currentIndex - 1); selectPatchOnDevice(state.currentIndex);
       }
       if (e.key === 'ArrowDown' && state.currentIndex < state.patches.length - 1) {
-        e.preventDefault();
-        state.selectPatch(state.currentIndex + 1);
-        selectPatchOnDevice(state.currentIndex);
+        e.preventDefault(); state.selectPatch(state.currentIndex + 1); selectPatchOnDevice(state.currentIndex);
       }
     }
   });
 }
-
-// ═══════════════════════════════════════════════════════
-//  COMMANDS
-// ═══════════════════════════════════════════════════════
 
 function _cmdSave() {
   const patch = state.currentPatch;
   const idx   = state.currentIndex;
   patch.dirty = false;
   
-  // 1. Salva no LittleFS local (navegador)
   savePatch({ ...patch, slot: idx });
   
-  // 2. Salva na pedaleira física (se conectada)
   if (state.midi.connected) {
-    sendPatch(patch); // Envia o patch pro buffer primeiro!
-    setTimeout(() => {
-      savePatchToSlot(idx); // Manda gravar no slot permanentemente
-    }, 50); // Delay de 50ms para a pedaleira respirar
+    sendPatch(patch);
+    setTimeout(() => { savePatchToSlot(idx); }, 50); 
   }
   
   setSetting('lastPatchIndex', idx);
@@ -250,32 +153,25 @@ function _cmdSend() {
   sendPatch(state.currentPatch);
   notify('Patch enviado ▶', 'ok');
 }
-
 function _cmdReceive() {
   requestCurrentPatch();
   notify('Aguardando patch...', 'info');
 }
-
 function _cmdNewPatch() {
   const idx  = state.patches.length;
   state.patches.push({ slot:idx, name:`NOVO${String(idx).padStart(2,'0')}`, effects:[null,null,null,null,null], dirty:true });
-  state.selectPatch(idx);
-  notify('Novo patch criado', 'info');
+  state.selectPatch(idx); notify('Novo patch criado', 'info');
 }
-
 function _cmdExport() {
   const json = exportBankJSON(state.patches);
   const blob = new Blob([json], { type:'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url; a.download = `g1on_bank_${new Date().toISOString().slice(0,10)}.json`; a.click();
-  URL.revokeObjectURL(url);
-  notify('Banco exportado ✓', 'ok');
+  URL.revokeObjectURL(url); notify('Banco exportado ✓', 'ok');
 }
-
 function _cmdImport() {
-  const input  = document.createElement('input');
-  input.type   = 'file'; input.accept = '.json';
+  const input  = document.createElement('input'); input.type   = 'file'; input.accept = '.json';
   input.onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
     try {
@@ -287,42 +183,19 @@ function _cmdImport() {
   };
   input.click();
 }
-
 function _cmdShowGuardianStatus() {
   const s = getGuardianStats();
   console.group('[DataGuardian] Status');
-  console.log('Saves automáticos realizados:', s.saveCount);
-  console.log('Último save:', s.lastSaveAt);
-  console.log('Último backup:', s.lastBackupAt);
-  console.log('Slots com mudanças pendentes:', s.pendingSlots);
-  console.log('Divergências detectadas:', s.divergenceCount);
-  console.table(s.backups);
-  console.table(s.sessions);
+  console.log('Saves:', s.saveCount, '| Pendentes:', s.pendingSlots, '| Divergências:', s.divergenceCount);
   console.groupEnd();
-  const valid = s.backups.filter(b => b.valid).length;
-  notify(`Guardian: ${s.saveCount} saves · ${valid} backups válidos · ${s.sessions.length} snapshots`, 'info', 5000);
+  notify(`Guardian: ${s.saveCount} saves`, 'info', 5000);
 }
-
-function _cmdRestoreBackup() {
-  const patches = restoreFromBackup();
-  if (patches) state.loadPatchBank(patches);
-}
-
-function _cmdStorageStats() {
-  const fs = getStorageStats();
-  notify(`LittleFS: ${fs.patchCount} patches · ${fs.totalKB} KB`, 'info', 4000);
-}
-
-// ═══════════════════════════════════════════════════════
-//  window._ui BRIDGE
-// ═══════════════════════════════════════════════════════
+function _cmdRestoreBackup() { const patches = restoreFromBackup(); if (patches) state.loadPatchBank(patches); }
+function _cmdStorageStats() { const fs = getStorageStats(); notify(`LittleFS: ${fs.patchCount} patches · ${fs.totalKB} KB`, 'info', 4000); }
 
 function _exposeUI() {
   window._ui = {
-    // MIDI
     connectMidi, disconnectMidi,
-
-    // Patches
     selectPatch:     (i)  => { state.selectPatch(i); selectPatchOnDevice(i); },
     newPatch:        _cmdNewPatch,
     savePatch:       _cmdSave,
@@ -331,41 +204,24 @@ function _exposeUI() {
     exportBank:      _cmdExport,
     importBank:      _cmdImport,
     patchNameChange: ()   => { const v = document.getElementById('patchNameInput')?.value; if (v) state.renamePatch(v); },
-
-    // Signal chain
     selectSlot:    (i)       => state.selectSlot(i),
     toggleFx:      (i)       => state.toggleEffect(i),
     removeFx:      (i)       => state.removeEffect(i),
-    openBrowser,
-    startKnobDrag,
-    onDragStart, onDragOver, onDragLeave, onDrop,
-
-    // Param editor
-    onParamSlider, onTapTempo,
-
-    // Effect browser
-    pickEffect, setBrowserCat,
-
-    // SysEx log
+    openBrowser, startKnobDrag, onDragStart, onDragOver, onDragLeave, onDrop,
+    onParamSlider, onTapTempo, pickEffect, setBrowserCat,
     toggleLog: () => sysexLog.toggle(),
     clearLog:  () => sysexLog.clear(),
-
-    // Undo
     undo: () => { state.undo(); notify('Undo ✓','info',1200); },
-
-    // DataGuardian
+    
+    // Guardian / Interação
     guardianStatus:     _cmdShowGuardianStatus,
     restoreBackup:      _cmdRestoreBackup,
     storageStats:       _cmdStorageStats,
     listBackups:        () => console.table(listBackups()),
     listSessions:       () => console.table(listSessionSnapshots()),
-    restoreSession:     (key) => {
-      const p = restoreSessionSnapshot(key);
-      if (p) state.loadPatchBank(p);
-    },
+    restoreSession:     (key) => { const p = restoreSessionSnapshot(key); if (p) state.loadPatchBank(p); },
     getDivergences:     () => getDivergences(),
-
-    // Hook exposto para midi_manager usar após receber dump de sync
     onPatchReceivedForSync,
+    setInteracting:     (val) => state.setInteracting(val) // A Ponte salva-vidas pro Guardian!
   };
 }

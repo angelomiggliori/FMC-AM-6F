@@ -11,8 +11,6 @@ import { getSetting }      from '../storage/settings_storage.js';
 
 const tapEngine = new TapTempo();
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
 export function initParamEditor() {
   state.addEventListener('state:slot-selected',  () => render());
   state.addEventListener('state:patch-changed',  () => render());
@@ -20,19 +18,14 @@ export function initParamEditor() {
   render();
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function _catClass(cat) {
   const map = {
-    Drive:'cat-drive', Amp:'cat-amp', Modulation:'cat-modulation',
-    Delay:'cat-delay', Reverb:'cat-reverb', Dynamics:'cat-dynamics',
-    'Filter/Wah':'cat-filter', 'Pitch/Synth':'cat-pitch',
-    'EQ/Utility':'cat-eq', Other:'cat-other',
+    Drive:'cat-drive', Amp:'cat-amp', Modulation:'cat-modulation', Delay:'cat-delay',
+    Reverb:'cat-reverb', Dynamics:'cat-dynamics', 'Filter/Wah':'cat-filter',
+    'Pitch/Synth':'cat-pitch', 'EQ/Utility':'cat-eq', Other:'cat-other',
   };
   return map[cat] || 'cat-other';
 }
-
-// ── Render ────────────────────────────────────────────────────────────────────
 
 export function render() {
   const panel = document.getElementById('paramPanel');
@@ -41,7 +34,6 @@ export function render() {
   const slotIdx = state.selectedSlot;
   const patch   = state.currentPatch;
 
-  // Nenhum slot selecionado ou slot vazio
   if (slotIdx === null || !patch.effects[slotIdx]) {
     panel.innerHTML = `
       <div class="param-header">
@@ -84,12 +76,12 @@ export function render() {
           min="0" max="127" value="${val}"
           style="background:linear-gradient(90deg,var(--accent) 0%,var(--accent) ${pct}%,var(--border) ${pct}%)"
           oninput="window._ui.onParamSlider(${slotIdx},${pi},this)"
+          onmousedown="window._ui.setInteracting(true)"
+          onmouseup="window._ui.setInteracting(false)"
+          ontouchstart="window._ui.setInteracting(true)"
+          ontouchend="window._ui.setInteracting(false)"
           id="slider-${slotIdx}-${pi}">
-        ${isTap ? `
-        <button class="param-tap-btn" id="tapBtn-${slotIdx}-${pi}"
-          onclick="window._ui.onTapTempo(${slotIdx},${pi})">
-          ♩ TAP TEMPO
-        </button>` : ''}
+        ${isTap ? `<button class="param-tap-btn" id="tapBtn-${slotIdx}-${pi}" onclick="window._ui.onTapTempo(${slotIdx},${pi})">♩ TAP TEMPO</button>` : ''}
       </div>`;
     }).join('');
   }
@@ -99,38 +91,27 @@ export function render() {
       <div class="param-effect-name">${fx.name}</div>
       <div class="param-effect-cat">
         <span class="fx-cat-badge ${cc}">${cat}</span>
-        <span style="margin-left:8px;font-family:var(--mono);font-size:10px;color:var(--text3)">
-          ID:${String(def.id).padStart(3,'0')} · SLOT ${slotIdx + 1}
-        </span>
+        <span style="margin-left:8px;font-family:var(--mono);font-size:10px;color:var(--text3)">ID:${String(def.id).padStart(3,'0')} · SLOT ${slotIdx + 1}</span>
       </div>
     </div>
     <div class="param-list">${paramsHTML}</div>`;
 }
 
-// ── Slider Interaction ────────────────────────────────────────────────────────
-
 export function onParamSlider(slotIdx, paramIdx, sliderEl) {
   const val = parseInt(sliderEl.value, 10);
   const pct = (val / 127 * 100).toFixed(1);
 
-  // Update gradient live
-  sliderEl.style.background =
-    `linear-gradient(90deg,var(--accent) 0%,var(--accent) ${pct}%,var(--border) ${pct}%)`;
+  sliderEl.style.background = `linear-gradient(90deg,var(--accent) 0%,var(--accent) ${pct}%,var(--border) ${pct}%)`;
 
-  // Update value display
   const disp = document.getElementById(`pval-${slotIdx}-${paramIdx}`);
   if (disp) disp.textContent = val;
 
-  // Update state (triggers mini-knob update via event)
   state.setParam(slotIdx, paramIdx, val);
 
-  // Send MIDI realtime if enabled
   if (getSetting('realtimeSend')) {
     sendParamChange(slotIdx, paramIdx + 1, val);
   }
 }
-
-// ── Tap Tempo ─────────────────────────────────────────────────────────────────
 
 export function onTapTempo(slotIdx, paramIdx) {
   const bpm   = tapEngine.onTap();
@@ -150,15 +131,12 @@ export function onTapTempo(slotIdx, paramIdx) {
   state.setParam(slotIdx, paramIdx, midi);
   if (getSetting('realtimeSend')) sendParamChange(slotIdx, paramIdx + 1, midi);
 
-  // Sync slider
   const slider = document.getElementById(`slider-${slotIdx}-${paramIdx}`);
   if (slider) {
     slider.value = midi;
     onParamSlider(slotIdx, paramIdx, slider);
   }
 }
-
-// ── Sync slider when param changed externally (e.g. knob drag) ───────────────
 
 function _syncSlider({ slotIndex, paramIndex, value }) {
   if (slotIndex !== state.selectedSlot) return;
@@ -167,8 +145,7 @@ function _syncSlider({ slotIndex, paramIndex, value }) {
   if (slider) {
     slider.value = value;
     const pct    = (value / 127 * 100).toFixed(1);
-    slider.style.background =
-      `linear-gradient(90deg,var(--accent) 0%,var(--accent) ${pct}%,var(--border) ${pct}%)`;
+    slider.style.background = `linear-gradient(90deg,var(--accent) 0%,var(--accent) ${pct}%,var(--border) ${pct}%)`;
   }
 
   const disp = document.getElementById(`pval-${slotIndex}-${paramIndex}`);

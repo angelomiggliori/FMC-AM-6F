@@ -2,13 +2,6 @@
  * data/effects_catalog.js
  * Catálogo completo dos 222 efeitos da série ZDL1 (Zoom G1on / G1Xon)
  * Extraído dos arquivos .ZDL binários via análise DSP
- *
- * Estrutura de cada efeito:
- *   id          : índice numérico interno (0–221)
- *   params      : array de nomes dos parâmetros DSP
- *   tap         : nome do parâmetro de Tap Tempo (ou null)
- *   tapParamIdx : índice (1-based) do parâmetro alvo do Tap Tempo
- *   category    : categoria do efeito
  */
 
 export const CATEGORIES = [
@@ -252,4 +245,18 @@ export const FX_CATALOG = {
 /** Lookup effect name by numeric ID */
 export function fxNameById(id) {
   return Object.keys(FX_CATALOG).find(k => FX_CATALOG[k].id === id) ?? null;
+}
+
+/** * Estima o custo de processamento (DSP) do efeito em porcentagem (0 a 100%).
+ * Amps e Reverbs gastam muita CPU. Drive e EQs gastam pouco. 
+ */
+export function getFxDSP(fxName) {
+  const def = FX_CATALOG[fxName];
+  if (!def) return 0;
+  const cat = def.category;
+  
+  if (cat === 'Amp' || cat === 'Reverb') return 30; // Mais pesados
+  if (cat === 'Delay' || cat === 'Pitch/Synth') return 25;
+  if (cat === 'Modulation') return 20;
+  return 12; // Drive, Dynamics, Filter, EQ pesam bem menos
 }

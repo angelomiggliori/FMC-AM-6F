@@ -1,10 +1,6 @@
 /**
  * ui/signal_chain.js
  * Renderiza a cadeia de efeitos (rack central) e gerencia interações:
- * - Seleção de slot
- * - Liga/desliga efeito
- * - Botão remover / trocar efeito
- * - Drag & drop para reordenar
  */
 
 import { state }         from '../engine/state_manager.js';
@@ -12,8 +8,6 @@ import { FX_CATALOG }    from '../data/effects_catalog.js';
 import { sendParamChange } from '../midi/midi_manager.js';
 
 let _dragFrom = null;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
 
 export function initSignalChain() {
   state.addEventListener('state:patch-changed',  () => render());
@@ -26,20 +20,11 @@ export function initSignalChain() {
   render();
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function _catClass(cat) {
   const map = {
-    Drive:        'cat-drive',
-    Amp:          'cat-amp',
-    Modulation:   'cat-modulation',
-    Delay:        'cat-delay',
-    Reverb:       'cat-reverb',
-    Dynamics:     'cat-dynamics',
-    'Filter/Wah': 'cat-filter',
-    'Pitch/Synth':'cat-pitch',
-    'EQ/Utility': 'cat-eq',
-    Other:        'cat-other',
+    Drive:'cat-drive', Amp:'cat-amp', Modulation:'cat-modulation', Delay:'cat-delay',
+    Reverb:'cat-reverb', Dynamics:'cat-dynamics', 'Filter/Wah':'cat-filter',
+    'Pitch/Synth':'cat-pitch', 'EQ/Utility':'cat-eq', Other:'cat-other',
   };
   return map[cat] || 'cat-other';
 }
@@ -65,8 +50,6 @@ function _miniParamsHTML(fx, slotIdx) {
   }).join('');
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
-
 export function render() {
   const chain   = document.getElementById('signalChain');
   if (!chain) return;
@@ -74,6 +57,15 @@ export function render() {
   const patch   = state.currentPatch;
   const selSlot = state.selectedSlot;
   const SLOTS   = 5;
+
+  // Atualiza o info header com o DSP calculado
+  const usedFx   = patch.effects.filter(Boolean).length;
+  const dspTotal = state.currentDSP;
+  const dspColor = dspTotal > 100 ? 'var(--red)' : 'var(--text3)';
+  const infoEl   = document.getElementById('chainSlotInfo');
+  if (infoEl) {
+    infoEl.innerHTML = `${usedFx} / 5 SLOTS &nbsp;·&nbsp; <span style="color:${dspColor};font-weight:bold">DSP: ${dspTotal}%</span>`;
+  }
 
   let html = `<div class="chain-input-label">▶ INPUT</div>`;
 
@@ -86,8 +78,7 @@ export function render() {
       const cat     = def.category || 'Other';
       const cc      = _catClass(cat);
       const disabled = !fx.on ? 'disabled' : '';
-      const tapMark  = def.tap
-        ? `<span class="tap-mark" title="Tem Tap Tempo">TAP</span>` : '';
+      const tapMark  = def.tap ? `<span class="tap-mark" title="Tem Tap Tempo">TAP</span>` : '';
 
       html += `
       <div class="fx-slot ${sel ? 'selected' : ''} ${disabled}" id="slot-${i}"
@@ -97,7 +88,6 @@ export function render() {
         ondragleave="window._ui.onDragLeave(event,${i})"
         ondrop="window._ui.onDrop(event,${i})">
         <div class="fx-slot-inner">
-
           <div class="fx-drag" title="Arrastar para reordenar">
             <svg width="10" height="18" viewBox="0 0 10 18">
               <circle cx="3" cy="3"  r="1.5" fill="currentColor"/>
@@ -108,65 +98,43 @@ export function render() {
               <circle cx="7" cy="15" r="1.5" fill="currentColor"/>
             </svg>
           </div>
-
           <div class="fx-power" onclick="window._ui.toggleFx(${i})" title="${fx.on ? 'Desligar' : 'Ligar'}">
             <div class="power-led"></div>
           </div>
-
           <div class="fx-info" onclick="window._ui.selectSlot(${i})">
-            <div class="fx-name-row">
-              <span class="fx-name">${fx.name}</span>
-              <span class="fx-cat-badge ${cc}">${cat}</span>
-              ${tapMark}
-            </div>
+            <div class="fx-name-row"><span class="fx-name">${fx.name}</span><span class="fx-cat-badge ${cc}">${cat}</span>${tapMark}</div>
             <div class="fx-params-row">${_miniParamsHTML(fx, i)}</div>
           </div>
-
           <div class="fx-actions">
             <button class="fx-action-btn" onclick="window._ui.openBrowser(${i})" title="Trocar efeito">⇄</button>
             <button class="fx-action-btn del" onclick="window._ui.removeFx(${i})" title="Remover">✕</button>
           </div>
-
         </div>
       </div>`;
     } else {
       html += `
       <div class="fx-empty" onclick="window._ui.openBrowser(${i})">
-        <span style="font-size:18px;opacity:.4">+</span>
-        SLOT ${i + 1} — ADICIONAR EFEITO
+        <span style="font-size:18px;opacity:.4">+</span> SLOT ${i + 1} — ADICIONAR EFEITO
       </div>`;
     }
 
     if (i < SLOTS - 1) {
-      html += `
-      <div class="chain-arrow">
-        <svg width="16" height="14" viewBox="0 0 16 14">
-          <path d="M8 0L16 7L8 14L6.6 12.5L12.2 8H0V6H12.2L6.6 1.5Z" fill="currentColor"/>
-        </svg>
-      </div>`;
+      html += `<div class="chain-arrow"><svg width="16" height="14" viewBox="0 0 16 14"><path d="M8 0L16 7L8 14L6.6 12.5L12.2 8H0V6H12.2L6.6 1.5Z" fill="currentColor"/></svg></div>`;
     }
   }
 
   chain.innerHTML = html;
 }
 
-// ── Knob Live Update (sem re-render completo) ─────────────────────────────────
-
 function _updateMiniKnob({ slotIndex, paramIndex, value }) {
   const knob = document.getElementById(`knob-${slotIndex}-${paramIndex}`);
   const val  = document.getElementById(`kval-${slotIndex}-${paramIndex}`);
   if (!knob && !val) return;
-
   const angle = Math.round(value / 127 * 270);
   const rot   = angle - 135;
-  if (knob) {
-    knob.style.setProperty('--angle', angle + 'deg');
-    knob.style.setProperty('--rot',   rot + 'deg');
-  }
+  if (knob) { knob.style.setProperty('--angle', angle + 'deg'); knob.style.setProperty('--rot', rot + 'deg'); }
   if (val) val.textContent = value;
 }
-
-// ── Knob Drag (mouse) ─────────────────────────────────────────────────────────
 
 let _knobDrag = null;
 
@@ -175,14 +143,9 @@ export function startKnobDrag(e, slotIdx, paramIdx) {
   const patch = state.currentPatch;
   if (!patch.effects[slotIdx]) return;
 
-  _knobDrag = {
-    slotIdx,
-    paramIdx,
-    startY:   e.clientY,
-    startVal: patch.effects[slotIdx].params[paramIdx] ?? 64,
-  };
+  window._ui?.setInteracting(true); // Trava o auto-sync do Guardian
 
-  // Seleciona o slot para mostrar painel de parâmetros
+  _knobDrag = { slotIdx, paramIdx, startY: e.clientY, startVal: patch.effects[slotIdx].params[paramIdx] ?? 64 };
   if (state.selectedSlot !== slotIdx) state.selectSlot(slotIdx);
 
   window.addEventListener('mousemove', _onKnobMove);
@@ -200,6 +163,7 @@ function _onKnobMove(e) {
 
 function _onKnobUp() {
   _knobDrag = null;
+  window._ui?.setInteracting(false); // Libera o auto-sync do Guardian
   window.removeEventListener('mousemove', _onKnobMove);
   window.removeEventListener('mouseup',   _onKnobUp);
 }
@@ -209,6 +173,7 @@ function _onKnobUp() {
 export function onDragStart(e, i) {
   _dragFrom = i;
   e.dataTransfer.effectAllowed = 'move';
+  window._ui?.setInteracting(true);
   setTimeout(() => document.getElementById(`slot-${i}`)?.classList.add('dragging'), 0);
 }
 
@@ -225,7 +190,16 @@ export function onDragLeave(e, i) {
 export function onDrop(e, i) {
   e.preventDefault();
   document.getElementById(`slot-${i}`)?.classList.remove('drag-over');
+  window._ui?.setInteracting(false);
+  
   if (_dragFrom === null || _dragFrom === i) { _dragFrom = null; return; }
+  
+  // Realiza a mudança de posição
   state.reorderEffects(_dragFrom, i);
   _dragFrom = null;
+
+  // ENVIA O PATCH COMPLETO para a pedaleira refletir o drag&drop na hora
+  if (window._ui && window._ui.sendPatch) {
+    window._ui.sendPatch();
+  }
 }
