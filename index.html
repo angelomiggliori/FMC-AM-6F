@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>G1on Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--surface:#1e1e30;--surface2:#252540;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --accent:#ff3c6e;--accent2:#7c3aed;--accent3:#06b6d4;
+  --text:#e8e8f0;--text2:#9090b0;--text3:#5a5a7a;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --r:6px;--r2:10px;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);
+  display:grid;grid-template-rows:56px 52px 1fr;grid-template-columns:280px 1fr;
+  grid-template-areas:"hdr hdr""bar bar""side main";height:100vh;overflow:hidden}
+header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.logo{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s ease-in-out infinite}
+.dot.off{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#badge{font-size:.72rem;font-family:var(--mono);color:var(--text2);background:var(--surface);border:1px solid var(--border2);padding:3px 10px;border-radius:20px}
+#status{margin-left:auto;font-size:.72rem;font-family:var(--mono);padding:4px 12px;border-radius:20px}
+.s-info{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.s-ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.s-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.s-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.toolbar{grid-area:bar;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:8px}
+.btn{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.5px;padding:6px 14px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.btn:not(:disabled):hover{filter:brightness(1.2);transform:translateY(-1px)}
+#bc{background:var(--accent);color:#fff;border-color:var(--accent)}
+#br{background:transparent;color:var(--blue);border-color:rgba(59,130,246,.4)}
+#bb{background:transparent;color:var(--green);border-color:rgba(16,185,129,.4)}
+#brs{background:transparent;color:var(--amber);border-color:rgba(245,158,11,.4)}
+#bd{background:transparent;color:var(--text3);border-color:rgba(255,255,255,.1);margin-left:auto}
+.pw{flex:1;display:flex;flex-direction:column;gap:3px;margin:0 10px}
+.pt{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent3));width:0;transition:width .2s;border-radius:2px}
+#pt{font-size:.65rem;font-family:var(--mono);color:var(--text3)}
+#sidebar{grid-area:side;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sh{padding:12px 16px 8px;font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;border-bottom:1px solid var(--border);text-transform:uppercase}
+#pl{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.pi{display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;position:relative}
+.pi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);opacity:0;transition:opacity .15s}
+.pi:hover{background:rgba(255,255,255,.025)}
+.pi.active{background:rgba(255,60,110,.06)}
+.pi.active::before{opacity:1}
+.pn{font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.pm{font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm.e{color:var(--text3);font-style:italic;font-weight:300}
+.pfx{font-family:var(--mono);font-size:.6rem;color:var(--text3);background:var(--surface2);border-radius:4px;padding:1px 5px;text-align:center}
+#main{grid-area:main;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3)}
+.ei{font-size:3rem;opacity:.3}
+.es p{font-family:var(--mono);font-size:.75rem;letter-spacing:1px}
+.et{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.en{font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--accent);min-width:40px}
+.ni{font-family:var(--mono);font-size:.95rem;font-weight:700;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:var(--r);width:180px;letter-spacing:1px;transition:border-color .15s}
+.ni:focus{outline:none;border-color:var(--accent2)}
+.bw{background:var(--accent);color:#fff;font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;transition:all .15s}
+.bs{background:transparent;color:var(--accent3);border:1px solid rgba(6,182,212,.3);font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);cursor:pointer;transition:all .15s}
+.bw:hover,.bs:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.fl{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+.fc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.fs{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px;transition:border-color .2s,opacity .2s;position:relative;overflow:hidden}
+.fs::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent3));opacity:0;transition:opacity .2s}
+.fs.on{border-color:rgba(124,58,237,.3)}
+.fs.on::before{opacity:1}
+.fs.off{opacity:.45}
+.fh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.tl{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
+.tl input[type=checkbox]{display:none}
+.tt{width:28px;height:15px;background:var(--surface2);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;border:1px solid var(--border2)}
+.tt::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:var(--text3);transition:all .2s}
+.tl input:checked+.tt{background:var(--accent2);border-color:var(--accent2)}
+.tl input:checked+.tt::after{left:15px;background:#fff}
+.fn{font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc2{font-family:var(--mono);font-size:.58rem;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.fp{display:flex;flex-direction:column;gap:7px}
+.pr{display:grid;grid-template-columns:70px 1fr 28px;align-items:center;gap:6px}
+.pl2{font-size:.68rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps{-webkit-appearance:none;appearance:none;height:3px;background:var(--surface2);border-radius:2px;outline:none;cursor:pointer}
+.ps::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 4px var(--accent2);cursor:pointer}
+.pv{font-family:var(--mono);font-size:.65rem;color:var(--text2);text-align:right}
+#dbg{position:fixed;bottom:0;left:0;right:0;background:#0a0a10;border-top:2px solid var(--accent2);padding:8px 16px;font-family:var(--mono);font-size:.65rem;color:var(--text2);max-height:200px;overflow-y:auto;display:none;z-index:999}
+.dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.dt{color:var(--accent2);font-weight:700;letter-spacing:1px}
+.dr{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.dr span{margin-right:8px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="dot off" id="dot"></div>G1ON</div>
+  <span id="badge">no device</span>
+  <span id="status" class="s-info">ready</span>
+</header>
+<div class="toolbar">
+  <button class="btn" id="bc">CONNECT</button>
+  <button class="btn" id="br" disabled>READ ALL</button>
+  <button class="btn" id="bb" disabled>BACKUP</button>
+  <button class="btn" id="brs" disabled>RESTORE</button>
+  <input type="file" id="frs" accept=".json" style="display:none"/>
+  <div class="pw"><div class="pt"><div class="pf" id="pb"></div></div><span id="pt"></span></div>
+  <button class="btn" id="bd">DEBUG</button>
+</div>
+<div id="sidebar"><div class="sh">PATCHES</div><div id="pl"></div></div>
+<div id="main">
+  <div class="es" id="es">
+    <div class="ei">⬡</div>
+    <p>CONNECT YOUR ZOOM PEDAL VIA USB</p>
+    <p style="font-size:.65rem;opacity:.5">chrome or edge · allow midi when prompted</p>
+  </div>
+  <div id="ec" style="display:none"></div>
+</div>
+<div id="dbg">
+  <div class="dh">
+    <span class="dt">◈ MIDI RAW LOG</span>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="ds" style="cursor:pointer;color:var(--accent3)">SEND IDENTITY REQ</span>
+      <span id="dc" style="cursor:pointer;color:var(--text3)">✕</span>
+    </div>
+  </div>
+  <div id="dl"></div>
+</div>
+<script>
+const ZOOM_MFR=0x52;
+const DEVS={
+  0x61:{key:'G1on',   name:'Zoom G1on',   fxSlots:5,presets:100},
+  0x62:{key:'G1Xon',  name:'Zoom G1Xon',  fxSlots:5,presets:100},
+  0x63:{key:'G1Xon_K',name:'Zoom G1Xon-K',fxSlots:5,presets:100},
+  0x64:{key:'G1four', name:'Zoom G1 FOUR',fxSlots:5,presets:50},
+  0x65:{key:'G1Xfour',name:'Zoom G1X FOUR',fxSlots:5,presets:50},
+  0x6E:{key:'G3n',    name:'Zoom G3n',    fxSlots:7,presets:60},
+  0x73:{key:'G5n',    name:'Zoom G5n',    fxSlots:7,presets:60},
+  0x5F:{key:'B1on',   name:'Zoom B1on',   fxSlots:5,presets:100},
+  0x66:{key:'B1Xon',  name:'Zoom B1Xon',  fxSlots:5,presets:100},
+  0x71:{key:'B1four', name:'Zoom B1 FOUR',fxSlots:5,presets:50},
+  0x58:{key:'MS50G',  name:'Zoom MS-50G', fxSlots:6,presets:50},
+};
+const F1ON=new Set([0x61,0x62,0x63,0x64,0x65,0x5F,0x66,0x71]);
+const FX={
+  0x00:{n:'Empty',c:null,p:[]},
+  0x01:{n:'OptComp', c:'COMP', p:['Level','Sensitivity','Tone','Attack']},
+  0x02:{n:'D Comp',  c:'COMP', p:['Sustain','Level','Attack','Tone']},
+  0x03:{n:'M Comp',  c:'COMP', p:['Lo Ratio','Hi Ratio','Attack','Release','Level']},
+  0x04:{n:'160 Comp',c:'COMP', p:['Threshold','Ratio','Attack','Release','Level']},
+  0x05:{n:'GrayComp',c:'COMP', p:['Sustain','Level']},
+  0x07:{n:'RackComp',c:'COMP', p:['Threshold','Ratio','Attack','Release','Level']},
+  0x08:{n:'DualComp',c:'COMP', p:['Sensitivity','Level','Tone']},
+  0x09:{n:'Limiter', c:'COMP', p:['Threshold','Release','Level']},
+  0x10:{n:'Booster', c:'DRIVE',p:['Gain','Tone','Level']},
+  0x11:{n:'OverDrive',c:'DRIVE',p:['Drive','Tone','Level']},
+  0x12:{n:'Dist 1',  c:'DRIVE',p:['Gain','Tone','Level']},
+  0x13:{n:'Dist+',   c:'DRIVE',p:['Gain','Tone','Output']},
+  0x14:{n:'TS Drive',c:'DRIVE',p:['Drive','Tone','Level']},
+  0x15:{n:'TS Boost',c:'DRIVE',p:['Drive','Tone','Level']},
+  0x16:{n:'RC Boost',c:'DRIVE',p:['Volume','Bass','Treble','Bright']},
+  0x18:{n:'FuzzSmile',c:'DRIVE',p:['Fuzz','Volume','Tone']},
+  0x19:{n:'OctFuzz', c:'DRIVE',p:['Fuzz','Volume','Oct Mix']},
+  0x1A:{n:'DynDrive',c:'DRIVE',p:['Gain','Tone','Level','Sensitivity']},
+  0x20:{n:'Chorus',  c:'MOD',  p:['Rate','Depth','Pre Dly','Level']},
+  0x21:{n:'Flanger', c:'MOD',  p:['Rate','Depth','Resonance','Level']},
+  0x22:{n:'Phaser',  c:'MOD',  p:['Rate','Depth','Resonance','Level']},
+  0x23:{n:'4-Phaser',c:'MOD',  p:['Rate','Depth','Resonance','Level']},
+  0x24:{n:'8-Phaser',c:'MOD',  p:['Rate','Depth','Resonance','Level']},
+  0x25:{n:'Tremolo', c:'MOD',  p:['Rate','Depth','Wave','Level']},
+  0x26:{n:'Vibrato', c:'MOD',  p:['Rate','Depth','Level']},
+  0x30:{n:'Delay',   c:'DELAY',p:['Time','Feedback','Mix','Level']},
+  0x31:{n:'Delay 3S',c:'DELAY',p:['Time','Feedback','Mix','Level']},
+  0x32:{n:'ModDelay',c:'DELAY',p:['Time','Feedback','Rate','Depth','Mix']},
+  0x33:{n:'PitchDly',c:'DELAY',p:['Time','Feedback','Pitch','Mix']},
+  0x34:{n:'DynDelay',c:'DELAY',p:['Time','Feedback','Sensitivity','Mix']},
+  0x38:{n:'HD Reverb',c:'REVERB',p:['Time','Pre Dly','Mix','Level']},
+  0x39:{n:'ModReverb',c:'REVERB',p:['Time','Rate','Depth','Mix']},
+  0x40:{n:'AutoWah', c:'WAH',  p:['Sensitivity','Freq','Resonance','Mix']},
+  0x41:{n:'PedalWah',c:'WAH',  p:['Freq','Resonance','Mix']},
+  0x42:{n:'A-Filter',c:'WAH',  p:['Sensitivity','Freq','Resonance','Level']},
+  0x43:{n:'M-Filter',c:'WAH',  p:['Freq','Resonance','Mix','Level']},
+  0x44:{n:'EgFilter',c:'WAH',  p:['Sensitivity','Freq','Attack','Mix']},
+  0x45:{n:'SeqFLTR', c:'WAH',  p:['Rate','Depth','Resonance','Step','Level']},
+  0x50:{n:'Octave',  c:'PITCH',p:['Oct1','Oct2','Direct','Level']},
+  0x51:{n:'MonoPitch',c:'PITCH',p:['Shift','Fine','Level']},
+  0x52:{n:'PitchSHFT',c:'PITCH',p:['Shift','Fine','Level']},
+  0x60:{n:'ParaEQ',  c:'EQ',   p:['Low','Mid','High','Level']},
+  0x70:{n:'BassWah', c:'BASS', p:['Sensitivity','Freq','Mix']},
+  0x71:{n:'Ba AutoWah',c:'BASS',p:['Sensitivity','Freq','Resonance','Mix']},
+  0x72:{n:'Ba Octave',c:'BASS',p:['Oct1','Oct2','Direct','Level']},
+  0x73:{n:'Ba Pitch',c:'BASS', p:['Shift','Fine','Level']},
+  0x76:{n:'Ba GEQ',  c:'BASS', p:['60Hz','250Hz','800Hz','3.2k','8kHz','Level']},
+  0x77:{n:'Ba PEQ',  c:'BASS', p:['Low','Mid','High','Level']},
+};
+function gfx(id){return FX[id]||{n:`FX 0x${id.toString(16).toUpperCase()}`,c:'?',p:[]};}
+
+// ── Protocol ─────────────────────────────────────────────────────────
+function sx(did,pl){return new Uint8Array([0xF0,ZOOM_MFR,0x00,did,...pl,0xF7]);}
+function idReq(){return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]);}
+function pc(s){return new Uint8Array([0xC0,s&0x7F]);}
+function readMsg(did){return sx(did,[0x28]);}  // 1on: PC then buffer request
+function writeMsg(did,slot,patch){
+  const b=[];
+  for(const fx of patch.effects){b.push(fx.en?fx.id:0x00);for(let i=0;i<6;i++)b.push(fx.p[i]??0);}
+  for(let i=0;i<10;i++)b.push(i<patch.name.length?patch.name.charCodeAt(i)&0x7F:0x20);
+  return sx(did,[0x28,slot&0x7F,...b]);
+}
+function parseId(d){
+  if(d.length<7)return null;
+  if(d[0]!==0xF0||d[1]!==0x7E||d[3]!==0x06||d[4]!==0x02||d[5]!==ZOOM_MFR)return null;
+  const id=d[6];
+  const fw=[];for(let i=10;i<d.length-1;i++){if(d[i]===0xF7)break;if(d[i]>=0x20&&d[i]<0x7F)fw.push(d[i]);}
+  return{id,fw:fw.length?String.fromCharCode(...fw):'?.??'};
+}
+function parsePatch(d,did){
+  if(!d||d.length<8)return null;
+  if(d[0]!==0xF0||d[1]!==ZOOM_MFR)return null;
+  const dev=DEVS[did]||{fxSlots:5};
+  const min=dev.fxSlots*7+10;
+  // 1on: F0 52 00 [id] 28 [payload] F7 — no slot byte
+  if(F1ON.has(did)&&(d[4]===0x28||d[4]===0x29)){
+    const pl=d.slice(5,-1);
+    if(pl.length>=min)return decode(pl,dev.fxSlots,0);
+  }
+  // Others: cmd + slot + payload
+  for(const cmd of[0x08,0x28,0x09,0x05,0x45,0x04]){
+    if(d[4]!==cmd)continue;
+    if(d.length<min+7)continue;
+    const pl=d.slice(6,-1);
+    if(pl.length>=min)return decode(pl,dev.fxSlots,d[5]);
+  }
+  return null;
+}
+function decode(pl,slots,slot){
+  const fx=[];let o=0;
+  for(let i=0;i<slots;i++){fx.push({id:pl[o],p:Array.from(pl.slice(o+1,o+7)),en:pl[o]!==0});o+=7;}
+  // Name is in last 12 bytes: [00][4 chars][00][5 chars][null(s)]
+  // e.g. 00 4D 55 53 45 00 55 4D 20 20 20 20 = "MUSEUM"
+  // Skip first 00, take up to 9 chars (4+null+5), strip nulls/spaces
+  const rawName = pl.slice(-12);
+  const part1 = String.fromCharCode(...rawName.slice(1,5)).replace(/ /g,'').trim();
+  const part2 = String.fromCharCode(...rawName.slice(6,11)).replace(/ /g,'').trim();
+  const name  = (part1 + part2).trim();
+  return{slot,name,effects:fx};
+}
+
+// ── MIDI ─────────────────────────────────────────────────────────────
+let acc=null,inp=null,out=null,dev=null,pend=null;
+const evs={};
+function on(e,f){(evs[e]=evs[e]||[]).push(f);}
+function em(e,d){(evs[e]||[]).forEach(f=>f(d));}
+
+function wait(ms=3000){
+  return new Promise((res,rej)=>{
+    if(pend){pend.rej(new Error('superseded'));}
+    const t=setTimeout(()=>{pend=null;rej(new Error('Device response timeout'));},ms);
+    pend={res,rej,t};
+  });
+}
+function onMsg(e){
+  const d=new Uint8Array(e.data);
+  log('←rx',hex(d),'var(--accent3)');
+  if(pend){clearTimeout(pend.t);pend.res(d);pend=null;}
+  if(d[0]===0xF0&&d[1]===ZOOM_MFR&&d[4]===0x28){
+    const p=parsePatch(d,dev?.id);if(p)em('pu',p);
+  }
+}
+async function connect(){
+  if(!navigator.requestMIDIAccess)throw new Error('Web MIDI API not supported. Use Chrome or Edge.');
+  try{acc=await navigator.requestMIDIAccess({sysex:true});}
+  catch(e){throw new Error('MIDI access denied. Allow MIDI when prompted.');}
+  const ins=Array.from(acc.inputs.values()),outs=Array.from(acc.outputs.values());
+  if(!ins.length||!outs.length)throw new Error('No MIDI ports found. Connect pedal via USB.');
+  st('scanning...','s-info');
+  const f=await probe(ins,outs);
+  if(!f)throw new Error('No Zoom device found. Connect via USB, power it on, close other MIDI apps.');
+  inp=f.i;out=f.o;inp.onmidimessage=onMsg;
+  const id=f.id,d=DEVS[id.id]||{key:'unknown',name:`Zoom 0x${id.id.toString(16).toUpperCase()}`,fxSlots:5,presets:50};
+  dev={...d,id:id.id,fw:id.fw};
+  acc.onstatechange=e=>{if((e.port===inp||e.port===out)&&e.port.state==='disconnected')disconnect();};
+  return dev;
+}
+async function probe(ins,outs){
+  for(const o of outs){const r=await probeOut(o,ins);if(r)return r;}
+  return null;
+}
+async function probeOut(o,ins){
+  return new Promise(res=>{
+    const orig=ins.map(i=>i.onmidimessage);
+    const done=r=>{ins.forEach((i,x)=>{i.onmidimessage=orig[x];});clearTimeout(t);res(r);};
+    const t=setTimeout(()=>done(null),1200);
+    ins.forEach(i=>{
+      i.onmidimessage=e=>{
+        const d=new Uint8Array(e.data);
+        log('←rx',hex(d),'var(--accent3)');
+        if(d.length>=6&&d[0]===0xF0&&d[1]===0x7E&&d[3]===0x06&&d[4]===0x02&&d[5]===ZOOM_MFR)
+          done({i,o,id:parseId(d)});
+      };
+    });
+    // Send directly via output port — not via send() which requires out to be set
+    try{
+      const m=idReq();
+      log('→tx',hex(m),'var(--accent2)');
+      o.send(m);
+    }catch(e){done(null);}
+  });
+}
+function disconnect(){if(inp)inp.onmidimessage=null;inp=out=dev=null;em('dc');}
+function send(msg,wait2=false,ms=2000){
+  if(!out)throw new Error('Not connected');
+  const p=wait2?wait(ms):null;
+  log('→tx',hex(msg),'var(--accent2)');
+  out.send(msg);
+  return wait2?p:null;
+}
+
+// ── APP ───────────────────────────────────────────────────────────────
+let patches=[],slot=-1,reading=false;
+const $=id=>document.getElementById(id);
+const [BC,BR,BB,BRS,FRS,PB,PT,PL,ES,EC,DOT,BADGE,STATUS]=
+  ['bc','br','bb','brs','frs','pb','pt','pl','es','ec','dot','badge','status'].map($);
+
+function st(m,c='s-info'){STATUS.textContent=m;STATUS.className=c;}
+function sp(c,t){PB.style.width=t?Math.round(c/t*100)+'%':'0%';PT.textContent=t?`${c} / ${t}`:'`';}
+
+BC.onclick=async()=>{
+  if(dev){disconnect();return;}
+  st('connecting...','s-info');BC.disabled=true;
+  try{const d=await connect();connected(d);}
+  catch(e){st(e.message,'s-err');}
+  finally{BC.disabled=false;}
+};
+
+function connected(d){
+  DOT.classList.remove('off');
+  BADGE.textContent=`${d.name} · fw ${d.fw}`;
+  BC.textContent='DISCONNECT';BC.style.cssText='background:transparent;color:var(--red);border-color:rgba(239,68,68,.4)';
+  BR.disabled=BB.disabled=BRS.disabled=false;
+  patches=new Array(d.presets).fill(null);
+  st(`connected · ${d.presets} patches`,'s-ok');
+  ES.innerHTML=`<div class="ei">⬡</div><p>${d.name.toUpperCase()} CONNECTED</p><p style="font-size:.65rem;opacity:.5">click READ ALL to load patches</p>`;
+}
+on('dc',()=>{
+  DOT.classList.add('off');BADGE.textContent='no device';
+  BC.textContent='CONNECT';BC.style.cssText='';
+  BR.disabled=BB.disabled=BRS.disabled=true;
+  patches=[];slot=-1;PL.innerHTML='';
+  ES.innerHTML=`<div class="ei">⬡</div><p>DEVICE DISCONNECTED</p>`;
+  ES.style.display='flex';EC.style.display='none';
+  st('disconnected','s-warn');sp(0,0);
+});
+
+BR.onclick=async()=>{
+  if(!dev||reading)return;
+  reading=true;BR.disabled=true;
+  $('dbg').style.display='block';
+  const probeCmd=await probeReadCmd(dev.id);
+  if(probeCmd===null){
+    st('pedal não respondeu — veja DEBUG','s-err');
+    reading=false;BR.disabled=false;return;
+  }
+  st(`cmd 0x${probeCmd.toString(16).toUpperCase()} ok — lendo...`,'s-ok');
+  sp(0,dev.presets);
+  try{
+    for(let s=0;s<dev.presets;s++){
+      await send(pc(s));
+      await sleep(60);
+      // Always use edit enable before each request
+      sendRaw(sx(dev.id,[0x50]));
+      await sleep(80);
+      const r=await send(sx(dev.id,[probeCmd]),true,2000);
+      const p=parsePatch(r,dev.id);
+      if(p){p.slot=s;patches[s]=p;renderItem(s,p);}
+      sp(s+1,dev.presets);
+      await sleep(80);
+    }
+    const n=patches.filter(Boolean).length;
+    st(`${n}/${dev.presets} patches loaded`,n>0?'s-ok':'s-warn');
+  }catch(e){st(e.message,'s-err');}
+  finally{reading=false;BR.disabled=false;}
+};
+
+async function probeReadCmd(did){
+  // From MIDI_MESSAGE.pdf (zoom-ms-utility docs), confirmed protocol:
+  // 0x50 = ParameterEditEnable   (must send BEFORE any patch operation)
+  // 0x51 = ParameterEditDisable  (send when done)
+  // 0x28 = Send Patch (WRITE to pedal)
+  // 0x29 = Request Patch (READ from pedal) → pedal responds with 0x28 + data
+  //
+  // Correct read sequence:
+  //   C0 [slot]           → Program Change (select patch)
+  //   F0 52 00 id 50 F7   → ParameterEditEnable
+  //   F0 52 00 id 29 F7   → Request Patch
+  //   ← F0 52 00 id 28 [data] F7   ← response
+
+  const editEnable  = sx(did,[0x50]);
+  const editDisable = sx(did,[0x51]);
+  const reqPatch    = sx(did,[0x29]);  // REQUEST = 0x29 !!
+
+  log('────','0x50 enable → 0x29 request (from MIDI spec)','var(--text3)');
+  await sendRaw(pc(0));
+  await sleep(150);
+  sendRaw(editEnable);
+  await sleep(150);
+  log('probe',`→ ${hex(reqPatch)}`,'var(--accent2)');
+  let r=null;
+  try{ r=await send(reqPatch,true,2000); }catch{}
+  if(r){
+    log('probe',`← ${hex(r)}`,'var(--green)');
+    if(r.length>7){ log('probe','✓ 0x29 FUNCIONOU!','var(--green)'); return 0x29; }
+    log('probe',`  (${r.length}b curto)`,'var(--amber)');
+  } else {
+    log('probe','  sem resposta','var(--text3)');
+  }
+  sendRaw(editDisable);
+  await sleep(200);
+
+  // Fallback: try without edit enable
+  log('probe','--- fallback: sem enable → 0x29','var(--accent2)');
+  await sendRaw(pc(0));
+  await sleep(150);
+  log('probe',`→ ${hex(reqPatch)}`,'var(--accent2)');
+  r=null;
+  try{ r=await send(reqPatch,true,2000); }catch{}
+  if(r){
+    log('probe',`← ${hex(r)}`,'var(--green)');
+    if(r.length>7){ log('probe','✓ FUNCIONOU sem enable!','var(--green)'); return 0x29; }
+  }
+  log('probe','  sem resposta','var(--text3)');
+
+  log('probe','nenhuma sequência funcionou','var(--red)');
+  return null;
+}
+
+function sendRaw(msg){
+  if(!out) return;
+  log('probe',`→ raw: ${hex(msg)}`,'var(--accent2)');
+  out.send(msg);
+}
+
+
+function renderItem(s,p){
+  let el=PL.querySelector(`[data-s="${s}"]`);
+  if(!el){
+    el=document.createElement('div');el.className='pi';el.dataset.s=s;
+    el.onclick=()=>openEd(s);
+    let ins=false;
+    for(const it of PL.querySelectorAll('.pi')){if(+it.dataset.s>s){PL.insertBefore(el,it);ins=true;break;}}
+    if(!ins)PL.appendChild(el);
+  }
+  const n=p.effects.filter(f=>f.en).length,e=!p.name||p.name.trim()===''||p.name.toLowerCase().includes('empty');
+  el.innerHTML=`<span class="pn">${String(s+1).padStart(2,'0')}</span><span class="pm${e?' e':''}">${esc(p.name||'empty')}</span><span class="pfx">${n}</span>`;
+  if(s===slot)el.classList.add('active');
+}
+
+function openEd(s){
+  const p=patches[s];if(!p)return;
+  slot=s;
+  PL.querySelectorAll('.pi').forEach(el=>el.classList.remove('active'));
+  PL.querySelector(`[data-s="${s}"]`)?.classList.add('active');
+  ES.style.display='none';EC.style.display='block';
+  EC.innerHTML=`
+    <div class="et">
+      <span class="en">${String(s+1).padStart(2,'0')}</span>
+      <input class="ni" id="ni" type="text" maxlength="10" value="${esc(p.name)}" spellcheck="false"/>
+      <button class="bw" id="bw">WRITE TO PEDAL</button>
+      <button class="bs" id="bse">SELECT ON PEDAL</button>
+    </div>
+    <div class="fl">FX CHAIN · ${p.effects.length} SLOTS</div>
+    <div class="fc" id="fc"></div>`;
+  const fc=$('fc');
+  p.effects.forEach((fx,i)=>fc.appendChild(mkSlot(fx,i,p)));
+  $('bw').onclick=async()=>{
+    p.name=$('ni').value.slice(0,10);
+    try{await send(writeMsg(dev.id,s,p),true);st(`patch ${s+1} written`,'s-ok');renderItem(s,p);}
+    catch(e){st(e.message,'s-err');}
+  };
+  $('bse').onclick=async()=>{
+    try{await send(pc(s));st(`switched to patch ${s+1}`,'s-info');}
+    catch(e){st(e.message,'s-err');}
+  };
+}
+
+function mkSlot(fx,idx,p){
+  const info=gfx(fx.id),div=document.createElement('div');
+  div.className=`fs ${fx.en?'on':'off'}`;
+  const cb=`cb${idx}`;
+  div.innerHTML=`
+    <div class="fh">
+      <label class="tl" for="${cb}">
+        <input type="checkbox" id="${cb}" ${fx.en?'checked':''}/>
+        <span class="tt"></span>
+        <span class="fn">${esc(info.n)}</span>
+      </label>
+      ${info.c?`<span class="fc2">${info.c}</span>`:''}
+    </div>
+    <div class="fp">
+      ${(info.p||[]).map((pn,pi)=>`
+        <div class="pr">
+          <span class="pl2">${esc(pn)}</span>
+          <input type="range" class="ps" min="0" max="127" value="${fx.p[pi]??0}" data-i="${idx}" data-p="${pi}"/>
+          <span class="pv" id="pv${idx}_${pi}">${fx.p[pi]??0}</span>
+        </div>`).join('')}
+    </div>`;
+  div.querySelector(`#${cb}`).onchange=e=>{
+    fx.en=e.target.checked;p.effects[idx].en=fx.en;
+    div.className=`fs ${fx.en?'on':'off'}`;
+  };
+  div.querySelectorAll('.ps').forEach(inp=>{
+    inp.oninput=e=>{
+      const pi=+e.target.dataset.p,v=+e.target.value;
+      p.effects[idx].p[pi]=v;
+      document.getElementById(`pv${idx}_${pi}`).textContent=v;
+    };
+  });
+  return div;
+}
+
+BB.onclick=()=>{
+  if(!dev)return;
+  const bk={version:'1.0',timestamp:new Date().toISOString(),device:{key:dev.key,name:dev.name,id:dev.id,fw:dev.fw},patches};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(bk,null,2)],{type:'application/json'}));
+  a.download=`${dev.name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(a.href);st('backup downloaded','s-ok');
+};
+BRS.onclick=()=>FRS.click();
+FRS.onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;FRS.value='';
+  let bk;try{bk=JSON.parse(await f.text());}catch{st('invalid file','s-err');return;}
+  if(!bk.patches||!bk.device){st('invalid format','s-err');return;}
+  const bid=bk.device.id||bk.device.deviceId;
+  if(bid!==dev.id){st(`backup for ${bk.device.name}, connected: ${dev.name}`,'s-err');return;}
+  if(!confirm(`Restore ${bk.patches.filter(Boolean).length} patches?`))return;
+  st('restoring...','s-info');
+  for(let s=0;s<bk.patches.length;s++){
+    const p=bk.patches[s];if(!p)continue;
+    try{await send(writeMsg(dev.id,s,p),true);patches[s]=p;renderItem(s,p);}
+    catch(e){st(e.message,'s-err');return;}
+    sp(s+1,bk.patches.length);await sleep(80);
+  }
+  st('restore complete','s-ok');
+};
+
+// ── DEBUG ─────────────────────────────────────────────────────────────
+const DBG=$('dbg'),DL=$('dl');
+function log(tag,msg,color='var(--accent3)'){
+  if(DBG.style.display!=='block')return;
+  const r=document.createElement('div');r.className='dr';
+  r.innerHTML=`<span style="color:${color}">${tag}</span>${esc(String(msg))}`;
+  DL.appendChild(r);DL.scrollTop=DL.scrollHeight;
+}
+function hex(d){return Array.from(d).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');}
+
+$('bd').onclick=()=>{
+  const op=DBG.style.display==='block';
+  DBG.style.display=op?'none':'block';
+  if(!op){DL.innerHTML='';log('info','debug open — all MIDI traffic logged','var(--text2)');}
+};
+$('dc').onclick=()=>{DBG.style.display='none';};
+$('ds').onclick=async()=>{
+  log('info','sending identity request...','var(--text2)');
+  if(!acc)try{acc=await navigator.requestMIDIAccess({sysex:true});}catch(e){log('err',e.message,'var(--red)');return;}
+  const ins=Array.from(acc.inputs.values()),outs=Array.from(acc.outputs.values());
+  ins.forEach(i=>{log('in ',`${i.name} [${i.state}]`,'var(--green)');i.onmidimessage=e=>log('←rx',hex(new Uint8Array(e.data)),'var(--accent3)');});
+  outs.forEach(o=>{log('out',`${o.name} [${o.state}]`,'var(--amber)');try{const m=idReq();o.send(m);log('→tx',`${o.name.slice(0,18)}  ${hex(m)}`,'var(--accent2)');}catch(e){log('err',e.message,'var(--red)');}});
+};
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
