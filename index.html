@@ -454,7 +454,7 @@ const ZOOM_MFR = 0x52;
 const DEVICES = {
   0x61: { key:'G1on',    name:'Zoom G1on',    category:'guitar', fxSlots:5, presets:50 },
   0x62: { key:'G1Xon',   name:'Zoom G1Xon',   category:'guitar', fxSlots:5, presets:50 },
-  0x63: { key:'G1Xon_K', name:'Zoom G1Xon-K', category:'guitar', fxSlots:5, presets:50 },
+  0x63: { key:'G1Xon_K', name:'Zoom G1Xon-K', category:'guitar', fxSlots:5, presets:50 }, // confirmed via live USB sniff
   0x64: { key:'G1four',  name:'Zoom G1 FOUR', category:'guitar', fxSlots:5, presets:50 },
   0x65: { key:'G1Xfour', name:'Zoom G1X FOUR',category:'guitar', fxSlots:5, presets:50 },
   0x6E: { key:'G3n',     name:'Zoom G3n',     category:'guitar', fxSlots:7, presets:60 },
@@ -469,6 +469,7 @@ const ZOOM_PORTS = [
   'zoom g1on','zoom g1xon','zoom g3n','zoom g3xn','zoom g5n',
   'zoom b1on','zoom b1xon','zoom b3n','zoom ms-50','zoom ms-60','zoom ms-70',
   'zoom g1 four','zoom g1x four','zoom b1 four','zoom b1x four',
+  'zoom 1 series','zoom g series','zoom b series','zoom ms series',
 ];
 
 const EFFECTS = {
@@ -557,10 +558,11 @@ function sysex(deviceId, payload) {
 }
 function identityRequest() { return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]); }
 function readPatchMsg(deviceId, slot) {
-  return sysex(deviceId, [0x28, slot & 0x7F, (slot >> 7) & 0x7F]);
+  // Request specific patch slot: F0 52 00 [devId] 09 [slot] F7
+  return sysex(deviceId, [0x09, slot & 0x7F]);
 }
 function writePatchMsg(deviceId, slot, patch) {
-  const fxSlots = patch.effects.length;
+  // Write patch: F0 52 00 [devId] 09 [slot] [patch data...] F7
   const bytes = [];
   for (const fx of patch.effects) {
     bytes.push(fx.enabled ? fx.fxId : 0x00);
@@ -569,22 +571,36 @@ function writePatchMsg(deviceId, slot, patch) {
   for (let i = 0; i < 10; i++) {
     bytes.push(i < patch.name.length ? patch.name.charCodeAt(i) & 0x7F : 0x20);
   }
-  return sysex(deviceId, [0x28, slot & 0x7F, (slot >> 7) & 0x7F, ...bytes]);
+  return sysex(deviceId, [0x09, slot & 0x7F, ...bytes]);
 }
 function programChange(slot) { return new Uint8Array([0xC0, slot & 0x7F]); }
 
 // Parsers
 function parseIdentity(data) {
-  if (data.length < 10) return null;
-  if (data[0]!==0xF0||data[1]!==0x7E||data[3]!==0x06||data[4]!==0x02||data[5]!==ZOOM_MFR) return null;
-  return { deviceId: data[7], fw: `${data[8]}.${String(data[9]).padStart(2,'0')}` };
+  // Real response layout (confirmed via USB sniff):
+  // F0 7E 00 06 02 52 [devId] 00 00 00 [fw ASCII...] F7
+  //  0  1  2  3  4  5    6    7  8  9     10+
+  if (data.length < 7) return null;
+  if (data[0]!==0xF0 || data[1]!==0x7E || data[3]!==0x06 ||
+      data[4]!==0x02 || data[5]!==ZOOM_MFR) return null;
+  const deviceId = data[6];
+  // Firmware: ASCII bytes after the 3 zero bytes (offset 10), up to F7
+  const fwBytes = [];
+  for (let i = 10; i < data.length - 1; i++) {
+    if (data[i] === 0xF7) break;
+    if (data[i] >= 0x20 && data[i] < 0x7F) fwBytes.push(data[i]);
+  }
+  const fw = fwBytes.length ? String.fromCharCode(...fwBytes) : '?.??';
+  return { deviceId, fw };
 }
 function parsePatch(data, deviceId) {
-  if (!data||data.length<10) return null;
-  if (data[0]!==0xF0||data[1]!==ZOOM_MFR||data[4]!==0x28) return null;
-  const slot    = data[5] | (data[6] << 7);
+  if (!data||data.length<8) return null;
+  if (data[0]!==0xF0||data[1]!==ZOOM_MFR) return null;
+  // Response cmd byte: 0x08 (patch data) at data[4]
+  if (data[4]!==0x08 && data[4]!==0x28) return null;
+  const slot    = data[5];
   const dev     = DEVICES[deviceId] || { fxSlots: 5 };
-  const payload = data.slice(7, -1);
+  const payload = data.slice(6, -1);
   const effects = [];
   let off = 0;
   for (let i = 0; i < dev.fxSlots; i++) {
@@ -626,12 +642,23 @@ function waitForReply(ms = 3000) {
 
 function onMidiMessage(e) {
   const data = new Uint8Array(e.data);
+  // Log to debug panel if open
+  const dbgLog = document.getElementById('dbg-log');
+  const dbgPanel = document.getElementById('debug-panel');
+  if (dbgPanel && dbgPanel.style.display === 'block' && dbgLog) {
+    const bytes = Array.from(data).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    const row = document.createElement('div');
+    row.className = 'dbg-row';
+    row.innerHTML = `<span style="color:var(--accent3)">←rx</span>${bytes}`;
+    dbgLog.appendChild(row);
+    dbgLog.scrollTop = dbgLog.scrollHeight;
+  }
   if (pendingReply) {
     clearTimeout(pendingReply.t);
     pendingReply.resolve(data);
     pendingReply = null;
   }
-  if (data[0]===0xF0 && data[1]===ZOOM_MFR && data[4]===0x28) {
+  if (data[0]===0xF0 && data[1]===ZOOM_MFR && (data[4]===0x08||data[4]===0x28)) {
     const patch = parsePatch(data, deviceInfo?.deviceId);
     if (patch) emit('patchupdate', patch);
   }
@@ -720,9 +747,9 @@ function midiDisconnect() {
   emit('disconnected');
 }
 
-async function midiSend(msg, waitReply = false) {
+async function midiSend(msg, waitReply = false, timeoutMs = 2000) {
   if (!midiOutput) throw new Error('Not connected');
-  const p = waitReply ? waitForReply() : null;
+  const p = waitReply ? waitForReply(timeoutMs) : null;
   midiOutput.send(msg);
   return waitReply ? p : null;
 }
