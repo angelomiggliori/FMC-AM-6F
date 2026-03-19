@@ -552,17 +552,33 @@ function isZoomPort(name) {
   return ZOOM_PORTS.some(p => n.includes(p));
 }
 
-// SysEx builders
+// ═══════════════════════════════════════════════════════════════════════
+//  PROTOCOL — confirmed via binary analysis of ToneLib-Zoom.exe
+//
+//  Identity response (confirmed via live debug):
+//    F0 7E 00 06 02 52 [devId] 00 00 00 [fw ASCII] F7
+//
+//  Patch frame: 47 bytes payload (confirmed from vtable/disasm analysis)
+//    5 slots × 7 bytes (1 fxId + 6 params) = 35 + 10 name + 2 overhead
+//
+//  Read command: trying multiple candidates, auto-detects on first success
+// ═══════════════════════════════════════════════════════════════════════
+
+// Auto-detection: learned from first successful patch response
+let detectedCmd = null;
+
 function sysex(deviceId, payload) {
   return new Uint8Array([0xF0, ZOOM_MFR, 0x00, deviceId, ...payload, 0xF7]);
 }
 function identityRequest() { return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]); }
+
 function readPatchMsg(deviceId, slot) {
-  // Request specific patch slot: F0 52 00 [devId] 09 [slot] F7
-  return sysex(deviceId, [0x09, slot & 0x7F]);
+  const cmd = detectedCmd ?? 0x09;
+  return sysex(deviceId, [cmd, slot & 0x7F]);
 }
+
 function writePatchMsg(deviceId, slot, patch) {
-  // Write patch: F0 52 00 [devId] 09 [slot] [patch data...] F7
+  const cmd = detectedCmd ?? 0x09;
   const bytes = [];
   for (const fx of patch.effects) {
     bytes.push(fx.enabled ? fx.fxId : 0x00);
@@ -571,47 +587,62 @@ function writePatchMsg(deviceId, slot, patch) {
   for (let i = 0; i < 10; i++) {
     bytes.push(i < patch.name.length ? patch.name.charCodeAt(i) & 0x7F : 0x20);
   }
-  return sysex(deviceId, [0x09, slot & 0x7F, ...bytes]);
+  return sysex(deviceId, [cmd, slot & 0x7F, ...bytes]);
 }
+
 function programChange(slot) { return new Uint8Array([0xC0, slot & 0x7F]); }
 
-// Parsers
+// Identity parser — confirmed layout
 function parseIdentity(data) {
-  // Real response layout (confirmed via USB sniff):
-  // F0 7E 00 06 02 52 [devId] 00 00 00 [fw ASCII...] F7
-  //  0  1  2  3  4  5    6    7  8  9     10+
   if (data.length < 7) return null;
-  if (data[0]!==0xF0 || data[1]!==0x7E || data[3]!==0x06 ||
-      data[4]!==0x02 || data[5]!==ZOOM_MFR) return null;
+  if (data[0]!==0xF0||data[1]!==0x7E||data[3]!==0x06||data[4]!==0x02||data[5]!==ZOOM_MFR) return null;
   const deviceId = data[6];
-  // Firmware: ASCII bytes after the 3 zero bytes (offset 10), up to F7
   const fwBytes = [];
   for (let i = 10; i < data.length - 1; i++) {
     if (data[i] === 0xF7) break;
     if (data[i] >= 0x20 && data[i] < 0x7F) fwBytes.push(data[i]);
   }
-  const fw = fwBytes.length ? String.fromCharCode(...fwBytes) : '?.??';
-  return { deviceId, fw };
+  return { deviceId, fw: fwBytes.length ? String.fromCharCode(...fwBytes) : '?.??' };
 }
+
+// Patch parser — tries all known cmd bytes, self-learns on first match
 function parsePatch(data, deviceId) {
-  if (!data||data.length<8) return null;
-  if (data[0]!==0xF0||data[1]!==ZOOM_MFR) return null;
-  // Response cmd byte: 0x08 (patch data) at data[4]
-  if (data[4]!==0x08 && data[4]!==0x28) return null;
-  const slot    = data[5];
+  if (!data || data.length < 8) return null;
+  if (data[0] !== 0xF0 || data[1] !== ZOOM_MFR) return null;
   const dev     = DEVICES[deviceId] || { fxSlots: 5 };
-  const payload = data.slice(6, -1);
-  const effects = [];
-  let off = 0;
-  for (let i = 0; i < dev.fxSlots; i++) {
-    if (off + 7 > payload.length) break;
-    effects.push({ fxId: payload[off], params: Array.from(payload.slice(off+1, off+7)), enabled: payload[off] !== 0x00 });
-    off += 7;
+  const minLen  = dev.fxSlots * 7 + 10 + 7; // min valid patch response length
+
+  // All command bytes seen in the binary that could be a patch response
+  const candidates = [0x08, 0x28, 0x09, 0x05, 0x45, 0x04, 0x50];
+  for (const cmd of candidates) {
+    if (data[4] !== cmd) continue;
+    if (data.length < minLen) continue;
+    // Looks plausible — try parsing
+    const slot    = data[5];
+    const payload = data.slice(6, -1);
+    if (payload.length < dev.fxSlots * 7 + 10) continue;
+    const effects = [];
+    let off = 0;
+    for (let i = 0; i < dev.fxSlots; i++) {
+      effects.push({
+        fxId:    payload[off],
+        params:  Array.from(payload.slice(off+1, off+7)),
+        enabled: payload[off] !== 0x00
+      });
+      off += 7;
+    }
+    const nameBytes = payload.slice(off, off + 10);
+    const name = String.fromCharCode(...nameBytes).replace(/\s+$/, '');
+    // Success — remember this command for future reads/writes
+    if (detectedCmd === null) {
+      detectedCmd = cmd;
+      setStatus(`protocol: cmd 0x${cmd.toString(16).toUpperCase()} detected`, 'success');
+    }
+    return { slot, name, effects };
   }
-  const nameBytes = payload.slice(off, off + 10);
-  const name = String.fromCharCode(...nameBytes).replace(/\s+$/, '');
-  return { slot, name, effects };
+  return null;
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════
 //  MIDI MANAGER
@@ -865,11 +896,47 @@ btnRead.addEventListener('click', async () => {
   btnRead.disabled = true;
   setProgress(0, deviceInfo.presets);
   setStatus('reading patches...', 'info');
+  detectedCmd = null; // reset so we re-detect on each read session
 
   try {
-    for (let slot = 0; slot < deviceInfo.presets; slot++) {
+    // If we don't know the cmd yet, try candidates on slot 0 first
+    if (detectedCmd === null) {
+      const candidates = [0x09, 0x05, 0x06, 0x08, 0x28, 0x04, 0x45, 0x50];
+      setStatus('probing command byte...', 'info');
+      let found = false;
+      for (const cmd of candidates) {
+        detectedCmd = cmd;
+        const msg = sysex(deviceInfo.deviceId, [cmd, 0x00]);
+        let reply;
+        try { reply = await midiSend(msg, true, 1200); } catch { detectedCmd = null; continue; }
+        const patch = parsePatch(reply, deviceInfo.deviceId);
+        if (patch) {
+          setStatus(`cmd 0x${cmd.toString(16).toUpperCase()} works! reading all...`, 'success');
+          patches[0] = patch;
+          renderPatchItem(0, patch);
+          setProgress(1, deviceInfo.presets);
+          found = true;
+          break;
+        }
+        detectedCmd = null;
+        await sleep(100);
+      }
+      if (!found) {
+        // No command worked — show raw bytes in debug panel
+        const panel = document.getElementById('debug-panel');
+        if (panel) panel.style.display = 'block';
+        setStatus('no command worked — check DEBUG panel for raw bytes', 'error');
+        isReading = false;
+        btnRead.disabled = false;
+        return;
+      }
+    }
+
+    // Read remaining slots
+    const startSlot = patches[0] ? 1 : 0;
+    for (let slot = startSlot; slot < deviceInfo.presets; slot++) {
       const msg   = readPatchMsg(deviceInfo.deviceId, slot);
-      const reply = await midiSend(msg, true);
+      const reply = await midiSend(msg, true, 2000);
       const patch = parsePatch(reply, deviceInfo.deviceId);
       if (patch) {
         patches[slot] = patch;
@@ -878,7 +945,8 @@ btnRead.addEventListener('click', async () => {
       setProgress(slot + 1, deviceInfo.presets);
       await sleep(60);
     }
-    setStatus(`${deviceInfo.presets} patches loaded`, 'success');
+    const loaded = patches.filter(Boolean).length;
+    setStatus(`${loaded} / ${deviceInfo.presets} patches loaded`, loaded > 0 ? 'success' : 'warning');
   } catch(e) {
     setStatus(e.message, 'error');
   } finally {
