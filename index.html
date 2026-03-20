@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>G1on Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--surface:#1e1e30;--surface2:#252540;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --accent:#ff3c6e;--accent2:#7c3aed;--accent3:#06b6d4;
+  --text:#e8e8f0;--text2:#9090b0;--text3:#5a5a7a;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --r:6px;--r2:10px;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);
+  display:grid;grid-template-rows:56px 52px 1fr;grid-template-columns:280px 1fr;
+  grid-template-areas:"hdr hdr""bar bar""side main";height:100vh;overflow:hidden}
+header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.logo{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s ease-in-out infinite}
+.dot.off{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#badge{font-size:.72rem;font-family:var(--mono);color:var(--text2);background:var(--surface);border:1px solid var(--border2);padding:3px 10px;border-radius:20px}
+#status{margin-left:auto;font-size:.72rem;font-family:var(--mono);padding:4px 12px;border-radius:20px}
+.s-info{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.s-ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.s-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.s-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.toolbar{grid-area:bar;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:8px}
+.btn{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.5px;padding:6px 14px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.btn:not(:disabled):hover{filter:brightness(1.2);transform:translateY(-1px)}
+#bc{background:var(--accent);color:#fff;border-color:var(--accent)}
+#br{background:transparent;color:var(--blue);border-color:rgba(59,130,246,.4)}
+#bb{background:transparent;color:var(--green);border-color:rgba(16,185,129,.4)}
+#brs{background:transparent;color:var(--amber);border-color:rgba(245,158,11,.4)}
+#bd{background:transparent;color:var(--text3);border-color:rgba(255,255,255,.1);margin-left:auto}
+.pw{flex:1;display:flex;flex-direction:column;gap:3px;margin:0 10px}
+.pt{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent3));width:0;transition:width .2s;border-radius:2px}
+#pt{font-size:.65rem;font-family:var(--mono);color:var(--text3)}
+#sidebar{grid-area:side;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sh{padding:12px 16px 8px;font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;border-bottom:1px solid var(--border);text-transform:uppercase}
+#pl{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.pi{display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;position:relative}
+.pi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);opacity:0;transition:opacity .15s}
+.pi:hover{background:rgba(255,255,255,.025)}
+.pi.active{background:rgba(255,60,110,.06)}
+.pi.active::before{opacity:1}
+.pn{font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.pm{font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm.e{color:var(--text3);font-style:italic;font-weight:300}
+.pfx{font-family:var(--mono);font-size:.6rem;color:var(--text3);background:var(--surface2);border-radius:4px;padding:1px 5px;text-align:center}
+#main{grid-area:main;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3)}
+.ei{font-size:3rem;opacity:.3}
+.es p{font-family:var(--mono);font-size:.75rem;letter-spacing:1px}
+.et{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.en{font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--accent);min-width:40px}
+.ni{font-family:var(--mono);font-size:.95rem;font-weight:700;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:var(--r);width:180px;letter-spacing:1px;transition:border-color .15s}
+.ni:focus{outline:none;border-color:var(--accent2)}
+.bw{background:var(--accent);color:#fff;font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;transition:all .15s}
+.bs{background:transparent;color:var(--accent3);border:1px solid rgba(6,182,212,.3);font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);cursor:pointer;transition:all .15s}
+.bw:hover,.bs:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.fl{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+.fc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.fs{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px;transition:border-color .2s,opacity .2s;position:relative;overflow:hidden}
+.fs::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent3));opacity:0;transition:opacity .2s}
+.fs.on{border-color:rgba(124,58,237,.3)}
+.fs.on::before{opacity:1}
+.fs.off{opacity:.45}
+.fh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.tl{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
+.tl input[type=checkbox]{display:none}
+.tt{width:28px;height:15px;background:var(--surface2);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;border:1px solid var(--border2)}
+.tt::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:var(--text3);transition:all .2s}
+.tl input:checked+.tt{background:var(--accent2);border-color:var(--accent2)}
+.tl input:checked+.tt::after{left:15px;background:#fff}
+.fn{font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc2{font-family:var(--mono);font-size:.58rem;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.fp{display:flex;flex-direction:column;gap:7px}
+.pr{display:grid;grid-template-columns:70px 1fr 28px;align-items:center;gap:6px}
+.pl2{font-size:.68rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps{-webkit-appearance:none;appearance:none;height:3px;background:var(--surface2);border-radius:2px;outline:none;cursor:pointer}
+.ps::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 4px var(--accent2);cursor:pointer}
+.pv{font-family:var(--mono);font-size:.65rem;color:var(--text2);text-align:right}
+.ptag{font-family:var(--mono);font-size:.5rem;padding:1px 3px;border-radius:3px;background:rgba(124,58,237,.2);color:var(--accent2);margin-left:3px;vertical-align:middle}
+.ptag.t{background:rgba(6,182,212,.2);color:var(--accent3)}
+.fdesc{font-size:.65rem;color:var(--text3);margin-bottom:8px;line-height:1.4;font-style:italic}
+#dbg{position:fixed;bottom:0;left:0;right:0;background:#0a0a10;border-top:2px solid var(--accent2);padding:8px 16px;font-family:var(--mono);font-size:.65rem;color:var(--text2);max-height:200px;overflow-y:auto;display:none;z-index:999}
+.dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.dt{color:var(--accent2);font-weight:700;letter-spacing:1px}
+.dr{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.dr span{margin-right:8px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="dot off" id="dot"></div>G1ON</div>
+  <span id="badge">no device</span>
+  <span id="status" class="s-info">ready</span>
+</header>
+<div class="toolbar">
+  <button class="btn" id="bc">CONNECT</button>
+  <button class="btn" id="br" disabled>READ ALL</button>
+  <button class="btn" id="bb" disabled>BACKUP</button>
+  <button class="btn" id="brs" disabled>RESTORE</button>
+  <input type="file" id="frs" accept=".json" style="display:none"/>
+  <div class="pw"><div class="pt"><div class="pf" id="pb"></div></div><span id="pt"></span></div>
+  <button class="btn" id="bd">DEBUG</button>
+</div>
+<div id="sidebar"><div class="sh">PATCHES</div><div id="pl"></div></div>
+<div id="main">
+  <div class="es" id="es">
+    <div class="ei">⬡</div>
+    <p>CONNECT YOUR ZOOM PEDAL VIA USB</p>
+    <p style="font-size:.65rem;opacity:.5">chrome or edge · allow midi when prompted</p>
+  </div>
+  <div id="ec" style="display:none"></div>
+</div>
+<div id="dbg">
+  <div class="dh">
+    <span class="dt">◈ MIDI RAW LOG</span>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="ds" style="cursor:pointer;color:var(--accent3)">SEND IDENTITY REQ</span>
+      <span id="dc" style="cursor:pointer;color:var(--text3)">✕</span>
+    </div>
+  </div>
+  <div id="dl"></div>
+</div>
+<script>
+const ZOOM_MFR=0x52;
+const DEVS={
+  0x61:{key:'G1on',   name:'Zoom G1on',   fxSlots:5,presets:100},
+  0x62:{key:'G1Xon',  name:'Zoom G1Xon',  fxSlots:5,presets:100},
+  0x63:{key:'G1Xon_K',name:'Zoom G1Xon-K',fxSlots:5,presets:100},
+  0x64:{key:'G1four', name:'Zoom G1 FOUR',fxSlots:5,presets:50},
+  0x65:{key:'G1Xfour',name:'Zoom G1X FOUR',fxSlots:5,presets:50},
+  0x6E:{key:'G3n',    name:'Zoom G3n',    fxSlots:7,presets:60},
+  0x73:{key:'G5n',    name:'Zoom G5n',    fxSlots:7,presets:60},
+  0x5F:{key:'B1on',   name:'Zoom B1on',   fxSlots:5,presets:100},
+  0x66:{key:'B1Xon',  name:'Zoom B1Xon',  fxSlots:5,presets:100},
+  0x71:{key:'B1four', name:'Zoom B1 FOUR',fxSlots:5,presets:50},
+  0x58:{key:'MS50G',  name:'Zoom MS-50G', fxSlots:6,presets:50},
+};
+const F1ON=new Set([0x61,0x62,0x63,0x64,0x65,0x5F,0x66,0x71]);
+// G1Xon-K Complete Effect Map (91 effects)
+// Chave primária: b0,b1m,b3 (tipo do efeito — b3 é o subtipo fixo)
+// b4 é parâmetro variável, usado só como desempate quando b3 colide
+// b5 só para Air vs TiledRoom (mesma família até b4)
+const FX_BY_KEY = {
+  // ── chave 3 campos (b0,b1m,b3) ──
+  '1,0,2': {n:'SlowATTCK',c:'COMP'},
+  '1,0,6': {n:'Dist+',c:'DRIVE'},
+  '1,0,14': {n:'Z-Organ',c:'MOD'},
+  '1,0,16': {n:'ReverseDL',c:'DELAY'},
+  '1,0,72': {n:'VX COMBO',c:'AMP'},
+  '1,0,76': {n:'TheVibe',c:'MOD'},
+  '1,1,4': {n:'RndmFLTR',c:'FILTER'},
+  '1,1,8': {n:'TANGERINE',c:'AMP'},
+  '1,1,16': {n:'StompDly',c:'DELAY'},
+  '1,1,72': {n:'CAR DRIVE',c:'AMP'},
+  '1,1,76': {n:'Detune',c:'PITCH'},
+  '1,1,80': {n:'PitchDly',c:'DELAY'},
+  '1,1,82': {n:'Spring63',c:'REVERB'},
+  '1,2,6': {n:'Aco.Sim',c:'OTHER'},
+  '1,4,76': {n:'CoronaTri',c:'MOD'},
+  '17,0,2': {n:'Comp',c:'COMP'},
+  '17,0,6': {n:'Booster',c:'DRIVE'},
+  '17,0,8': {n:'FD COMBO',c:'AMP'},
+  '17,0,12': {n:'Tremolo',c:'MOD'},
+  '17,0,18': {n:'HD Hall',c:'REVERB'},
+  '17,0,80': {n:'Delay',c:'DELAY'},
+  '33,0,4': {n:'GraphicEQ',c:'EQ'},
+  '33,0,18': {n:'Arena',c:'REVERB'},
+  '33,0,66': {n:'ZNR',c:'GATE'},
+  '33,0,68': {n:'AutoWah',c:'WAH'},
+  '33,0,78': {n:'BitCrush',c:'PITCH'},
+  '33,0,82': {n:'Hall',c:'REVERB'},
+  '33,1,4': {n:'M-Filter',c:'FILTER'},
+  '33,1,6': {n:'MetalWRLD',c:'DRIVE'},
+  '33,1,12': {n:'SuperCho',c:'MOD'},
+  '33,1,16': {n:'StereoDly',c:'DELAY'},
+  '33,1,18': {n:'Plate',c:'REVERB'},
+  '33,1,68': {n:'fCycle',c:'FILTER'},
+  '33,2,6': {n:'Z Wild',c:'DRIVE'},
+  '33,3,18': {n:'ParticleR',c:'OTHER'},
+  '49,1,76': {n:'VinFLNGR',c:'MOD'},
+  '65,0,4': {n:'ParaEQ',c:'EQ'},
+  '65,0,8': {n:'FD VIBRO',c:'AMP'},
+  '65,0,12': {n:'Slicer',c:'MOD'},
+  '65,0,14': {n:'Rt Closet',c:'REVERB'},
+  '65,0,18': {n:'EarlyRef',c:'REVERB'},
+  '65,0,66': {n:'NoiseGate',c:'GATE'},
+  '65,0,72': {n:'BG CRUNCH',c:'DRIVE'},
+  '65,0,78': {n:'Bomber',c:'DRIVE'},
+  '65,0,82': {n:'Room',c:'REVERB'},
+  '65,1,4': {n:'Step',c:'FILTER'},
+  '65,1,6': {n:'HotBox',c:'DRIVE'},
+  '65,1,12': {n:'StereoCho',c:'MOD'},
+  '65,1,18': {n:'ModReverb',c:'REVERB'},
+  '65,1,76': {n:'Flanger',c:'MOD'},
+  '65,2,6': {n:'Lead',c:'DRIVE'},
+  '65,2,72': {n:'BG DRIVE',c:'AMP'},
+  '65,2,76': {n:'PitchSHFT',c:'PITCH'},
+  '97,0,8': {n:'MATCH 30',c:'AMP'},
+  '97,0,12': {n:'Chorus',c:'MOD'},
+  '97,0,66': {n:'OptComp',c:'COMP'},
+  '97,0,72': {n:'US BLUES',c:'AMP'},
+  '97,0,76': {n:'Phaser',c:'MOD'},
+  '97,0,80': {n:'FilterDly',c:'DELAY'},
+  '97,1,4': {n:'SeqFLTR',c:'FILTER'},
+  '97,1,12': {n:'Ensemble',c:'MOD'},
+  '97,1,80': {n:'CarbonDly',c:'DELAY'},
+  '97,2,6': {n:'ExtremeDS',c:'DRIVE'},
+  '97,2,12': {n:'MonoPitch',c:'PITCH'},
+  '97,2,72': {n:'DZ DRIVE',c:'AMP'},
+  '97,2,76': {n:'RingMod',c:'MOD'},
+  '107,0,2': {n:'160 Comp',c:'COMP'},
+  '107,0,12': {n:'DuoPhase',c:'MOD'},
+  // ── desempate por b4 (b3 colide entre dois efeitos) ──
+  '1,1,6,15': {n:'Z MP1',c:'AMP'},
+  '1,1,6,17': {n:'GreatMuff',c:'DRIVE'},
+  '1,2,8,15': {n:'ALIEN',c:'AMP'},
+  '1,2,8,20': {n:'MS DRIVE',c:'AMP'},
+  '1,2,12,1': {n:'HPS',c:'PITCH'},
+  '1,2,12,10': {n:'Vibrato',c:'MOD'},
+  '33,0,6,15': {n:'OverDrive',c:'DRIVE'},
+  '33,0,8,12': {n:'VX JMI',c:'AMP'},
+  '33,0,80,11': {n:'TapeEcho',c:'DELAY'},
+  '33,0,80,109': {n:'MultiTapD',c:'DELAY'},
+  '33,1,72,13': {n:'TW ROCK',c:'AMP'},
+  '33,1,72,15': {n:'B-BREAKER',c:'DRIVE'},
+  '33,2,8,16': {n:'REVO-1',c:'AMP'},
+  '33,2,8,21': {n:'BGN DRIVE',c:'AMP'},
+  '33,2,12,10': {n:'BendCho',c:'MOD'},
+  '33,2,12,20': {n:'Octave',c:'PITCH'},
+  '65,0,6,10': {n:'Squeak',c:'DRIVE'},
+  '65,0,6,17': {n:'T Scream',c:'DRIVE'},
+  '65,1,8,18': {n:'MS CRUNCH',c:'AMP'},
+  '65,1,8,19': {n:'TONE CITY',c:'AMP'},
+  '97,0,4,0': {n:'Exciter',c:'FILTER'},
+  '97,0,4,1': {n:'Cry',c:'WAH'},
+  '97,0,6,15': {n:'Governor',c:'DRIVE'},
+  '97,0,6,17': {n:'FuzzSmile',c:'DRIVE'},
+  '97,0,82,4': {n:'Air',c:'REVERB'},  // fallback b5 desconhecido
+  '97,1,6,15': {n:'Z Clean',c:'AMP'},
+  '97,1,8,13': {n:'HW STACK',c:'AMP'},
+  '97,1,8,14': {n:'MS 1959',c:'AMP'},
+  // ── desempate por b5: Air vs TiledRoom (mesmo até b4) ──
+  '97,0,82,4,64': {n:'Air',c:'REVERB'},
+  '97,0,82,4,32': {n:'TiledRoom',c:'REVERB'},
+};
+
+function gfx(b0,b1,b3,b4,b5){
+  const b1m=b1&0x7F;
+  // Lookup cascading: 5 fields → 4 fields → 3 fields
+  return FX_BY_KEY[`${b0},${b1m},${b3},${b4},${b5}`]
+      || FX_BY_KEY[`${b0},${b1m},${b3},${b4}`]
+      || FX_BY_KEY[`${b0},${b1m},${b3}`]
+      || {n:`Eff(${b0},${b1m},${b3})`,c:'?'};
+}
+
+
+function zoomUnpack(pl){
+  // Zoom 7-in-8: MSB byte's low 7 bits = data byte 0; gives 8 output per 8 input
+  const out=[];
+  for(let i=0;i<pl.length;i+=8){
+    if(i>=pl.length)break;
+    const msb=pl[i];
+    out.push(msb&0x7F); // MSB byte low7 bits = first data byte
+    for(let j=1;j<8&&i+j<pl.length;j++) out.push(pl[i+j]|(((msb>>(j-1))&1)<<7));
+  }
+  return out;
+}
+function decode(pl,slots,slot,rawPl){
+  const u=zoomUnpack(pl);
+  const fx=[];
+  for(let i=0;i<5;i++){
+    const s=i*23; // stride=23 (Zoom scheme: 8 output per 8 input)
+    const b0=u[s],b1=u[s+1],b3=u[s+3],b4=u[s+4],b5=u[s+5];
+    const isEmpty=(b0===0&&b3===0)||(b0===1&&(b1&0x7F)===0&&b3===0);
+    const en=(b1&0x80)!==0; // enable = bit7 of b1
+    const p=u.slice(s,s+23);
+    const info=isEmpty?{n:'Empty',c:null}:gfx(b0,b1,b3,b4,b5);
+    fx.push({b0,b1,b3,isEmpty,en,p,name:info.n,cat:info.c});
+  }
+  const n=u.slice(115,125); // name at offset 115 in 127-byte unpacked
+  const name=String.fromCharCode(...n.filter(b=>(b&0x7F)!==0).map(b=>b&0x7F)).trimEnd();
+  return{slot,name,effects:fx,raw:rawPl?Array.from(rawPl):null};
+}
+
+function sx(did,pl){return new Uint8Array([0xF0,ZOOM_MFR,0x00,did,...pl,0xF7]);}
+function idReq(){return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]);}
+function parseId(d){
+  if(d.length<11||d[0]!==0xF0||d[1]!==0x7E||d[3]!==0x06||d[4]!==0x02)return null;
+  if(d[5]!==ZOOM_MFR)return null;
+  const id=d[6];
+  const fw=String.fromCharCode(d[9],d[10],d[11],d[12]);
+  return{id,fw};
+}
+function parsePatch(data,devId){
+  const d=Array.from(data);
+  for(const [cmd,fxSlots] of [[0x28,5]]){
+    if(d[4]!==cmd)continue;
+    const pl=d.slice(6,-1);
+    if(pl.length>=110)return decode(pl,fxSlots,d[5],d.slice(6,-1));
+  }
+  return null;
+}
+
+// ── MIDI ─────────────────────────────────────────────────────────────
+let acc=null,inp=null,out=null,dev=null,pend=null;
+const evs={};
+function on(e,f){(evs[e]=evs[e]||[]).push(f);}
+function em(e,d){(evs[e]||[]).forEach(f=>f(d));}
+
+function wait(ms=3000){
+  return new Promise((res,rej)=>{
+    if(pend){pend.rej(new Error('superseded'));}
+    const t=setTimeout(()=>{pend=null;rej(new Error('Device response timeout'));},ms);
+    pend={res,rej,t};
+  });
+}
+function onMsg(e){
+  const d=new Uint8Array(e.data);
+  log('←rx',hex(d),'var(--accent3)');
+  if(pend){clearTimeout(pend.t);pend.res(d);pend=null;}
+  if(d[0]===0xF0&&d[1]===ZOOM_MFR&&d[4]===0x28){
+    const p=parsePatch(d,dev?.id);if(p)em('pu',p);
+  }
+}
+async function connect(){
+  if(!navigator.requestMIDIAccess)throw new Error('Web MIDI API not supported. Use Chrome or Edge.');
+  try{acc=await navigator.requestMIDIAccess({sysex:true});}
+  catch(e){throw new Error('MIDI access denied. Allow MIDI when prompted.');}
+  const ins=Array.from(acc.inputs.values()),outs=Array.from(acc.outputs.values());
+  if(!ins.length||!outs.length)throw new Error('No MIDI ports found. Connect pedal via USB.');
+  st('scanning...','s-info');
+  const f=await probe(ins,outs);
+  if(!f)throw new Error('No Zoom device found. Connect via USB, power it on, close other MIDI apps.');
+  inp=f.i;out=f.o;inp.onmidimessage=onMsg;
+  const id=f.id,d=DEVS[id.id]||{key:'unknown',name:`Zoom 0x${id.id.toString(16).toUpperCase()}`,fxSlots:5,presets:50};
+  dev={...d,id:id.id,fw:id.fw};
+  acc.onstatechange=e=>{if((e.port===inp||e.port===out)&&e.port.state==='disconnected')disconnect();};
+  return dev;
+}
+async function probe(ins,outs){
+  for(const o of outs){const r=await probeOut(o,ins);if(r)return r;}
+  return null;
+}
+async function probeOut(o,ins){
+  return new Promise(res=>{
+    const orig=ins.map(i=>i.onmidimessage);
+    const done=r=>{ins.forEach((i,x)=>{i.onmidimessage=orig[x];});clearTimeout(t);res(r);};
+    const t=setTimeout(()=>done(null),1200);
+    ins.forEach(i=>{
+      i.onmidimessage=e=>{
+        const d=new Uint8Array(e.data);
+        log('←rx',hex(d),'var(--accent3)');
+        if(d.length>=6&&d[0]===0xF0&&d[1]===0x7E&&d[3]===0x06&&d[4]===0x02&&d[5]===ZOOM_MFR)
+          done({i,o,id:parseId(d)});
+      };
+    });
+    // Send directly via output port — not via send() which requires out to be set
+    try{
+      const m=idReq();
+      log('→tx',hex(m),'var(--accent2)');
+      o.send(m);
+    }catch(e){done(null);}
+  });
+}
+function disconnect(){if(inp)inp.onmidimessage=null;inp=out=dev=null;em('dc');}
+function send(msg,wait2=false,ms=2000){
+  if(!out)throw new Error('Not connected');
+  const p=wait2?wait(ms):null;
+  log('→tx',hex(msg),'var(--accent2)');
+  out.send(msg);
+  return wait2?p:null;
+}
+
+// ── APP ───────────────────────────────────────────────────────────────
+let patches=[],slot=-1,reading=false;
+const $=id=>document.getElementById(id);
+const [BC,BR,BB,BRS,FRS,PB,PT,PL,ES,EC,DOT,BADGE,STATUS]=
+  ['bc','br','bb','brs','frs','pb','pt','pl','es','ec','dot','badge','status'].map($);
+
+function st(m,c='s-info'){STATUS.textContent=m;STATUS.className=c;}
+function sp(c,t){PB.style.width=t?Math.round(c/t*100)+'%':'0%';PT.textContent=t?`${c} / ${t}`:'';  }
+
+BC.onclick=async()=>{
+  if(dev){disconnect();return;}
+  st('connecting...','s-info');BC.disabled=true;
+  try{const d=await connect();connected(d);}
+  catch(e){st(e.message,'s-err');}
+  finally{BC.disabled=false;}
+};
+
+function connected(d){
+  DOT.classList.remove('off');
+  BADGE.textContent=`${d.name} · fw ${d.fw}`;
+  BC.textContent='DISCONNECT';BC.style.cssText='background:transparent;color:var(--red);border-color:rgba(239,68,68,.4)';
+  BR.disabled=BB.disabled=BRS.disabled=false;
+  patches=new Array(d.presets).fill(null);
+  st(`connected · ${d.presets} patches`,'s-ok');
+  ES.innerHTML=`<div class="ei">⬡</div><p>${d.name.toUpperCase()} CONNECTED</p><p style="font-size:.65rem;opacity:.5">click READ ALL to load patches</p>`;
+}
+on('dc',()=>{
+  DOT.classList.add('off');BADGE.textContent='no device';
+  BC.textContent='CONNECT';BC.style.cssText='';
+  BR.disabled=BB.disabled=BRS.disabled=true;
+  patches=[];slot=-1;PL.innerHTML='';
+  ES.innerHTML=`<div class="ei">⬡</div><p>DEVICE DISCONNECTED</p>`;
+  ES.style.display='flex';EC.style.display='none';
+  st('disconnected','s-warn');sp(0,0);
+});
+
+BR.onclick=async()=>{
+  if(!dev||reading)return;
+  reading=true;BR.disabled=true;
+  $('dbg').style.display='block';
+  const probeCmd=await probeReadCmd(dev.id);
+  if(probeCmd===null){
+    st('pedal não respondeu — veja DEBUG','s-err');
+    reading=false;BR.disabled=false;return;
+  }
+  st(`cmd 0x${probeCmd.toString(16).toUpperCase()} ok — lendo...`,'s-ok');
+  sp(0,dev.presets);
+  try{
+    for(let s=0;s<dev.presets;s++){
+      await send(pc(s));
+      await sleep(60);
+      // Always use edit enable before each request
+      sendRaw(sx(dev.id,[0x50]));
+      await sleep(80);
+      const r=await send(sx(dev.id,[probeCmd]),true,2000);
+      const p=parsePatch(r,dev.id);
+      if(p){p.slot=s;patches[s]=p;renderItem(s,p);}
+      sp(s+1,dev.presets);
+      await sleep(80);
+    }
+    const n=patches.filter(Boolean).length;
+    st(`${n}/${dev.presets} patches loaded`,n>0?'s-ok':'s-warn');
+  }catch(e){st(e.message,'s-err');}
+  finally{reading=false;BR.disabled=false;}
+};
+
+async function probeReadCmd(did){
+  // From MIDI_MESSAGE.pdf (zoom-ms-utility docs), confirmed protocol:
+  // 0x50 = ParameterEditEnable   (must send BEFORE any patch operation)
+  // 0x51 = ParameterEditDisable  (send when done)
+  // 0x28 = Send Patch (WRITE to pedal)
+  // 0x29 = Request Patch (READ from pedal) → pedal responds with 0x28 + data
+  //
+  // Correct read sequence:
+  //   C0 [slot]           → Program Change (select patch)
+  //   F0 52 00 id 50 F7   → ParameterEditEnable
+  //   F0 52 00 id 29 F7   → Request Patch
+  //   ← F0 52 00 id 28 [data] F7   ← response
+
+  const editEnable  = sx(did,[0x50]);
+  const editDisable = sx(did,[0x51]);
+  const reqPatch    = sx(did,[0x29]);  // REQUEST = 0x29 !!
+
+  log('────','0x50 enable → 0x29 request (from MIDI spec)','var(--text3)');
+  await sendRaw(pc(0));
+  await sleep(150);
+  sendRaw(editEnable);
+  await sleep(150);
+  log('probe',`→ ${hex(reqPatch)}`,'var(--accent2)');
+  let r=null;
+  try{ r=await send(reqPatch,true,2000); }catch{}
+  if(r){
+    log('probe',`← ${hex(r)}`,'var(--green)');
+    if(r.length>7){ log('probe','✓ 0x29 FUNCIONOU!','var(--green)'); return 0x29; }
+    log('probe',`  (${r.length}b curto)`,'var(--amber)');
+  } else {
+    log('probe','  sem resposta','var(--text3)');
+  }
+  sendRaw(editDisable);
+  await sleep(200);
+
+  // Fallback: try without edit enable
+  log('probe','--- fallback: sem enable → 0x29','var(--accent2)');
+  await sendRaw(pc(0));
+  await sleep(150);
+  log('probe',`→ ${hex(reqPatch)}`,'var(--accent2)');
+  r=null;
+  try{ r=await send(reqPatch,true,2000); }catch{}
+  if(r){
+    log('probe',`← ${hex(r)}`,'var(--green)');
+    if(r.length>7){ log('probe','✓ FUNCIONOU sem enable!','var(--green)'); return 0x29; }
+  }
+  log('probe','  sem resposta','var(--text3)');
+
+  log('probe','nenhuma sequência funcionou','var(--red)');
+  return null;
+}
+
+function sendRaw(msg){
+  if(!out) return;
+  log('probe',`→ raw: ${hex(msg)}`,'var(--accent2)');
+  out.send(msg);
+}
+
+function pc(s){return new Uint8Array([0xC0,s&0x7F]);}
+
+function writeMsg(did,slot,p){
+  // Send raw payload back with modifications for name and enable states
+  if(!p.raw||p.raw.length<127){st('no raw payload stored','s-err');return null;}
+  const pl=p.raw.slice(); // copy
+
+  // Update name (raw payload bytes 115-124, split format with null at 119)
+  const nm=(p.name||'').padEnd(10,' ').slice(0,10);
+  // Name encoding: 4 chars, null, 5 chars, null padding
+  // But the format observed is: nm[0..3] at 115-118, 0x00 at 119, nm[4..8] at 120-124
+  for(let i=0;i<4;i++) pl[115+i]=nm.charCodeAt(i)&0x7F;
+  pl[119]=0x00;
+  for(let i=4;i<9;i++) pl[115+i+1]=nm.charCodeAt(i)&0x7F;
+  pl[125]=0x20; // trailing space
+
+  // Update enable states for each effect slot
+  // enable = bit7 of u[s*23+1] (b1). In the Zoom 7-in-8 scheme (8→8),
+  // u[ui] where ui = s*23+1:
+  //   group   = Math.floor(ui / 8)  → which group of 8 raw bytes
+  //   bitInMsb = (ui % 8) - 1       → which bit of the MSB carrier controls bit7 of this byte
+  //     (ui%8 === 0 means it IS the MSB carrier byte itself — its bit7 is NOT used here)
+  for(let s=0;s<5;s++){
+    const ui=s*23+1; // unpacked index of b1 (enable byte) — stride=23
+    const group=Math.floor(ui/8);
+    const bitInMsb=(ui%8)-1; // bit0 of MSB = bit7 of byte1, bit1 = bit7 of byte2, etc.
+    const msbPos=group*8;    // raw index of the MSB carrier for this group
+    if(p.effects[s]&&!p.effects[s].isEmpty){
+      if(p.effects[s].en) pl[msbPos]|=(1<<bitInMsb);
+      else pl[msbPos]&=~(1<<bitInMsb);
+    }
+  }
+  return new Uint8Array([0xF0,0x52,0x00,did,0x28,slot,...pl,0xF7]);
+}
+
+
+function renderItem(s,p){
+  let el=PL.querySelector(`[data-s="${s}"]`);
+  if(!el){
+    el=document.createElement('div');el.className='pi';el.dataset.s=s;
+    el.onclick=()=>openEd(s);
+    let ins=false;
+    for(const it of PL.querySelectorAll('.pi')){if(+it.dataset.s>s){PL.insertBefore(el,it);ins=true;break;}}
+    if(!ins)PL.appendChild(el);
+  }
+  const n=p.effects.filter(f=>!f.isEmpty).length,e=!p.name||p.name.trim()===''||p.name.toLowerCase().includes('empty');
+  el.innerHTML=`<span class="pn">${String(s+1).padStart(2,'0')}</span><span class="pm${e?' e':''}">${esc(p.name||'empty')}</span><span class="pfx">${n}</span>`;
+  if(s===slot)el.classList.add('active');
+}
+
+function openEd(s){
+  const p=patches[s];if(!p)return;
+  slot=s;
+  PL.querySelectorAll('.pi').forEach(el=>el.classList.remove('active'));
+  PL.querySelector(`[data-s="${s}"]`)?.classList.add('active');
+  ES.style.display='none';EC.style.display='block';
+  EC.innerHTML=`
+    <div class="et">
+      <span class="en">${String(s+1).padStart(2,'0')}</span>
+      <input class="ni" id="ni" type="text" maxlength="10" value="${esc(p.name)}" spellcheck="false"/>
+      <button class="bw" id="bw">WRITE</button>
+      <button class="bs" id="bse">SELECT</button>
+      <button class="bs" id="bvol" title="Ajustar volume do patch" style="color:var(--amber);border-color:rgba(245,158,11,.3)">VOL</button>
+      <button class="bs" id="bclr" title="Limpar patch" style="color:var(--red);border-color:rgba(239,68,68,.3)">CLR</button>
+    </div>
+    <div id="vol-row" style="display:none;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--amber)">VOLUME</span>
+      <input type="range" id="vol-sl" min="0" max="127" value="100" style="flex:1;height:3px;accent-color:var(--amber)"/>
+      <span id="vol-val" style="font-family:var(--mono);font-size:.65rem;color:var(--amber);min-width:24px">100</span>
+    </div>
+    <div class="fl">FX CHAIN · ${p.effects.length} SLOTS</div>
+    <div class="fc" id="fc"></div>`;
+  const fc=$('fc');
+  p.effects.forEach((fx,i)=>fc.appendChild(mkSlot(fx,i,p)));
+  $('bw').onclick=async()=>{
+    p.name=$('ni').value.slice(0,10);
+    const msg=writeMsg(dev.id,s,p);
+    if(!msg)return; // writeMsg already set error status
+    try{
+      sendRaw(pc(s));              // 1. select slot
+      await sleep(60);
+      sendRaw(sx(dev.id,[0x50])); // 2. ParameterEditEnable (required before write)
+      await sleep(80);
+      await send(msg,true,2000);  // 3. Write patch (0x28)
+      st(`patch ${s+1} written`,'s-ok');renderItem(s,p);
+    }catch(e){st(e.message,'s-err');}
+  };
+  $('bse').onclick=async()=>{
+    try{await send(pc(s));st(`switched to patch ${s+1}`,'s-info');}
+    catch(e){st(e.message,'s-err');}
+  };
+
+  // VOL button: show/hide volume slider
+  $('bvol').onclick=()=>{
+    const row=$('vol-row');
+    const showing=row.style.display==='flex';
+    row.style.display=showing?'none':'flex';
+    if(!showing){
+      const v=getPatchVolume(p);
+      if(v){$('vol-sl').value=v.value;$('vol-val').textContent=v.value;}
+      else{st('Nenhum efeito ativo com parâmetro Level','s-warn');}
+    }
+  };
+  $('vol-sl').oninput=()=>{
+    const v=parseInt($('vol-sl').value);
+    $('vol-val').textContent=v;
+    setPatchVolume(p, v);
+    // update slider display in fx chain if visible
+    const vol=getPatchVolume(p);
+    if(vol){
+      const sl=document.querySelector(`[data-fi="${vol.slotIdx}"][data-pi="${vol.paramIdx}"]`);
+      if(sl){sl.value=v;sl.nextElementSibling.textContent=v;}
+    }
+  };
+
+  // CLR button: clear patch
+  $('bclr').onclick=()=>{
+    if(!confirm('Limpar este patch? Todos os efeitos e o nome serão apagados.'))return;
+    clearPatch(p);
+    $('ni').value='';
+    openEd(s);
+    st(`patch ${s+1} limpo`,'s-warn');
+  };
+}
+
+// FX_DB: full effect database from Zoom G1on/G1Xon FX List PDF
+// Indexed by effect name. Each entry: {desc, params:[{n,r,d,p?,t?}]}
+// p=true: pedal expression assignable. t=true: tempo sync available.
+const FX_DB = {"Comp":{"desc":"Compressor no estilo do MXR Dyna Comp.","params":[{"n":"Sense","r":"0–10","d":"Adjusts the compressor sensitivity.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"ATTCK","r":"Slow,Fast","d":"Sets compressor attack speed."}]},"160 Comp":{"desc":"Compressor no estilo do dbx 160A.","params":[{"n":"THRSH","r":"-60–0","d":"Adjusts the threshold when effect activates."},{"n":"Ratio","r":"1.0–10.0","d":"Adjusts the compression ratio."},{"n":"Gain","r":"0–20","d":"Adjusts the gain after compression."},{"n":"Knee","r":"Hard,Soft","d":"Sets the type of knee."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"SlowATTCK":{"desc":"Retarda o ataque de cada nota, produzindo uma performance com sonoridade de violino.","params":[{"n":"Time","r":"1–50","d":"Adjusts the attack time.","p":true},{"n":"Curve","r":"0–10","d":"Sets the curve of volume change during attack.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"ZNR":{"desc":"Redução de ruído exclusiva da ZOOM — corta o ruído durante as pausas sem afetar o tom.","params":[{"n":"THRSH","r":"1–25","d":"Adjusts the effect sensitivity.","p":true},{"n":"DETCT","r":"GtrIn,EfxIn","d":"Sets control signal detection level."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"NoiseGate":{"desc":"Gate de ruído que corta o som durante as pausas na performance.","params":[{"n":"THRSH","r":"1–25","d":"Adjusts the effect sensitivity.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"GraphicEQ":{"desc":"Equalizador gráfico de 6 bandas.","params":[{"n":"160Hz","r":"-12–12","d":"Boosts or cuts the 160 Hz frequency band."},{"n":"400Hz","r":"-12–12","d":"Boosts or cuts the 400 Hz frequency band."},{"n":"800Hz","r":"-12–12","d":"Boosts or cuts the 800 Hz frequency band."},{"n":"3.2kHz","r":"-12–12","d":"Boosts or cuts the 3.2 kHz frequency band."},{"n":"6.4kHz","r":"-12–12","d":"Boosts or cuts the 6.4 kHz frequency band."},{"n":"12kHz","r":"-12–12","d":"Boosts or cuts the 12 kHz frequency band."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"ParaEQ":{"desc":"Equalizador paramétrico de 2 bandas.","params":[{"n":"Freq1","r":"20Hz–20kHz","d":"Adjusts center frequency of EQ1."},{"n":"Q1","r":"0.5,1,2,4,8,16","d":"Adjusts EQ1 Q."},{"n":"Gain1","r":"-12–12","d":"Adjusts EQ1 gain."},{"n":"Freq2","r":"20Hz–20kHz","d":"Adjusts center frequency of EQ2."},{"n":"Q2","r":"0.5,1,2,4,8,16","d":"Adjusts EQ2 Q."},{"n":"Gain2","r":"-12–12","d":"Adjusts EQ2 gain."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"AutoWah":{"desc":"Varia o wah de acordo com a intensidade da palhetada.","params":[{"n":"Sense","r":"-10–-1,1–10","d":"Adjusts the sensitivity of the effect.","p":true},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Cry":{"desc":"Varia o som como um modulador de voz.","params":[{"n":"Range","r":"1–10","d":"Adjusts the frequency range processed by the effect.","p":true},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Sense","r":"-10–-1,1–10","d":"Adjusts the sensitivity of the effect.","p":true},{"n":"Bal","r":"0–100","d":"Adjusts the balance between original and effect sounds.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Exciter":{"desc":"Efeito exciter/realçador de harmônicos.","params":[{"n":"Bass","r":"0–100","d":"Adjusts low frequencies.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts high frequencies.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"M-Filter":{"desc":"Filtro envelope com o caráter do MOOG MF-101 Low Pass Filter.","params":[{"n":"Freq","r":"0–100","d":"Sets minimum frequency of envelope filter.","p":true},{"n":"Sense","r":"0–10","d":"Sets effect sensitivity."},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Type","r":"HPF,BPF,LPF","d":"Sets filter type."},{"n":"Chara","r":"2Pole,4Pole","d":"Adjusts amount of filter applied."},{"n":"VLCTY","r":"Fast,Slow","d":"Sets speed of filter action."},{"n":"Bal","r":"0–100","d":"Adjusts the balance between original and effect sounds.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"SeqFLTR":{"desc":"Filtro sequencial com o caráter do Z.Vex Seek-Wah.","params":[{"n":"Step","r":"2–8","d":"Adjusts number of sequence steps."},{"n":"PTTRN","r":"1–8","d":"Sets effect pattern."},{"n":"Speed","r":"1–50","d":"Sets modulation speed.","p":true},{"n":"Shape","r":"0–10","d":"Sets effect sound envelope."},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"RndmFLTR":{"desc":"Filtro aleatório.","params":[{"n":"Step","r":"2–8","d":"Adjusts number of sequence steps."},{"n":"PTTRN","r":"1–8","d":"Sets effect pattern."},{"n":"Speed","r":"1–50","d":"Sets modulation speed.","p":true},{"n":"Shape","r":"0–10","d":"Sets effect sound envelope."},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"OptComp":{"desc":"Compressor óptico.","params":[{"n":"Comp","r":"0–100","d":"Adjusts compression amount."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"fCycle":{"desc":"Filtro cíclico.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation."},{"n":"Rate","r":"0–50","d":"Sets the speed of the modulation."},{"n":"Mix","r":"0–100","d":"Adjusts the dry/wet mix."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level."}]},"Booster":{"desc":"Aumenta o ganho do sinal para tornar o som mais potente.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"OverDrive":{"desc":"Simulação do BOSS OD-1, o primeiro pedal de overdrive do mundo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Dist 1":{"desc":"Simulação do BOSS OD-1 Distortion.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"T Scream":{"desc":"Simulação do Ibanez TS808 Tube Screamer.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Governor":{"desc":"Simulação do distortion Marshall Guv'nor.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Dist+":{"desc":"Simulação do MXR Distortion+, que popularizou a distorção no mundo todo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Squeak":{"desc":"Simulação do Pro Co RAT, famoso pelo seu som distorcido e cortante.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"FuzzSmile":{"desc":"Simulação do Fuzz Face — história do rock com um som arrasador.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"GreatMuff":{"desc":"Simulação do Electro-Harmonix Big Muff — fuzz gordo e adocicado.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Z Clean":{"desc":"Som limpo original da ZOOM sem adornos.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Z Scream":{"desc":"Overdrive distorcido original da ZOOM.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Lead":{"desc":"Som de distorção brilhante e suave.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"ExtremeDS":{"desc":"O efeito de distorção com mais gain do mundo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"MetalWRLD":{"desc":"Distorção Metal World de alto ganho.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Z Wild":{"desc":"Distorção Wild original da ZOOM.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"HotBox":{"desc":"Overdrive Hot Box.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Z MP1":{"desc":"Simulação do pré-amplificador ZOOM MP1.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Bomber":{"desc":"Distorção Bomber de alto ganho.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"CAB","r":"See Table 1","d":"Selects cabinet."}]},"BitCrush":{"desc":"Bit crusher — reduz a taxa de amostragem adicionando textura digital ao som.","params":[{"n":"SMPL","r":"0–100","d":"Adjusts the sample rate reduction."},{"n":"Tone","r":"0–100","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Aco.Sim":{"desc":"Transforma o som da guitarra elétrica para soar como um violão.","params":[{"n":"Top","r":"0–100","d":"Adjusts the unique string tone of acoustic guitars.","p":true},{"n":"Body","r":"0–100","d":"Adjusts the body resonance of acoustic guitars."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"FD COMBO":{"desc":"Modelagem do Fender Twin Reverb ('65) — amado por guitarristas de todos os estilos.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"DELUXE-R":{"desc":"Modelagem do Fender Deluxe Reverb de 1965.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"VX JMI":{"desc":"Simula um amplificador combo britânico Classe-A de modelo antigo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"FD VIBRO":{"desc":"Modelagem do Fender Vibroverb de 1963.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"US BLUES":{"desc":"Som crunch do Fender Tweed Bassman.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"VX COMBO":{"desc":"Modelagem de combo britânico — o som de Liverpool dos anos 60.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"BG CRUNCH":{"desc":"Som crunch do Mesa Boogie MkIII combo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"MATCH 30":{"desc":"Modelagem do DC-30 (canal 1), o flagship combo da Matchless.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"CAR DRIVE":{"desc":"Modelagem do Carr Mercury — combo de alto nível.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"TW ROCK":{"desc":"Som crunch do canal drive do Two Rock Emerald 50.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"TONE CITY":{"desc":"Modelagem do Sound City 50 Plus Mark 2 — amplificador britânico lendário.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"HW STACK":{"desc":"Modelagem do lendário Hiwatt Custom 100 a válvulas.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"TANGERINE":{"desc":"Modelagem do Orange Graphic 120 com seu design e som únicos.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"B-BREAKER":{"desc":"Modelagem do Marshall 1962 Bluesbreaker combo.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"MS CRUNCH":{"desc":"Som crunch do Marshall 1959 — berço de muitas lendas.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"MS 1959":{"desc":"Modelagem do Marshall 1959 Plexi de 1969.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"MS DRIVE":{"desc":"Som de alto ganho do Marshall JCM2000 stack.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"BGN DRIVE":{"desc":"Simula o som lead do canal 3 do Bogner Ecstasy.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"BG DRIVE":{"desc":"Som de alto ganho do canal red do Mesa Boogie Dual Rectifier (modo Vintage).","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"DZ DRIVE":{"desc":"Som de alto ganho de 3 canais do Diezel Herbert.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"ALIEN":{"desc":"Simula o som de alto ganho do Engl Invader — graves potentes.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"REVO-1":{"desc":"Simula o som de alto ganho do Krank Revolution 1 Plus.","params":[{"n":"Gain","r":"0–100","d":"Adjusts the gain.","p":true},{"n":"Tube","r":"0–100","d":"Adjusts tube amp compression."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Trebl","r":"0–100","d":"Adjusts volume of high frequencies."},{"n":"Middl","r":"0–100","d":"Adjusts volume of middle frequencies."},{"n":"Bass","r":"0–100","d":"Adjusts volume of low frequencies."},{"n":"Prese","r":"0–100","d":"Adjusts volume of super-high frequencies."},{"n":"CAB","r":"See Table 1","d":"Selects cabinet type."},{"n":"OUT","r":"See Table 2","d":"Selects type of connected device."}]},"Tremolo":{"desc":"Varia o volume em uma taxa regular.","params":[{"n":"Depth","r":"0–100","d":"Adjust the depth of the modulation.","p":true},{"n":"Rate","r":"0–50","d":"Adjusts the rate of the modulation.","p":true,"t":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Wave","r":"UP0–UP9,DWN0–DWN9,TRI0–TRI9","d":"Sets the modulation waveform.","p":true}]},"Slicer":{"desc":"Cria um som rítmico cortando o sinal de forma contínua.","params":[{"n":"PTTRN","r":"1–20","d":"Sets effect pattern."},{"n":"Speed","r":"1–50","d":"Sets modulation speed.","p":true,"t":true},{"n":"Bal","r":"0–100","d":"Adjusts balance between original and effect sounds.","p":true},{"n":"THRSH","r":"0–50","d":"Adjusts effect threshold."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Phaser":{"desc":"Adiciona uma variação de phasing ao som.","params":[{"n":"Rate","r":"1–50","d":"Sets the speed of the modulation.","p":true,"t":true},{"n":"Color","r":"4STG,8STG,inv4,inv8","d":"Sets the tone of the effect type."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Vibrato":{"desc":"Adiciona vibrato automaticamente.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation."},{"n":"Rate","r":"0–50","d":"Sets the speed of the modulation.","p":true,"t":true},{"n":"Bal","r":"0–100","d":"Adjusts balance between original and effect sounds.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"TheVibe":{"desc":"Som vibe com ondulações únicas.","params":[{"n":"Speed","r":"0–50","d":"Sets modulation speed.","p":true},{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Bias","r":"0–100","d":"Adjusts bias of waveform modulation.","p":true},{"n":"Wave","r":"0–100","d":"Adjusts modulation waveform.","p":true},{"n":"Mode","r":"VIBRT,CHORS","d":"Sets effect to vibrato or chorus."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Detune":{"desc":"Mix de sinal com pitch levemente deslocado — cria efeito de chorus sem modulação pesada.","params":[{"n":"Cent","r":"-25–25","d":"Adjusts detuning in cents."},{"n":"PreD","r":"0–50","d":"Sets pre-delay time of the effect sound."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"StereoCho":{"desc":"Chorus estéreo com timbre limpo.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Rate","r":"1–50","d":"Sets the speed of the modulation.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"SuperCho":{"desc":"Modelagem do BOSS CH-1 SUPER CHORUS.","params":[{"n":"E.LVL","r":"0–120","d":"Adjusts amount of effect sound mixed with original.","p":true},{"n":"Rate","r":"0–100","d":"Sets the speed of the modulation.","p":true},{"n":"Depth","r":"0–100","d":"Adjusts the depth of the modulation.","p":true},{"n":"EQ","r":"0–100","d":"Adjusts effect tone."},{"n":"Mode","r":"MONO,STR","d":"Sets output to mono or stereo."}]},"CoronaTri":{"desc":"Modelagem do tc electronic CORONA Tri-Chorus.","params":[{"n":"SPEED","r":"0–100","d":"Sets modulation speed.","p":true},{"n":"DEPTH","r":"0–100","d":"Sets the depth of the modulation."},{"n":"FxLVL","r":"0–100","d":"Adjusts the volume of the effect.","p":true},{"n":"TONE","r":"0–100","d":"Adjusts the tone."},{"n":"DRY","r":"OFF/ON","d":"When ON, original and effect sounds are mixed.","p":true}]},"Flanger":{"desc":"Som jet como o ADA Flanger.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Rate","r":"0–50","d":"Sets the speed of the modulation.","p":true,"t":true},{"n":"Reso","r":"-10–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"PreD","r":"0–50","d":"Sets pre-delay time of effect sound.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"VinFLNGR":{"desc":"Flanger vintage.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Rate","r":"0–50","d":"Sets the speed of the modulation.","p":true,"t":true},{"n":"Reso","r":"-10–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"PreD","r":"0–50","d":"Sets pre-delay time of effect sound.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Octave":{"desc":"Adiciona som uma e duas oitavas abaixo do original.","params":[{"n":"Oct1","r":"0–100","d":"Adjusts the level of the sound one octave below.","p":true},{"n":"Oct2","r":"0–100","d":"Adjusts the level of the sound two octaves below.","p":true},{"n":"Dry","r":"0–100","d":"Adjusts the volume of the unaffected sound.","p":true},{"n":"Chara","r":"0–100","d":"Adjusts effect character."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"BendCho":{"desc":"Efeito de modulação bend chorus.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Time","r":"1–2000","d":"Sets bend time.","p":true},{"n":"Mode","r":"0–10","d":"Sets effect mode."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"PitchSHFT":{"desc":"Desloca o pitch para cima ou para baixo.","params":[{"n":"Shift","r":"-12–12,24","d":"Adjusts the pitch shift amount in semitones."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Bal","r":"0–100","d":"Adjusts the balance between original and effect sounds.","p":true},{"n":"Fine","r":"-25–25","d":"Fine adjustment of pitch shift in Cent steps."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"MonoPitch":{"desc":"Pitch shifter com pouca variação para toques monofônicos.","params":[{"n":"Shift","r":"-12–12,24","d":"Adjusts the pitch shift amount in semitones."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Bal","r":"0–100","d":"Adjusts the balance between original and effect sounds.","p":true},{"n":"Fine","r":"-25–25","d":"Fine adjustment of pitch shift in Cent steps."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"HPS":{"desc":"Pitch shifter inteligente ajustado por escala e tonalidade.","params":[{"n":"Scale","r":"-6,-5,-4,-3,-m,m,3,4,5,6","d":"Sets the pitch of the shifted sound. See Table 3."},{"n":"Key","r":"C,C#,D,D#,E,F,F#,G,G#,A,A#,B","d":"Sets the tonic of the scale used for pitch shifting."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"RingMod":{"desc":"Produz um som metálico ressonante. Freq muda drasticamente o caráter.","params":[{"n":"Freq","r":"1–50","d":"Sets the frequency of the modulation.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Bal","r":"0–100","d":"Adjusts the balance between original and effect sounds.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Rt Closet":{"desc":"Simula um alto-falante rotativo.","params":[{"n":"Bal","r":"0–100","d":"Adjusts balance between horn (high) and drum (low) frequencies.","p":true},{"n":"Mode","r":"Slow,Fast","d":"Sets the rotary mode.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Drive","r":"0–100","d":"Adjusts amplification from the preamp."}]},"DuoPhase":{"desc":"Efeito de phaser duplo.","params":[{"n":"Rate","r":"0–50","d":"Sets the speed of the modulation."},{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation."},{"n":"Level","r":"0–150","d":"Adjusts the output level."},{"n":"Shape","r":"0–10","d":"Sets effect sound shape."},{"n":"Mode","r":"4STG,8STG","d":"Sets phaser mode."}]},"Z-Organ":{"desc":"Simulação de órgão.","params":[{"n":"Upper","r":"0–100","d":"Adjusts upper drawbar level."},{"n":"Lower","r":"0–100","d":"Adjusts lower drawbar level."},{"n":"Drawb","r":"0–100","d":"Adjusts drawbar mix."},{"n":"Perc","r":"0–10","d":"Adjusts percussion."},{"n":"Rot","r":"Slow,Fast","d":"Sets rotary speed."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"ParticleR":{"desc":"Reverb complexo exclusivo — modelagem do LINE6 M9 Particle Verb.","params":[{"n":"DWELL","r":"0–100","d":"Sets the duration of the reverberations.","p":true},{"n":"GAIN","r":"0–100","d":"Adjusts the output gain of the reverb sound.","p":true},{"n":"MODE","r":"STBL,CRTCL,HZD","d":"Sets how the reverb sound changes."},{"n":"MIX","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"MONO","r":"OFF/ON","d":"When ON, effect sound is output as a mono mix."},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"Delay":{"desc":"Delay longo com duração máxima de 4000 ms.","params":[{"n":"Time","r":"1–4000","d":"Sets the delay time.","t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"HiDMP","r":"0–10","d":"Adjusts the treble attenuation of the delay sound."},{"n":"P-P","r":"MONO,P-P","d":"Sets delay output to mono or ping-pong."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"CarbonDly":{"desc":"Delay analógico modelado no MXR Carbon Copy.","params":[{"n":"DELAY","r":"19–581","d":"Sets the delay time.","p":true,"t":true},{"n":"REGEN","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"MIX","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"MOD","r":"OFF/ON","d":"Turns modulation ON or OFF."},{"n":"WIDTH","r":"0–50","d":"Adjusts the width of the modulation."},{"n":"SPEED","r":"0–50","d":"Sets modulation speed.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."},{"n":"Sync","r":"OFF,♩–♩x8","d":"Activates tempo sync.","t":true}]},"TapeEcho":{"desc":"Simula um tape echo. Mudar o Time altera o pitch dos ecos.","params":[{"n":"Time","r":"1–2000","d":"Sets the delay time.","p":true,"t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"HiDMP","r":"0–10","d":"Adjusts the treble attenuation of the delay sound."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"ReverseDL":{"desc":"Delay reverso — delay longo com duração máxima de 2000 ms.","params":[{"n":"Time","r":"10–2000","d":"Sets the delay time.","t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Bal","r":"0–100","d":"Adjusts balance between original and effect sounds.","p":true},{"n":"HiDMP","r":"0–10","d":"Adjusts the treble attenuation of the delay sound."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"FilterDly":{"desc":"Filtra o som do delay.","params":[{"n":"Time","r":"1–2000","d":"Sets the delay time.","t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Rate","r":"1–50","d":"Sets the speed of the modulation.","p":true},{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Reso","r":"0–10","d":"Adjusts the intensity of the resonance sound.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"StereoDly":{"desc":"Delay estéreo — tempos esquerdo e direito ajustados separadamente.","params":[{"n":"TimeL","r":"1–2000","d":"Adjusts delay time of left channel.","t":true},{"n":"TimeR","r":"1–2000","d":"Adjusts delay time of right channel.","t":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"LchFB","r":"0–100","d":"Adjusts delay feedback of left channel.","p":true},{"n":"RchFB","r":"0–100","d":"Adjusts delay feedback of right channel.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"LchLv","r":"0–100","d":"Adjusts delay output of left channel.","p":true},{"n":"RchLv","r":"0–100","d":"Adjusts delay output of right channel.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"StompDly":{"desc":"Efeito de delay estilo stomp.","params":[{"n":"Time","r":"1–4000","d":"Sets the delay time.","t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"HiDMP","r":"0–10","d":"Adjusts treble attenuation of the delay sound."},{"n":"P-P","r":"MONO,P-P","d":"Sets delay output to mono or ping-pong."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"PitchDly":{"desc":"Delay com pitch deslocado.","params":[{"n":"Time","r":"1–4000","d":"Sets the delay time.","t":true},{"n":"Pitch","r":"-12–12","d":"Adjusts the pitch shift amount."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"MultiTapD":{"desc":"Delay multi-tap com múltiplos pontos de repetição.","params":[{"n":"Time","r":"1–2000","d":"Sets the delay time.","t":true},{"n":"F.B","r":"0–100","d":"Adjusts the feedback amount.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"HiDMP","r":"0–10","d":"Adjusts treble attenuation."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"HD Hall":{"desc":"Reverb de salão denso.","params":[{"n":"PreD","r":"1–200","d":"Adjusts pre-delay before reverb starts."},{"n":"Decay","r":"0–100","d":"Sets the duration of the reverberations.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"LoDMP","r":"0–100","d":"Adjusts low frequency damping in reverb sound.","p":true},{"n":"HiDMP","r":"0–100","d":"Adjusts high frequency damping in reverb sound.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"Hall":{"desc":"Reverb simulando a acústica de um salão de concertos.","params":[{"n":"Decay","r":"1–30","d":"Sets the duration of the reverberations.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"PreD","r":"1–100","d":"Adjusts pre-delay before reverb starts."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"Room":{"desc":"Reverb simulando a acústica de um ambiente fechado.","params":[{"n":"Decay","r":"1–30","d":"Sets the duration of the reverberations.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"PreD","r":"1–100","d":"Adjusts pre-delay before reverb starts."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"Plate":{"desc":"Simula um plate reverb.","params":[{"n":"PreD","r":"1–200","d":"Adjusts pre-delay before reverb starts."},{"n":"Decay","r":"0–100","d":"Sets the duration of the reverberations.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Color","r":"0–100","d":"Adjusts the reverb time of the low frequencies.","p":true},{"n":"LoDMP","r":"0–100","d":"Adjusts low frequency damping.","p":true},{"n":"HiDMP","r":"0–100","d":"Adjusts high frequency damping.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Spring63":{"desc":"Reverb de mola modelado no Fender Reverb de 1963.","params":[{"n":"DWELL","r":"0–100","d":"Adjusts the amount of level that input to reverb.","p":true},{"n":"MIXER","r":"0–100","d":"Adjusts the mix of volume of the effect sound.","p":true},{"n":"TONE","r":"0–100","d":"Adjusts the tone."},{"n":"LEVEL","r":"0–150","d":"Adjusts the output level.","p":true}]},"Air":{"desc":"Reproduz a ambiência de um ambiente para criar profundidade espacial.","params":[{"n":"Size","r":"1–100","d":"Sets the size of the space."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Ref","r":"0–10","d":"Adjusts the amount of reflection from the wall.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"TiledRoom":{"desc":"Simula a ambiência de uma sala com paredes de azulejo.","params":[{"n":"Size","r":"1–100","d":"Sets the size of the space."},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Ref","r":"0–10","d":"Adjusts the amount of reflection from the wall.","p":true},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"ModReverb":{"desc":"Reverb com ecos oscilantes.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation."},{"n":"Decay","r":"1–30","d":"Adjusts the duration of the reverb.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"Rate","r":"1–50","d":"Sets the speed of the modulation.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"PreD","r":"1–100","d":"Adjusts pre-delay before reverb starts."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"EarlyRef":{"desc":"Reverb de reflexões iniciais.","params":[{"n":"PreD","r":"1–200","d":"Adjusts pre-delay before reverb starts."},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]},"Arena":{"desc":"Reverb de grande salão — espaço com dimensões de arena.","params":[{"n":"PreD","r":"1–200","d":"Adjusts pre-delay before reverb starts."},{"n":"Decay","r":"0–100","d":"Sets the duration of the reverberations.","p":true},{"n":"Mix","r":"0–100","d":"Adjusts amount of effected sound mixed with original.","p":true},{"n":"LoDMP","r":"0–100","d":"Adjusts low frequency damping.","p":true},{"n":"HiDMP","r":"0–100","d":"Adjusts high frequency damping.","p":true},{"n":"Tail","r":"OFF/ON","d":"When ON, effect sound continues after effect is turned off."}]},"Chorus":{"desc":"Chorus com timbre claro.","params":[{"n":"Depth","r":"0–100","d":"Sets the depth of the modulation.","p":true},{"n":"Rate","r":"1–50","d":"Sets the speed of the modulation.","p":true},{"n":"Tone","r":"0–10","d":"Adjusts the tone."},{"n":"Level","r":"0–150","d":"Adjusts the output level.","p":true}]}};
+
+// Get param info for an effect by name. Falls back to FX_PARAMS key3 names.
+function fxInfo(name){return FX_DB[name]||null;}
+
+function mkSlot(fx,idx,p){
+  const info={n:fx.isEmpty?'Empty':(fx.name||'Empty'),c:fx.cat||null},div=document.createElement('div');
+  div.className=`fs ${fx.en?'on':'off'}`;
+  const cb=`cb${idx}`;
+  // Build param rows using FX_DB (full metadata) or fallback to raw indices
+  const fxdb=fxInfo(fx.name);
+  const fxDesc=fxdb?fxdb.desc:'';
+  const fxPrms=fxdb?fxdb.params:[];
+  const paramRows=(!fx.isEmpty&&fxPrms.length&&fx.p)?fxPrms.map((pm,i)=>{
+    const val=fx.p[i]!==undefined?(fx.p[i]&0x7F):0;
+    const flags=(pm.p?'<span class="ptag">P</span>':'')+(pm.t?'<span class="ptag t">♩</span>':'');
+    return `<div class="pr"><span class="pl2" title="${esc(pm.d||'')} [${esc(pm.r||'')}]">${esc(pm.n)}${flags}</span><input type="range" class="ps" min="0" max="127" value="${val}" data-pi="${i}" data-fi="${idx}" title="${esc(pm.d||'')}"/><span class="pv">${val}</span></div>`;
+  }).join(''):'';
+  if(fx.isEmpty){
+    // Empty slot: clicking opens effect picker
+    div.style.cursor='pointer';
+    div.title='Clique para adicionar um efeito';
+    div.innerHTML=`<div class="fh" style="opacity:.4"><span class="fn">+ Adicionar efeito</span></div>`;
+    div.onclick=()=>{
+      showEffectPicker(p, idx, name=>{
+        insertEffect(p, idx, name);
+        openEd(slot); // re-render the editor
+      });
+    };
+    return div;
+  }
+  div.innerHTML=`
+    <div class="fh">
+      <label class="tl" for="${cb}">
+        <input type="checkbox" id="${cb}" ${fx.en?'checked':''}/>
+        <span class="tt"></span>
+        <span class="fn" title="${esc(fxDesc)}">${esc(info.n)}</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${info.c?`<span class="fc2">${info.c}</span>`:''}
+        <span class="fx-remove" data-fi="${idx}" title="Remover efeito" style="cursor:pointer;font-size:.7rem;color:var(--text3);padding:2px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.08)">✕</span>
+      </div>
+    </div>
+    ${fxDesc&&!fx.isEmpty?`<div class="fdesc">${esc(fxDesc)}</div>`:''}
+    ${paramRows?`<div class="fp">${paramRows}</div>`:''}
+    `;
+  div.querySelector(`#${cb}`).onchange=e=>{
+    fx.en=e.target.checked;p.effects[idx].en=fx.en;
+    div.className=`fs ${fx.en?'on':'off'}`;
+    // Update raw payload enable bit — stride=23, divisor=8 (Zoom 7-in-8 scheme)
+    if(p.raw){
+      const ui=idx*23+1;
+      const group=Math.floor(ui/8),bitInMsb=(ui%8)-1,msbPos=group*8;
+      if(fx.en) p.raw[msbPos]|=(1<<bitInMsb);
+      else p.raw[msbPos]&=~(1<<bitInMsb);
+    }
+  };
+
+  // Slider handlers: update fx.p[] and raw payload
+  div.querySelectorAll('.ps').forEach(sl=>{
+    const pv=sl.nextElementSibling;
+    sl.oninput=()=>{
+      const v=parseInt(sl.value);
+      pv.textContent=v;
+      const pi=parseInt(sl.dataset.pi);
+      const fi=parseInt(sl.dataset.fi);
+      if(p.effects[fi]&&p.effects[fi].p) p.effects[fi].p[pi]=v;
+      // Update raw payload: param pi of effect fi is at unpacked index fi*23+6+pi
+      // In raw payload, use same 7-in-8 logic to find the byte
+      if(p.raw){
+        const ui=fi*23+6+pi; // unpacked index of this param byte
+        const group=Math.floor(ui/8);
+        const posInGroup=ui%8;
+        const rawPos=group*8+posInGroup; // raw byte position (for bytes 1-7 in group)
+        const msbPos=group*8;
+        if(posInGroup===0){
+          // This IS the MSB carrier byte — preserve bit7 flags, update bits 6-0
+          p.raw[msbPos]=(p.raw[msbPos]&0x80)|(v&0x7F);
+        } else {
+          // Regular data byte — store low 7 bits directly
+          p.raw[rawPos]=(p.raw[rawPos]&0x80)|(v&0x7F);
+          // Update bit(posInGroup-1) of MSB carrier for bit7 of this byte
+          // (bit7 of param bytes is not a user-controlled value, leave as-is)
+        }
+      }
+    };
+  });
+
+  // Remove effect button
+  div.querySelector('.fx-remove')?.addEventListener('click', e=>{
+    e.stopPropagation();
+    const fi=parseInt(e.currentTarget.dataset.fi);
+    removeEffect(p, fi);
+    openEd(slot);
+  });
+
+  return div;
+}
+
+BB.onclick=()=>{
+  if(!dev)return;
+  const bk={version:'1.0',timestamp:new Date().toISOString(),device:{key:dev.key,name:dev.name,id:dev.id,fw:dev.fw},patches};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(bk,null,2)],{type:'application/json'}));
+  a.download=`${dev.name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(a.href);st('backup downloaded','s-ok');
+};
+BRS.onclick=()=>FRS.click();
+FRS.onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;FRS.value='';
+  let bk;try{bk=JSON.parse(await f.text());}catch{st('invalid file','s-err');return;}
+  if(!bk.patches||!bk.device){st('invalid format','s-err');return;}
+  const bid=bk.device.id||bk.device.deviceId;
+  if(bid!==dev.id){st(`backup for ${bk.device.name}, connected: ${dev.name}`,'s-err');return;}
+  if(!confirm(`Restore ${bk.patches.filter(Boolean).length} patches?`))return;
+  st('restoring...','s-info');
+  for(let s=0;s<bk.patches.length;s++){
+    const p=bk.patches[s];if(!p)continue;
+    const msg=writeMsg(dev.id,s,p);if(!msg)continue;
+    try{
+      sendRaw(pc(s));
+      await sleep(60);
+      sendRaw(sx(dev.id,[0x50])); // ParameterEditEnable before each write
+      await sleep(80);
+      await send(msg,true,2000);
+      patches[s]=p;renderItem(s,p);
+    }catch(e){st(e.message,'s-err');return;}
+    sp(s+1,bk.patches.length);await sleep(80);
+  }
+  st('restore complete','s-ok');
+};
+
+// ── DEBUG ─────────────────────────────────────────────────────────────
+const DBG=$('dbg'),DL=$('dl');
+function log(tag,msg,color='var(--accent3)'){
+  if(DBG.style.display!=='block')return;
+  const r=document.createElement('div');r.className='dr';
+  r.innerHTML=`<span style="color:${color}">${tag}</span>${esc(String(msg))}`;
+  DL.appendChild(r);DL.scrollTop=DL.scrollHeight;
+}
+function hex(d){return Array.from(d).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');}
+
+$('bd').onclick=()=>{
+  const op=DBG.style.display==='block';
+  DBG.style.display=op?'none':'block';
+  if(!op){DL.innerHTML='';log('info','debug open — all MIDI traffic logged','var(--text2)');}
+};
+$('dc').onclick=()=>{DBG.style.display='none';};
+$('ds').onclick=async()=>{
+  log('info','sending identity request...','var(--text2)');
+  if(!acc)try{acc=await navigator.requestMIDIAccess({sysex:true});}catch(e){log('err',e.message,'var(--red)');return;}
+  const ins=Array.from(acc.inputs.values()),outs=Array.from(acc.outputs.values());
+  ins.forEach(i=>{log('in ',`${i.name} [${i.state}]`,'var(--green)');i.onmidimessage=e=>log('←rx',hex(new Uint8Array(e.data)),'var(--accent3)');});
+  outs.forEach(o=>{log('out',`${o.name} [${o.state}]`,'var(--amber)');try{const m=idReq();o.send(m);log('→tx',`${o.name.slice(0,18)}  ${hex(m)}`,'var(--accent2)');}catch(e){log('err',e.message,'var(--red)');}});
+};
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// FX_DEFAULT_SLOTS: 23 unpacked bytes per effect at default params (from ToneLib reference backup)
+const FX_DEFAULT_SLOTS = {"160 Comp":[107,128,128,2,137,112,128,144,6,0,128,140,0,0,0,0,0,0,0,0,1,0,0],"ALIEN":[1,130,0,8,15,112,0,44,87,128,198,134,69,134,0,128,0,0,0,0,1,0,0],"Aco.Sim":[1,130,0,6,20,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Air":[97,128,0,82,4,64,128,176,60,32,0,140,128,128,128,0,0,0,0,0,1,0,0],"Arena":[33,128,0,18,3,56,128,16,56,32,11,12,128,128,128,0,0,0,0,0,1,0,0],"AutoWah":[33,128,0,68,4,64,128,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"B-BREAKER":[33,129,0,72,15,120,128,8,100,64,70,134,102,6,128,128,0,0,0,0,1,0,0],"BG CRUNCH":[65,128,0,72,14,112,0,132,99,192,198,70,6,7,128,128,0,0,0,0,1,0,0],"BG DRIVE":[65,130,0,72,11,112,0,136,97,128,70,6,6,6,128,128,0,0,0,0,1,0,0],"BGN DRIVE":[33,130,0,8,21,112,128,32,91,128,198,38,198,134,0,128,0,0,0,0,1,0,0],"BendCho":[33,130,0,12,10,16,129,8,100,0,0,129,12,0,128,128,0,0,0,0,1,0,0],"BitCrush":[33,128,0,78,1,16,128,16,90,0,129,12,128,128,0,128,0,0,0,0,1,0,0],"Bomber":[65,128,0,78,0,8,1,156,15,128,197,131,128,12,0,0,0,0,0,0,1,0,0],"Booster":[17,128,0,6,20,144,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"CAR DRIVE":[1,129,0,72,12,112,0,0,74,64,198,70,198,6,2,160,0,0,0,0,1,0,0],"CarbonDly":[97,129,0,80,96,120,129,152,69,160,96,131,3,0,0,128,0,0,0,0,1,0,0],"Chorus":[97,128,0,12,10,64,128,176,50,96,128,12,0,128,128,0,0,0,0,0,1,0,0],"Comp":[17,128,0,2,1,176,0,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"CoronaTri":[1,132,0,76,6,32,3,32,100,0,44,128,0,0,128,128,0,0,0,0,1,0,0],"Cry":[97,128,0,4,1,64,128,176,16,0,12,12,0,128,0,0,0,0,0,0,1,0,0],"DELUXE-R":[33,128,0,8,12,112,128,0,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],"DZ DRIVE":[97,130,0,72,11,112,128,180,93,160,102,229,230,134,0,128,0,0,0,0,1,0,0],"Delay":[17,128,0,80,11,240,0,8,70,64,129,128,12,0,0,128,0,0,0,0,1,0,0],"Detune":[1,129,0,76,8,0,0,16,52,0,1,140,0,128,128,0,0,0,0,0,1,0,0],"Dist 1":[33,128,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Dist+":[1,128,0,6,20,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"DuoPhase":[107,128,128,12,139,40,128,150,100,0,64,128,0,68,135,128,0,0,0,0,1,0,0],"EarlyRef":[65,128,0,18,3,32,0,176,50,64,128,12,0,128,128,0,0,0,0,0,1,0,0],"Ensemble":[97,129,0,12,10,104,128,144,60,0,1,140,128,128,128,0,0,0,0,0,1,0,0],"Exciter":[97,128,0,4,0,0,128,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"ExtremeDS":[97,130,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"FD COMBO":[17,128,0,8,6,240,0,28,86,0,166,133,5,134,0,128,0,0,0,0,1,0,0],"FD VIBRO":[65,128,0,8,14,112,0,172,98,64,198,102,5,6,128,128,0,0,0,0,1,0,0],"FilterDly":[97,128,0,80,124,16,129,180,90,64,128,12,129,140,0,128,0,0,0,0,1,0,0],"Flanger":[65,129,0,76,11,56,0,168,18,0,160,8,12,128,0,0,0,0,0,0,1,0,0],"FuzzSmile":[97,128,0,6,17,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Governor":[97,128,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"GraphicEQ":[33,128,0,4,3,96,128,60,12,0,1,129,129,12,0,0,0,0,0,0,1,0,0],"GreatMuff":[1,129,0,6,17,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"HD Hall":[17,128,0,18,20,232,1,16,62,0,196,136,128,128,128,0,0,0,0,0,1,0,0],"HPS":[1,130,0,12,1,0,0,48,70,64,128,140,0,0,0,128,0,0,0,0,1,0,0],"HW STACK":[97,129,0,8,13,112,128,164,106,64,197,6,135,6,128,128,0,0,0,0,1,0,0],"Hall":[33,128,0,82,2,40,128,16,46,0,134,140,128,0,128,0,0,0,0,0,1,0,0],"HotBox":[65,129,0,6,15,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Lead":[65,130,0,6,15,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"M-Filter":[33,129,0,4,14,40,128,6,7,192,160,128,0,12,12,0,0,0,0,0,1,0,0],"MATCH 30":[97,128,0,8,7,112,128,188,100,64,69,165,37,6,128,128,0,0,0,0,1,0,0],"MS 1959":[97,129,0,8,14,112,128,128,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],"MS CRUNCH":[65,129,0,8,18,112,0,172,98,64,197,38,70,6,128,128,0,0,0,0,1,0,0],"MS DRIVE":[1,130,0,8,20,112,0,36,103,160,197,134,39,6,132,160,0,0,0,0,1,0,0],"MetalWRLD":[33,129,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"ModReverb":[65,129,0,18,9,24,0,156,45,224,66,160,131,12,128,0,0,0,0,0,1,0,0],"MonoPitch":[97,130,0,12,0,48,128,144,50,32,131,12,0,128,128,0,0,0,0,0,1,0,0],"MultiTapD":[33,128,0,80,109,10,128,16,20,64,1,140,0,128,0,0,0,0,0,0,1,0,0],"NoiseGate":[65,128,0,66,2,32,3,128,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],"Octave":[33,130,0,12,20,120,128,40,100,0,12,129,12,0,128,128,0,0,0,0,1,0,0],"OptComp":[97,128,0,66,1,48,129,128,50,0,128,0,0,128,128,0,0,0,0,0,1,0,0],"OverDrive":[33,128,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"ParaEQ":[65,128,0,4,2,8,0,172,12,96,33,128,129,12,0,0,0,0,0,0,1,0,0],"ParticleR":[33,131,0,18,10,32,131,32,0,0,7,0,0,0,0,0,0,0,0,0,1,0,0],"Phaser":[97,128,0,76,2,24,128,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"PitchDly":[1,129,0,80,22,40,0,8,80,0,10,1,12,128,0,128,0,0,0,0,1,0,0],"PitchSHFT":[65,130,0,76,4,56,0,144,40,32,3,12,128,0,128,0,0,0,0,0,1,0,0],"Plate":[33,129,0,18,2,32,129,10,44,64,39,236,139,0,140,0,0,0,0,0,1,0,0],"REVO-1":[33,130,0,8,16,112,128,0,89,192,70,102,230,134,0,128,0,0,0,0,1,0,0],"ReverseDL":[1,128,0,16,119,32,0,16,50,0,129,12,0,128,128,0,0,0,0,0,1,0,0],"RingMod":[97,130,0,76,6,80,128,128,50,0,143,0,0,128,128,0,0,0,0,0,1,0,0],"RndmFLTR":[1,129,0,4,8,16,1,4,6,64,160,192,11,12,0,0,0,0,0,0,1,0,0],"Room":[65,128,0,82,2,64,0,176,60,0,0,140,128,128,128,0,0,0,0,0,1,0,0],"Rt Closet":[65,128,0,14,12,0,0,160,100,0,2,128,0,0,128,128,0,0,0,0,1,0,0],"SeqFLTR":[97,129,0,4,1,48,128,136,25,192,65,1,140,128,0,0,0,0,0,0,1,0,0],"Slicer":[65,128,0,12,0,64,0,160,100,0,66,144,0,0,128,128,0,0,0,0,1,0,0],"SlowATTCK":[1,128,0,2,5,80,0,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Spring63":[1,129,0,82,8,24,1,32,58,0,140,0,128,128,128,0,0,0,0,0,1,0,0],"Squeak":[65,128,0,6,10,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Step":[65,129,0,4,15,72,0,144,8,64,1,12,128,0,0,0,0,0,0,0,1,0,0],"StereoCho":[65,129,0,12,20,104,0,176,60,96,0,140,128,128,128,0,0,0,0,0,1,0,0],"StereoDly":[33,129,0,16,41,64,143,62,100,96,38,132,12,12,140,128,0,0,0,0,1,0,0],"StompDly":[1,129,0,16,7,32,0,4,103,129,128,128,32,0,128,128,0,0,0,0,1,0,0],"SuperCho":[33,129,0,12,12,16,129,0,50,64,134,0,0,128,128,0,0,0,0,0,1,0,0],"T Scream":[65,128,0,6,17,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"TANGERINE":[1,129,0,8,17,112,0,40,99,128,198,38,69,6,128,128,0,0,0,0,1,0,0],"TONE CITY":[65,129,0,8,19,112,0,172,89,192,70,70,133,134,0,128,0,0,0,0,1,0,0],"TW ROCK":[33,129,0,72,13,112,128,0,95,192,198,230,198,134,0,128,0,0,0,0,1,0,0],"TapeEcho":[33,128,0,80,11,0,130,48,56,32,0,12,128,128,128,0,0,0,0,0,1,0,0],"TheVibe":[1,128,0,76,6,96,1,8,48,0,35,0,12,128,128,0,0,0,0,0,1,0,0],"TiledRoom":[97,128,0,82,4,32,128,144,46,32,129,140,128,0,128,0,0,0,0,0,1,0,0],"Tremolo":[17,128,0,12,20,136,1,96,2,32,130,0,0,0,0,0,0,0,0,0,1,0,0],"US BLUES":[97,128,0,72,14,112,128,160,107,192,197,6,198,7,128,128,0,0,0,0,1,0,0],"VX COMBO":[1,128,0,72,7,112,0,36,100,0,69,166,38,6,129,160,0,0,0,0,1,0,0],"VX JMI":[33,128,0,8,12,112,128,0,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],"Vibrato":[1,130,0,12,10,112,0,32,72,96,0,15,128,0,0,128,0,0,0,0,1,0,0],"VinFLNGR":[49,129,0,76,11,184,128,40,18,0,160,8,12,128,0,0,0,0,0,0,1,0,0],"Z Clean":[97,129,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Z MP1":[1,129,0,6,15,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Z Scream":[97,129,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Z Wild":[33,130,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"Z-Organ":[1,128,0,14,17,0,2,8,80,96,0,1,12,128,0,128,0,0,0,0,1,0,0],"ZNR":[33,128,0,66,2,8,128,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],"fCycle":[33,129,0,68,1,24,128,32,100,0,12,129,0,0,128,128,0,0,0,0,1,0,0]};
+
+// FX sorted by category for the effect picker
+const FX_CATEGORIES = {};
+Object.keys(FX_BY_KEY).forEach(k=>{
+  const e=FX_BY_KEY[k];
+  if(!e||!e.c||e.c==='?')return;
+  if(!FX_CATEGORIES[e.c])FX_CATEGORIES[e.c]=new Set();
+  FX_CATEGORIES[e.c].add(e.n);
+});
+// dedupe and sort
+const FX_LIST = {};
+Object.entries(FX_CATEGORIES).sort().forEach(([cat,names])=>{
+  FX_LIST[cat]=[...names].sort();
+});
+
+// zoom_pack: re-packs 127 unpacked bytes back into 127 raw SysEx-safe bytes
+function zoomPack(u){
+  const out=new Array(u.length).fill(0);
+  for(let g=0;g<u.length;g+=8){
+    let msb=u[g]&0x7F;
+    for(let j=1;j<8&&g+j<u.length;j++){
+      msb|=((u[g+j]>>7)&1)<<(j-1);
+      out[g+j]=u[g+j]&0x7F;
+    }
+    out[g]=msb;
+  }
+  return out;
+}
+
+// Build a full empty raw payload (127 bytes): 5 empty slots + blank name
+function emptyPayload(){
+  return new Array(127).fill(0);
+}
+
+// Build unpacked array from a raw payload
+function rawToUnpacked(raw){
+  return zoomUnpack(raw);
+}
+
+// Write a 23-byte effect slot into the unpacked array at slot index si
+function setSlotInUnpacked(u, si, slot23){
+  const s=si*23;
+  for(let i=0;i<23;i++) u[s+i]=slot23[i];
+}
+
+// ── CLEAR PATCH ─────────────────────────────────────────────────────────────
+function clearPatch(p){
+  // Set all 5 fx slots to empty (23 zeros each) and blank the name
+  p.name='';
+  p.effects=Array.from({length:5},()=>({
+    b0:0,b1:0,b3:0,isEmpty:true,en:false,
+    p:new Array(17).fill(0),name:'Empty',cat:null
+  }));
+  // Rebuild raw from scratch
+  const u=new Array(127).fill(0);
+  // Encode blank name: 10 spaces
+  const nm='          ';
+  for(let i=0;i<4;i++) u[115+i]=nm.charCodeAt(i)&0x7F;
+  u[119]=0x00;
+  for(let i=4;i<9;i++) u[115+i+1]=nm.charCodeAt(i)&0x7F;
+  u[125]=0x20;
+  p.raw=zoomPack(u);
+}
+
+// ── INSERT EFFECT into slot ──────────────────────────────────────────────────
+function insertEffect(p, slotIdx, effectName){
+  const dflt=FX_DEFAULT_SLOTS[effectName];
+  if(!dflt){st('Efeito não encontrado','s-err');return;}
+  // Get current unpacked array
+  const u=rawToUnpacked(p.raw);
+  // Write the 23 bytes of the new effect with enable=ON (bit7 of byte[1])
+  const slot23=[...dflt];
+  slot23[1]|=0x80; // set enable bit
+  setSlotInUnpacked(u, slotIdx, slot23);
+  // Re-pack
+  p.raw=zoomPack(u);
+  // Re-decode the effect for the UI
+  const s=slotIdx*23;
+  const b0=u[s],b1=u[s+1],b1m=b1&0x7F,b3=u[s+3],b4=u[s+4],b5=u[s+5];
+  const en=(b1&0x80)!==0;
+  const pp=u.slice(s,s+23);
+  const isEmpty=(b0===0&&b3===0)||(b0===1&&b1m===0&&b3===0);
+  const info=isEmpty?{n:'Empty',c:null}:gfx(b0,b1,b3,b4,b5);
+  p.effects[slotIdx]={b0,b1,b3,isEmpty,en,p:pp.slice(6),name:info.n,cat:info.c};
+}
+
+// ── REMOVE EFFECT from slot ──────────────────────────────────────────────────
+function removeEffect(p, slotIdx){
+  const u=rawToUnpacked(p.raw);
+  // Zero out the 23 bytes of this slot
+  const s=slotIdx*23;
+  for(let i=0;i<23;i++) u[s+i]=0;
+  p.raw=zoomPack(u);
+  p.effects[slotIdx]={b0:0,b1:0,b3:0,isEmpty:true,en:false,p:new Array(17).fill(0),name:'Empty',cat:null};
+}
+
+// ── PATCH VOLUME ─────────────────────────────────────────────────────────────
+// Volume = Level param (index 2 for most effects) of the last active slot.
+// We find the last non-empty slot, then locate the Level param using FX_DB.
+function getPatchVolume(p){
+  for(let i=4;i>=0;i--){
+    const fx=p.effects[i];
+    if(!fx||fx.isEmpty)continue;
+    const db=fxInfo(fx.name);
+    if(!db)return null;
+    const li=db.params.findIndex(pm=>pm.n==='Level'||pm.n==='LEVEL');
+    if(li<0)return null;
+    return{slotIdx:i,paramIdx:li,value:fx.p[li]!==undefined?(fx.p[li]&0x7F):100};
+  }
+  return null;
+}
+
+function setPatchVolume(p, vol){
+  const v=getPatchVolume(p);
+  if(!v){st('Nenhum efeito ativo para ajustar volume','s-warn');return;}
+  const fx=p.effects[v.slotIdx];
+  if(!fx.p)return;
+  fx.p[v.paramIdx]=vol&0x7F;
+  // Update raw payload
+  const u=rawToUnpacked(p.raw);
+  const ui=v.slotIdx*23+6+v.paramIdx;
+  const group=Math.floor(ui/8),posInGroup=ui%8;
+  if(posInGroup===0){
+    u[group*8]=(u[group*8]&0x80)|(vol&0x7F);
+  }else{
+    u[group*8+posInGroup]=(u[group*8+posInGroup]&0x80)|(vol&0x7F);
+  }
+  p.raw=zoomPack(u);
+}
+
+// ── EFFECT PICKER MODAL ───────────────────────────────────────────────────────
+function showEffectPicker(p, slotIdx, onSelect){
+  // Remove existing modal if any
+  document.getElementById('fx-modal')?.remove();
+  const modal=document.createElement('div');
+  modal.id='fx-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);width:420px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden';
+  
+  // Header
+  const hdr=document.createElement('div');
+  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)';
+  hdr.innerHTML=`<span style="font-family:var(--mono);font-size:.75rem;color:var(--accent)">ESCOLHER EFEITO · SLOT ${slotIdx+1}</span><span id="fx-close" style="cursor:pointer;color:var(--text3);font-size:1.2rem">✕</span>`;
+  
+  // Search
+  const srch=document.createElement('div');
+  srch.style.cssText='padding:8px 12px;border-bottom:1px solid var(--border)';
+  srch.innerHTML=`<input id="fx-search" type="text" placeholder="Buscar efeito..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--sans);font-size:.82rem;padding:6px 10px;border-radius:var(--r);outline:none"/>`;
+
+  // List
+  const list=document.createElement('div');
+  list.style.cssText='overflow-y:auto;flex:1;padding:8px 0';
+
+  function renderList(filter){
+    list.innerHTML='';
+    Object.entries(FX_LIST).forEach(([cat,names])=>{
+      const filtered=names.filter(n=>!filter||n.toLowerCase().includes(filter.toLowerCase()));
+      if(!filtered.length)return;
+      const catEl=document.createElement('div');
+      catEl.style.cssText='font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:1.5px;padding:6px 16px 2px;text-transform:uppercase';
+      catEl.textContent=cat;
+      list.appendChild(catEl);
+      filtered.forEach(name=>{
+        const item=document.createElement('div');
+        item.style.cssText='padding:7px 16px;cursor:pointer;font-size:.82rem;display:flex;flex-direction:column;gap:2px';
+        item.onmouseover=()=>item.style.background='rgba(255,255,255,.04)';
+        item.onmouseout=()=>item.style.background='';
+        const db=fxInfo(name);
+        item.innerHTML=`<span style="font-weight:500">${esc(name)}</span>${db?`<span style="font-size:.65rem;color:var(--text3)">${esc(db.desc)}</span>`:''}`; 
+        item.onclick=()=>{onSelect(name);modal.remove();};
+        list.appendChild(item);
+      });
+    });
+  }
+  renderList('');
+
+  box.appendChild(hdr);
+  box.appendChild(srch);
+  box.appendChild(list);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  box.querySelector('#fx-close').onclick=()=>modal.remove();
+  box.querySelector('#fx-search').oninput=e=>renderList(e.target.value);
+  box.querySelector('#fx-search').focus();
+}
+
+</script>
+</body>
+</html>
