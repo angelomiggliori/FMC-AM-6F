@@ -140,11 +140,11 @@ const ZOOM_MFR=0x52;
 
 // BUG CORRIGIDO AQUI: A G1on usa o code 0x5A, não 0x61!
 const DEVS={
-  0x5A:{key:'G1on',   name:'Zoom G1on / G1Xon',   fxSlots:5,presets:100},
-  0x5B:{key:'B1on',   name:'Zoom B1on / B1Xon',   fxSlots:5,presets:100},
-  0x5F:{key:'MS50G',  name:'Zoom MS-50G', fxSlots:6,presets:50},
-  0x60:{key:'MS60B',  name:'Zoom MS-60B', fxSlots:7,presets:50},
-  0x69:{key:'MS70CDR',name:'Zoom MS-70CDR',fxSlots:6,presets:50},
+  0x61:{sysex: 0x5A, key:'G1on',   name:'Zoom G1on',   fxSlots:5,presets:100},
+  0x62:{sysex: 0x5A, key:'G1Xon',  name:'Zoom G1Xon',  fxSlots:5,presets:100},
+  0x5F:{sysex: 0x5B, key:'B1on',   name:'Zoom B1on',   fxSlots:5,presets:100},
+  0x66:{sysex: 0x5B, key:'B1Xon',  name:'Zoom B1Xon',  fxSlots:5,presets:100},
+  0x58:{sysex: 0x5F, key:'MS50G',  name:'Zoom MS-50G', fxSlots:6,presets:50},
 };
 const F1ON=new Set([0x5A,0x5B]);
 
@@ -289,7 +289,7 @@ function decode(pl,slots,slotIdx,rawPl){
 }
 
 function sx(did,pl){return new Uint8Array([0xF0,ZOOM_MFR,0x00,did,...pl,0xF7]);}
-function idReq(){return new Uint8Array([0xF0,0x7E,0x00,0x06,0x01,0xF7]);}
+function idReq(){return new Uint8Array([0xF0,0x7E,0x7F,0x06,0x01,0xF7]);}
 
 function parseId(d){
   if(d.length<11||d[0]!==0xF0||d[1]!==0x7E||d[3]!==0x06||d[4]!==0x02)return null;
@@ -344,7 +344,7 @@ async function connect(){
   if(!f)throw new Error('No Zoom device found.');
   inp=f.i;out=f.o;inp.onmidimessage=onMsg;
   const id=f.id,d=DEVS[id.id]||{key:'unknown',name:`Zoom 0x${id.id.toString(16).toUpperCase()}`,fxSlots:5,presets:50};
-  dev={...d,id:id.id,fw:id.fw};
+  dev={...d, id: d.sysex || id.id, usbModelId: id.id, fw: id.fw};
   acc.onstatechange=e=>{if((e.port===inp||e.port===out)&&e.port.state==='disconnected')disconnect();};
   return dev;
 }
