@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom G1On WebMIDI Editor - Motor V3 (Decoder 8-bit)</title>
+    <style>
+        /* CSS LIMPO E 100% LIVRE DE AZUL */
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --border: #333333;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent-green: #4caf50;
+            --accent-orange: #ff9800;
+            --accent-red: #f44336;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: var(--accent-green);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        select, button {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        select:focus { outline: none; border-color: var(--accent-green); }
+        
+        button:hover:not(:disabled) {
+            background-color: var(--border);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-force {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+        .btn-force:hover:not(:disabled) {
+            background-color: var(--border);
+            color: var(--accent-orange);
+        }
+
+        #log-container {
+            background-color: #000;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .log-tx { color: var(--accent-orange); }
+        .log-rx { color: var(--accent-green); }
+        .log-sys { color: var(--text-muted); }
+        .log-err { color: var(--accent-red); font-weight: bold; }
+        .log-parser { color: #fff; background-color: #333; padding: 2px 5px; border-radius: 3px; display: inline-block; margin-top: 2px; }
+
+        .status-bar {
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--accent-orange);
+        }
+
+        .connected { color: var(--accent-green) !important; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>G1On Editor - Core V3 (Unpacker)</h1>
+        
+        <div class="panel">
+            <div id="status" class="status-bar">Aguardando inicialização do motor MIDI...</div>
+            <div class="controls">
+                <button id="btnInit">1. Iniciar WebMIDI</button>
+                <select id="selInput" disabled><option>Input MIDI...</option></select>
+                <select id="selOutput" disabled><option>Output MIDI...</option></select>
+                <button id="btnConnect" disabled>2. Conectar</button>
+                <button id="btnForce" class="btn-force" disabled>Forçar G1On (0x58)</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top: 0; color: var(--text-muted);">Console de Comunicação (Hex) & Parser</h3>
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * MOTOR WEBMIDI ZOOM G1ON - COM DECODER
+         * ==========================================
+         */
+
+        // 1. DICIONÁRIO DE EFEITOS BÁSICO
+        const effectDictionary = {
+            "00 00": "BYPASS (Vazio)",
+            "00 01": "Compressor",
+            "00 05": "RackComp",
+            "02 00": "ZNR",
+            "04 01": "TS Drive",
+            "04 08": "DZ Drive",
+            "06 00": "Tremolo",
+            "06 04": "Chorus",
+            "08 00": "Delay",
+            "08 05": "TapeEcho",
+            "0A 00": "Hall Reverb",
+            "0A 03": "Spring Reverb"
+        };
+
+        function getEffectName(byte1, byte2) {
+            const hexKey = `${byte1.toString(16).padStart(2, '0').toUpperCase()} ${byte2.toString(16).padStart(2, '0').toUpperCase()}`;
+            return effectDictionary[hexKey] || `Desc. (${hexKey})`;
+        }
+
+        // 2. MÁQUINA DE ESTADO
+        const appState = {
+            midiAccess: null,
+            input: null,
+            output: null,
+            connected: false,
+            deviceDetected: false,
+            currentDeviceId: null,
+            targetDevice: 0x58 // G1On
+        };
+
+        const ui = {
+            btnInit: document.getElementById('btnInit'),
+            btnConnect: document.getElementById('btnConnect'),
+            btnForce: document.getElementById('btnForce'),
+            selInput: document.getElementById('selInput'),
+            selOutput: document.getElementById('selOutput'),
+            log: document.getElementById('log-container'),
+            status: document.getElementById('status')
+        };
+
+        function toHex(data) {
+            return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+        }
+
+        function printLog(msg, type = 'log-sys') {
+            const time = new Date().toISOString().substring(11, 23);
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${time}] ${msg}`;
+            ui.log.appendChild(div);
+            ui.log.scrollTop = ui.log.scrollHeight;
+        }
+
+        function sendSysex(dataArray) {
+            if (!appState.output) return;
+            const data = new Uint8Array(dataArray);
+            appState.output.send(data);
+            printLog(`TX: ${toHex(data)}`, "log-tx");
+        }
+
+        // ==========================================
+        // DECODER 7-BIT PARA 8-BIT (A CHAVE MESTRA)
+        // ==========================================
+        function decode7bitTo8bit(data) {
+            const result = [];
+            for (let i = 0; i < data.length; i += 8) {
+                const msb = data[i];
+                for (let j = 1; j < 8; j++) {
+                    if (i + j >= data.length) break;
+                    let byte = data[i + j];
+                    if (msb & (1 << (j - 1))) {
+                        byte |= 0x80;
+                    }
+                    result.push(byte);
+                }
+            }
+            return result;
+        }
+
+        // ==========================================
+        // INICIALIZAÇÃO E CONEXÃO
+        // ==========================================
+        ui.btnInit.addEventListener('click', async () => {
+            if (!navigator.requestMIDIAccess) {
+                printLog("Seu navegador não suporta WebMIDI.", "log-err");
+                return;
+            }
+            try {
+                appState.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+                printLog("WebMIDI inicializado com sucesso (SysEx Liberado).");
+                populatePorts();
+                appState.midiAccess.onstatechange = populatePorts;
+                
+                ui.btnInit.disabled = true;
+                ui.selInput.disabled = false;
+                ui.selOutput.disabled = false;
+                ui.btnConnect.disabled = false;
+                ui.status.textContent = "Selecione as portas e clique em Conectar.";
+            } catch (err) {
+                printLog(`Erro ao requisitar MIDI: ${err.message}`, "log-err");
+            }
+        });
+
+        function populatePorts() {
+            ui.selInput.innerHTML = '';
+            ui.selOutput.innerHTML = '';
+            for (let input of appState.midiAccess.inputs.values()) ui.selInput.add(new Option(input.name, input.id));
+            for (let output of appState.midiAccess.outputs.values()) ui.selOutput.add(new Option(output.name, output.id));
+        }
+
+        ui.btnConnect.addEventListener('click', () => {
+            if (appState.input) appState.input.onmidimessage = null;
+            const inId = ui.selInput.value;
+            const outId = ui.selOutput.value;
+
+            if (!inId || !outId) return printLog("Portas inválidas.", "log-err");
+
+            appState.input = appState.midiAccess.inputs.get(inId);
+            appState.output = appState.midiAccess.outputs.get(outId);
+            appState.input.onmidimessage = handleIncomingMidi;
+            appState.connected = true;
+            appState.deviceDetected = false;
+            
+            ui.btnForce.disabled = false;
+            ui.status.textContent = "Conectado! Buscando pedaleira...";
+            ui.status.classList.add('connected');
+
+            printLog("Enviando Identity Request (Padrão MIDI)...");
+            sendSysex([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]);
+        });
+
+        // ==========================================
+        // HANDSHAKE FORÇADO / AUTO
+        // ==========================================
+        ui.btnForce.addEventListener('click', () => {
+            printLog(`Forçando handshake com G1On (0x58)...`, "log-sys");
+            executeHandshake(appState.targetDevice);
+        });
+
+        function executeHandshake(deviceId) {
+            if (appState.deviceDetected) return; 
+            appState.deviceDetected = true;
+            appState.currentDeviceId = deviceId;
+            ui.btnForce.disabled = true;
+            ui.status.textContent = `Pedaleira 0x${deviceId.toString(16).toUpperCase()} sincronizada!`;
+
+            setTimeout(() => {
+                printLog("1/2: Solicitando Edit Mode (Cmd 0x50)...");
+                sendSysex([0xF0, 0x52, 0x00, deviceId, 0x50, 0x01, 0xF7]);
+
+                setTimeout(() => {
+                    printLog("2/2: Solicitando Patch Atual (Cmd 0x29)...");
+                    sendSysex([0xF0, 0x52, 0x00, deviceId, 0x29, 0xF7]);
+                }, 150);
+            }, 500);
+        }
+
+        // ==========================================
+        // PARSER E ROTEAMENTO DE MENSAGENS
+        // ==========================================
+        function handleIncomingMidi(event) {
+            const msg = event.data;
+            if (msg[0] !== 0xF0) return;
+
+            // Silencia o log de recebimento bruto gigante pra não travar a tela
+            if (msg.length < 50) printLog(`RX: ${toHex(msg)}`, "log-rx");
+
+            if (msg[1] === 0x52 && msg.length >= 6) {
+                const deviceId = msg[3];
+                const command = msg[4];
+
+                if (!appState.deviceDetected && command !== 0x28) {
+                    if (deviceId === appState.targetDevice) {
+                        printLog(`✔ Zoom G1On detectada automaticamente!`);
+                        executeHandshake(deviceId);
+                    }
+                }
+
+                if (appState.deviceDetected && command === 0x28) {
+                    printLog("⬇ DUMP DE PATCH RECEBIDO! Iniciando extração...", "log-sys");
+                    parsePatchDump(msg);
+                }
+            }
+        }
+
+        function parsePatchDump(msg) {
+            try {
+                // Tira F0 52 00 58 28 (5 bytes) e tira o F7 final
+                const payloadBruto = msg.slice(5, -1);
+                
+                // MÁGICA: Decodifica de 7-bit pra 8-bit
+                const patchReal = decode7bitTo8bit(payloadBruto);
+
+                printLog(`📦 DUMP DESCOMPACTADO! Tamanho Real: ${patchReal.length} bytes`, "log-sys");
+                
+                // Printa os primeiros 60 bytes da descompactação para a gente ver a estrutura
+                const hexReal = toHex(patchReal.slice(0, 60));
+                printLog(`COPIE ISSO -> HEX REAL (Início): ${hexReal}`, "log-parser");
+
+                // Esqueleto do Loop de Efeitos (Vamos calibrar o offset quando você mandar o dump)
+                // Usando 26 bytes provisórios como tamanho de bloco comum no 1on
+                const blockSize = 26; 
+                const maxSlots = 5;
+
+                for(let slot = 0; slot < maxSlots; slot++) {
+                    const offset = slot * blockSize;
+                    if(offset + 2 >= patchReal.length) break; 
+
+                    const effectIdByte1 = patchReal[offset];
+                    const effectIdByte2 = patchReal[offset + 1];
+                    const stateByte     = patchReal[offset + 2];
+
+                    const effectName = getEffectName(effectIdByte1, effectIdByte2);
+                    const isActive = (stateByte === 0x01);
+                    const statusIcon = isActive ? "🟢" : "🔴";
+
+                    printLog(`[Slot ${slot + 1}] ${statusIcon} ID: ${effectIdByte1.toString(16).padStart(2,'0')} ${effectIdByte2.toString(16).padStart(2,'0')} -> ${effectName}`, "log-rx");
+                }
+
+            } catch (error) {
+                printLog(`Erro no Parser: ${error.message}`, "log-err");
+            }
+        }
+    </script>
+</body>
+</html>
