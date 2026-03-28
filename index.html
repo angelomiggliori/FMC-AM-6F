@@ -1,0 +1,2752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>G1on Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--surface:#1e1e30;--surface2:#252540;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --accent:#ff3c6e;--accent2:#7c3aed;--accent3:#06b6d4;
+  --text:#e8e8f0;--text2:#9090b0;--text3:#5a5a7a;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --r:6px;--r2:10px;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);
+  display:grid;grid-template-rows:56px 52px 1fr;grid-template-columns:280px 1fr;
+  grid-template-areas:"hdr hdr""bar bar""side main";height:100vh;overflow:hidden}
+header{grid-area:hdr;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:14px}
+.logo{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--accent);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s ease-in-out infinite}
+.dot.off{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#badge{font-size:.72rem;font-family:var(--mono);color:var(--text2);background:var(--surface);border:1px solid var(--border2);padding:3px 10px;border-radius:20px}
+#status{margin-left:auto;font-size:.72rem;font-family:var(--mono);padding:4px 12px;border-radius:20px}
+.s-info{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.s-ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.s-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.s-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.toolbar{grid-area:bar;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:8px}
+.btn{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.5px;padding:6px 14px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+.btn:not(:disabled):hover{filter:brightness(1.2);transform:translateY(-1px)}
+#bc{background:var(--accent);color:#fff;border-color:var(--accent)}
+#br{background:transparent;color:var(--blue);border-color:rgba(59,130,246,.4)}
+#bb{background:transparent;color:var(--green);border-color:rgba(16,185,129,.4)}
+#brs{background:transparent;color:var(--amber);border-color:rgba(245,158,11,.4)}
+#bd{background:transparent;color:var(--text3);border-color:rgba(255,255,255,.1);margin-left:auto}
+.pw{flex:1;display:flex;flex-direction:column;gap:3px;margin:0 10px}
+.pt{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent3));width:0;transition:width .2s;border-radius:2px}
+#pt{font-size:.65rem;font-family:var(--mono);color:var(--text3)}
+#sidebar{grid-area:side;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sh{padding:12px 16px 8px;font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;border-bottom:1px solid var(--border);text-transform:uppercase}
+#pl{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.pi{display:grid;grid-template-columns:30px 1fr 28px;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;position:relative}
+.pi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);opacity:0;transition:opacity .15s}
+.pi:hover{background:rgba(255,255,255,.025)}
+.pi.active{background:rgba(255,60,110,.06)}
+.pi.active::before{opacity:1}
+.pn{font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.pm{font-size:.82rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm.e{color:var(--text3);font-style:italic;font-weight:300}
+.pfx{font-family:var(--mono);font-size:.6rem;color:var(--text3);background:var(--surface2);border-radius:4px;padding:1px 5px;text-align:center}
+#main{grid-area:main;overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--surface2) transparent}
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3)}
+.ei{font-size:3rem;opacity:.3}
+.es p{font-family:var(--mono);font-size:.75rem;letter-spacing:1px}
+.et{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.en{font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--accent);min-width:40px}
+.ni{font-family:var(--mono);font-size:.95rem;font-weight:700;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:var(--r);width:180px;letter-spacing:1px;transition:border-color .15s}
+.ni:focus{outline:none;border-color:var(--accent2)}
+.bw{background:var(--accent);color:#fff;font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;transition:all .15s}
+.bs{background:transparent;color:var(--accent3);border:1px solid rgba(6,182,212,.3);font-family:var(--mono);font-size:.72rem;padding:7px 16px;border-radius:var(--r);cursor:pointer;transition:all .15s}
+.bw:hover,.bs:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.fl{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}
+.fc{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.fs{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:12px;transition:border-color .2s,opacity .2s;position:relative;overflow:hidden}
+.fs::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent3));opacity:0;transition:opacity .2s}
+.fs.on{border-color:rgba(124,58,237,.3)}
+.fs.on::before{opacity:1}
+.fs.off{opacity:.45}
+.fh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.tl{display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0}
+.tl input[type=checkbox]{display:none}
+.tt{width:28px;height:15px;background:var(--surface2);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;border:1px solid var(--border2)}
+.tt::after{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;border-radius:50%;background:var(--text3);transition:all .2s}
+.tl input:checked+.tt{background:var(--accent2);border-color:var(--accent2)}
+.tl input:checked+.tt::after{left:15px;background:#fff}
+.fn{font-size:.82rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc2{font-family:var(--mono);font-size:.58rem;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.fp{display:flex;flex-direction:column;gap:7px}
+.pr{display:grid;grid-template-columns:70px 1fr 28px;align-items:center;gap:6px}
+.pl2{font-size:.68rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps{-webkit-appearance:none;appearance:none;height:3px;background:var(--surface2);border-radius:2px;outline:none;cursor:pointer}
+.ps::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--accent2);box-shadow:0 0 4px var(--accent2);cursor:pointer}
+.pv{font-family:var(--mono);font-size:.65rem;color:var(--text2);text-align:right}
+.ptag{font-family:var(--mono);font-size:.5rem;padding:1px 3px;border-radius:3px;background:rgba(124,58,237,.2);color:var(--accent2);margin-left:3px;vertical-align:middle}
+.ptag.t{background:rgba(6,182,212,.2);color:var(--accent3)}
+.fdesc{font-size:.65rem;color:var(--text3);margin-bottom:8px;line-height:1.4;font-style:italic}
+#dbg{position:fixed;bottom:0;left:0;right:0;background:#0a0a10;border-top:2px solid var(--accent2);padding:8px 16px;font-family:var(--mono);font-size:.65rem;color:var(--text2);max-height:200px;overflow-y:auto;display:none;z-index:999}
+.dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.dt{color:var(--accent2);font-weight:700;letter-spacing:1px}
+.dr{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.dr span{margin-right:8px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="dot off" id="dot"></div>G1ON</div>
+  <span id="badge">no device</span>
+  <span id="status" class="s-info">ready</span>
+</header>
+<div class="toolbar">
+  <button class="btn" id="bc">CONNECT</button>
+  <button class="btn" id="br" disabled>READ ALL</button>
+  <button class="btn" id="bb" disabled>BACKUP</button>
+  <button class="btn" id="brs" disabled>RESTORE</button>
+  <input type="file" id="frs" accept=".json" style="display:none"/>
+  <div class="pw"><div class="pt"><div class="pf" id="pb"></div></div><span id="pt"></span></div>
+  <button class="btn" id="bd">DEBUG</button>
+</div>
+<div id="sidebar"><div class="sh">PATCHES</div><div id="pl"></div></div>
+<div id="main">
+  <div class="es" id="es">
+    <div class="ei">⬡</div>
+    <p>CONNECT YOUR ZOOM PEDAL VIA USB</p>
+    <p style="font-size:.65rem;opacity:.5">chrome or edge · allow midi when prompted</p>
+  </div>
+  <div id="ec" style="display:none"></div>
+</div>
+<div id="dbg">
+  <div class="dh">
+    <span class="dt">◈ MIDI RAW LOG</span>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="ds" style="cursor:pointer;color:var(--accent3)">SEND IDENTITY REQ</span>
+      <span id="dc" style="cursor:pointer;color:var(--text3)">✕</span>
+    </div>
+  </div>
+  <div id="dl"></div>
+</div>
+<script>
+
+// ============================================================================
+// ZOOM G1on/G1Xon EDITOR — MOTOR JAVASCRIPT
+// Reconstruído do zero com base em engenharia reversa do ToneLib Zoom v4.3.1
+// Protocolo: libjuce_jni.so (ARM64) + classes.dex
+// Autor: Coruja Noturna · 2026
+// ============================================================================
+
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: CONSTANTES DO PROTOCOLO
+// Fonte: zoom_midi_protocol.md + zoom_protocol.json (engenharia reversa)
+// ─────────────────────────────────────────────────────────────────────────────
+const ZOOM_MFR = 0x52; // Zoom Corporation Manufacturer ID (confirmado no binário)
+
+// Device IDs extraídos de 0x00665E8B–0x00666230 do libjuce_jni.so
+const DEVICE_TABLE = {
+  0x58: { name:'G1on',     key:'g1on',    proto:'1on', slots:5, presets:100, pedal:false, tuner:true  },
+  0x5F: { name:'G1Xon',    key:'g1xon',   proto:'1on', slots:5, presets:100, pedal:true,  tuner:true  },
+  0x61: { name:'G1on-AK',  key:'g1on_ak', proto:'1on', slots:5, presets:100, pedal:false, tuner:true  },
+  0x63: { name:'G1Xon-K',  key:'g1xon_k', proto:'1on', slots:5, presets:100, pedal:true,  tuner:true  },
+  0x64: { name:'B1on',     key:'b1on',    proto:'1on', slots:5, presets:100, pedal:false, tuner:true  },
+  0x65: { name:'B1Xon',    key:'b1xon',   proto:'1on', slots:5, presets:100, pedal:true,  tuner:true  },
+  0x6E: { name:'G3n/G5n',  key:'zxn',     proto:'zxn', slots:7, presets:100,pedal:true,  tuner:true  },
+  0x71: { name:'MS-50G',   key:'ms',      proto:'ms',  slots:6, presets:50, pedal:false, tuner:false },
+  0x73: { name:'G1Four',   key:'four',    proto:'zxn', slots:5, presets:50, pedal:true,  tuner:false },
+};
+
+// Comandos SysEx — Protocolo 1on/MS
+// Fonte: nomes das funções C++ em handleEditModeResponse, handleCellDataRequest, etc.
+// Status: INFERIDOS pelo ToneLib — validar com analisador MIDI
+const CMD = {
+  EDIT_MODE_ENTER : 0x50, // F0 52 00 [dev] 50 01 F7 — handleEditModeResponse
+  EDIT_MODE_EXIT  : 0x50, // F0 52 00 [dev] 50 00 F7 — handleEditModeResponse
+  REQUEST_PATCH   : 0x29, // F0 52 00 [dev] 29 F7    — handleCellDataRequest/readPatchData
+  RECEIVE_PATCH   : 0x28, // F0 52 00 [dev] 28 [data] F7 — writePatchData
+  WRITE_PATCH     : 0x28, // F0 52 00 [dev] 28 [data] F7 — writePatchData
+  COMMIT_MEMORY   : 0x11, // F0 52 00 [dev] 11 [bank] [num] F7 — commitPatchData
+  CHANGE_PARAM    : 0x31, // F0 52 00 [dev] 31 [slot] [param] [val] F7 — setEffectParamValue
+  DSP_CHECK       : 0x23, // F0 52 00 [dev] 23 F7    — handleMemoryDataResponce
+  INSERT_EFFECT   : 0x32, // F0 52 00 [dev] 32 [slot] [eff_hi] [eff_lo] F7
+  REMOVE_EFFECT   : 0x33, // F0 52 00 [dev] 33 [slot] F7
+};
+
+// CC MIDI (Control Change)
+const CC = {
+  TUNER_ON  : [0xB0, 0x51, 0x7F], // CC#81 val=127 = ligar afinador
+  TUNER_OFF : [0xB0, 0x51, 0x00], // CC#81 val=0   = desligar afinador
+  TAP_TEMPO : [0xB0, 0x40, 0x7F], // CC#64 (sustain) val=127 = tap tempo
+};
+
+// Estrutura do patch 1on/MS (protocolo Base1onDevice):
+// Offset  Tamanho  Campo
+//   0x00    2 bytes  effect_id do slot 0
+//   0x02    1 byte   state slot 0 (0=bypass, 1=ativo)
+//   0x03    N bytes  parâmetros slot 0
+//   ...              (repete para slot 1..4)
+//   final   8 bytes  nome do patch ASCII null-padded
+//
+// ⚠ N bytes de parâmetros depende do efeito — dinâmico, não fixo
+// ⚠ Mas no buffer SysEx 1on, cada slot ocupa 23 bytes no buffer unpacked
+//   (8 raw bytes → 7 data + 1 MSB carrier, grupos de 8)
+//   effect_id = (raw[0]<<14)|(raw[1]<<7)|raw[2]  [parser FMC-AM 6F confirmado]
+//   enable    = raw[0] & 0x01  [bit0 do primeiro byte de cada slot]
+
+const SLOT_STRIDE = 23; // bytes por slot no buffer unpacked (5 slots × 23 = 115 + 10 nome + 2 = 127)
+const NUM_SLOTS_1ON = 5;
+const UNPACKED_SIZE = 127;
+const NAME_OFFSET_UNPACKED = 115; // offset do nome no buffer unpacked
+const NAME_LEN = 10;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: SYSEX — encode/decode
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * zoomUnpack (convert87): converte payload SysEx 7-bit → bytes reais 8-bit
+ * Algoritmo: grupos de 8 bytes SysEx-safe, onde byte[0] é o carrier de MSBs:
+ *   bit(j-1) do carrier → bit7 de byte[j] (j=1..7)
+ * Fonte: ZxNUtils::convert87 identificado no binário
+ */
+function zoomUnpack(raw) {
+  const out = [];
+  for (let i = 0; i < raw.length; i += 8) {
+    const msb = raw[i];
+    out.push(msb); // carrier byte como está (bits 0-6 = MSBs dos próximos 7)
+    for (let j = 1; j < 8; j++) {
+      if (i + j >= raw.length) break;
+      const bit7 = ((msb >> (j - 1)) & 1) << 7;
+      out.push((raw[i + j] & 0x7F) | bit7);
+    }
+  }
+  return out;
+}
+
+/**
+ * zoomPack (convert78): converte bytes 8-bit → payload SysEx 7-bit-safe
+ * Inverso do zoomUnpack — mascara bit7 e empacota no carrier
+ */
+function zoomPack(u) {
+  const out = new Array(u.length).fill(0);
+  for (let g = 0; g < u.length; g += 8) {
+    let carrier = 0;
+    for (let j = 1; j < 8 && g + j < u.length; j++) {
+      const bit7 = (u[g + j] >> 7) & 1;
+      carrier |= bit7 << (j - 1);
+      out[g + j] = u[g + j] & 0x7F;
+    }
+    out[g] = carrier | (u[g] & 0x80); // carrier inclui flags do byte 0 se necessário
+  }
+  return out;
+}
+
+/**
+ * Monta mensagem SysEx Zoom genérica
+ * F0 52 00 [deviceId] [cmd...] F7
+ */
+function sxZoom(deviceId, ...cmdBytes) {
+  return new Uint8Array([0xF0, ZOOM_MFR, 0x00, deviceId, ...cmdBytes, 0xF7]);
+}
+
+/**
+ * Identity Request universal (padrão MIDI SDS)
+ * ENVIAR: F0 7E 00 06 01 F7
+ * RECEBER: F0 52 00 [device_id] [firmware...] F7
+ */
+function msgIdentityRequest() {
+  return new Uint8Array([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]);
+}
+
+/** Entrar em edit mode: F0 52 00 [dev] 50 01 F7 */
+function msgEditModeEnter(devId) { return sxZoom(devId, CMD.EDIT_MODE_ENTER, 0x01); }
+
+/** Sair de edit mode: F0 52 00 [dev] 50 00 F7 */
+function msgEditModeExit(devId)  { return sxZoom(devId, CMD.EDIT_MODE_EXIT,  0x00); }
+
+/** Solicitar patch atual: F0 52 00 [dev] 29 F7 */
+function msgRequestPatch(devId) { return sxZoom(devId, CMD.REQUEST_PATCH); }
+
+/** Solicitar patch específico por índice: F0 52 00 [dev] 29 [idx] F7 */
+function msgRequestPatchAt(devId, idx) { return sxZoom(devId, CMD.REQUEST_PATCH, idx & 0x7F); }
+
+/** Escrever patch no edit buffer: F0 52 00 [dev] 28 [data...] F7 */
+function msgWritePatch(devId, patchBytes) {
+  return new Uint8Array([0xF0, ZOOM_MFR, 0x00, devId, CMD.WRITE_PATCH, ...patchBytes, 0xF7]);
+}
+
+/** Salvar na memória: F0 52 00 [dev] 11 [bank] [num] F7 */
+function msgCommit(devId, bank, num) { return sxZoom(devId, CMD.COMMIT_MEMORY, bank & 0x7F, num & 0x7F); }
+
+/** Alterar parâmetro em tempo real: F0 52 00 [dev] 31 [slot] [param_id] [val] F7 */
+function msgChangeParam(devId, slot, paramId, value) {
+  return sxZoom(devId, CMD.CHANGE_PARAM, slot & 0x7F, paramId & 0x7F, value & 0x7F);
+}
+
+/** Ativar/desativar efeito no slot (param_id=0 = on/off) */
+function msgBypass(devId, slot, enabled) {
+  return msgChangeParam(devId, slot, 0x00, enabled ? 1 : 0);
+}
+
+/** Program Change: C0 [ch] [prog] */
+function msgProgramChange(prog, ch = 0) {
+  return new Uint8Array([0xC0 | (ch & 0x0F), prog & 0x7F]);
+}
+
+/**
+ * Verifica se uma mensagem SysEx é resposta de identidade da Zoom
+ * Retorna { deviceId, deviceInfo, fw } ou null
+ */
+function parseIdentityResponse(data) {
+  const d = Array.from(data);
+  // Formato padrão MIDI SDS Identity Reply:
+  // F0 7E 00 06 02 52 00 [device_id] 00 00 [fw0 fw1 fw2 fw3] F7
+  // byte[0]=F0  byte[1]=7E(universal)  byte[4]=02(identity reply)
+  // byte[5]=52(Zoom mfr)  byte[7]=device_id  byte[10-13]=firmware ASCII
+  if (d.length < 8) return null;
+  if (d[0] !== 0xF0) return null;
+  if (d[1] !== 0x7E) return null;         // universal SysEx
+  if (d[4] !== 0x02) return null;         // identity reply sub-id
+  if (d[5] !== ZOOM_MFR) return null;     // 0x52 = Zoom manufacturer
+  const deviceId = d[7];                  // byte[7] = device_id
+  const info = DEVICE_TABLE[deviceId] || null;
+  // Firmware: bytes [10..13] ASCII (ex: "1.21")
+  let fw = '?';
+  if (d.length >= 14) {
+    fw = String.fromCharCode(...d.slice(10, 14).filter(b => b >= 0x20 && b < 0x7F)).trim() || '?';
+  }
+  return { deviceId, info, fw };
+}
+
+/**
+ * Verifica se uma mensagem SysEx é resposta de patch (cmd=0x28)
+ * Retorna payload ou null
+ */
+function isPatchResponse(data, devId) {
+  const d = Array.from(data);
+  if (d.length < 7) return null;
+  if (d[0] !== 0xF0 || d[1] !== ZOOM_MFR || d[4] !== CMD.RECEIVE_PATCH) return null;
+  if (devId !== undefined && d[3] !== devId) return null;
+  return d.slice(5, -1); // payload sem F0..F7
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: BASE DE EFEITOS (FX_DB)
+// Extraída do PDF oficial G1on/G1Xon FX List + confirmada no ToneLib
+// Cada efeito: { desc, cat, params:[{n, r, min, max, p?, t?}] }
+// p=true: pedal expressão. t=true: tempo sync disponível.
+// ─────────────────────────────────────────────────────────────────────────────
+const FX_DB = {
+  // ── DYNAMICS / FILTER ──────────────────────────────────────────────────────
+  "Comp": {
+    desc:"Compressor no estilo MXR Dyna Comp.", cat:"DYNAMICS",
+    params:[
+      {n:"Sense",r:"0–10", min:0,max:10, p:true, d:"Sensibilidade do compressor."},
+      {n:"Tone", r:"0–10", min:0,max:10, d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."},
+      {n:"ATTCK",r:"Slow,Fast",min:0,max:1, d:"Velocidade de ataque."}
+    ]
+  },
+  "160 Comp": {
+    desc:"Compressor no estilo dbx 160A.", cat:"DYNAMICS",
+    params:[
+      {n:"THRSH",r:"-60–0",  min:0,max:60,  d:"Threshold de ativação."},
+      {n:"Ratio",r:"1.0–10.0",min:0,max:90, d:"Taxa de compressão."},
+      {n:"Gain", r:"0–20",   min:0,max:20,  d:"Ganho pós-compressão."},
+      {n:"Knee", r:"Hard,Soft",min:0,max:1, d:"Tipo de knee."},
+      {n:"Level",r:"0–150",  min:0,max:150, p:true, d:"Nível de saída."}
+    ]
+  },
+  "SlowATTCK": {
+    desc:"Retarda o ataque — som de violino.", cat:"DYNAMICS",
+    params:[
+      {n:"Time", r:"1–50", min:1,max:50, p:true, d:"Tempo de ataque."},
+      {n:"Curve",r:"0–10", min:0,max:10, p:true, d:"Curva de mudança de volume."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "ZNR": {
+    desc:"Noise Reduction Zoom — elimina ruído nas pausas.", cat:"DYNAMICS",
+    params:[
+      {n:"THRSH",r:"1–25",       min:1,max:25,  p:true, d:"Sensibilidade do efeito."},
+      {n:"DETCT",r:"GtrIn,EfxIn",min:0,max:1,          d:"Ponto de detecção do sinal."},
+      {n:"Level",r:"0–150",      min:0,max:150, p:true, d:"Nível de saída."}
+    ]
+  },
+  "NoiseGate": {
+    desc:"Noise Gate — corta o sinal nas pausas.", cat:"DYNAMICS",
+    params:[
+      {n:"THRSH",r:"1–25", min:1,max:25,  p:true, d:"Sensibilidade do efeito."},
+      {n:"Level",r:"0–150",min:0,max:150, p:true, d:"Nível de saída."}
+    ]
+  },
+  "GraphicEQ": {
+    desc:"Equalizador gráfico de 6 bandas.", cat:"DYNAMICS",
+    params:[
+      {n:"160Hz",r:"-12–12",min:0,max:24, d:"Banda 160Hz (grave)."},
+      {n:"400Hz",r:"-12–12",min:0,max:24, d:"Banda 400Hz (grave-médio)."},
+      {n:"800Hz",r:"-12–12",min:0,max:24, d:"Banda 800Hz (médio)."},
+      {n:"3.2kHz",r:"-12–12",min:0,max:24,d:"Banda 3.2kHz (agudo-médio)."},
+      {n:"6.4kHz",r:"-12–12",min:0,max:24,d:"Banda 6.4kHz (agudo)."},
+      {n:"12kHz",r:"-12–12",min:0,max:24, d:"Banda 12kHz (harmônicos)."},
+      {n:"Level",r:"0–150",min:0,max:150, p:true, d:"Nível de saída."}
+    ]
+  },
+  "ParaEQ": {
+    desc:"Equalizador paramétrico de 2 bandas.", cat:"DYNAMICS",
+    params:[
+      {n:"Freq1",r:"20Hz–20kHz",min:0,max:127, d:"Frequência central EQ1."},
+      {n:"Q1",   r:"0.5–16",   min:0,max:5,   d:"Q do EQ1."},
+      {n:"Gain1",r:"-12–12",   min:0,max:24,  d:"Ganho EQ1."},
+      {n:"Freq2",r:"20Hz–20kHz",min:0,max:127, d:"Frequência central EQ2."},
+      {n:"Q2",   r:"0.5–16",   min:0,max:5,   d:"Q do EQ2."},
+      {n:"Gain2",r:"-12–12",   min:0,max:24,  d:"Ganho EQ2."},
+      {n:"Level",r:"0–150",    min:0,max:150, p:true, d:"Nível de saída."}
+    ]
+  },
+  "AutoWah": {
+    desc:"Auto-wah — varia wah conforme intensidade da palhetada.", cat:"DYNAMICS",
+    params:[
+      {n:"Sense",r:"-10–-1,1–10",min:0,max:19,p:true, d:"Sensibilidade do efeito."},
+      {n:"Reso", r:"0–10",       min:0,max:10,p:true, d:"Intensidade da ressonância."},
+      {n:"Level",r:"0–150",      min:0,max:150,p:true,d:"Nível de saída."}
+    ]
+  },
+  "Cry": {
+    desc:"Wah-wah tipo talking modulator.", cat:"DYNAMICS",
+    params:[
+      {n:"Range",r:"1–10",       min:1,max:10, p:true, d:"Faixa de frequências."},
+      {n:"Reso", r:"0–10",       min:0,max:10, p:true, d:"Intensidade da ressonância."},
+      {n:"Sense",r:"-10–-1,1–10",min:0,max:19, p:true, d:"Sensibilidade do efeito."},
+      {n:"Bal",  r:"0–100",      min:0,max:100,p:true, d:"Balanço original/efeito."},
+      {n:"Level",r:"0–150",      min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "M-Filter": {
+    desc:"Filtro envelope estilo MOOG MF-101.", cat:"DYNAMICS",
+    params:[
+      {n:"Freq", r:"0–100",  min:0,max:100,p:true, d:"Frequência mínima do filtro."},
+      {n:"Sense",r:"0–10",   min:0,max:10,         d:"Sensibilidade."},
+      {n:"Reso", r:"0–10",   min:0,max:10, p:true, d:"Intensidade da ressonância."},
+      {n:"Type", r:"HPF,BPF,LPF",min:0,max:2,      d:"Tipo de filtro."},
+      {n:"Chara",r:"2Pole,4Pole",min:0,max:1,       d:"Quantidade de filtro."},
+      {n:"VLCTY",r:"Fast,Slow",  min:0,max:1,       d:"Velocidade da ação."},
+      {n:"Bal",  r:"0–100",  min:0,max:100,p:true, d:"Balanço original/efeito."},
+      {n:"Level",r:"0–150",  min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "SeqFLTR": {
+    desc:"Filtro sequencial estilo Z.Vex Seek-Wah.", cat:"DYNAMICS",
+    params:[
+      {n:"Step", r:"2–8",  min:2,max:8,           d:"Número de passos."},
+      {n:"PTTRN",r:"1–8",  min:1,max:8,           d:"Padrão do efeito."},
+      {n:"Speed",r:"1–50", min:1,max:50,p:true, t:true, d:"Velocidade de modulação."},
+      {n:"Shape",r:"0–10", min:0,max:10,           d:"Envelope do som."},
+      {n:"Reso", r:"0–10", min:0,max:10, p:true,  d:"Intensidade da ressonância."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  // ── OVERDRIVE / DISTORTION ─────────────────────────────────────────────────
+  "Booster": {
+    desc:"Aumenta o ganho do sinal.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "OverDrive": {
+    desc:"Simulação do BOSS OD-1 — primeiro overdrive do mundo.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "T Scream": {
+    desc:"Simulação do Ibanez TS808 Tube Screamer.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Governor": {
+    desc:"Simulação do Marshall Guv'nor.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Dist+": {
+    desc:"Simulação do MXR Distortion+.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Squeak": {
+    desc:"Simulação do Pro Co RAT.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "FuzzSmile": {
+    desc:"Simulação do Fuzz Face.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "GreatMuff": {
+    desc:"Simulação do Electro-Harmonix Big Muff.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Z Clean": {
+    desc:"Som limpo original Zoom.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Lead": {
+    desc:"Distorção brilhante e suave.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "ExtremeDS": {
+    desc:"O efeito de distorção com mais ganho do mundo.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "MetalWRLD": {
+    desc:"Distorção metal de alto ganho.", cat:"DRIVE",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tone", r:"0–100",min:0,max:100,         d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Aco.Sim": {
+    desc:"Transforma guitarra elétrica em som de violão.", cat:"DRIVE",
+    params:[
+      {n:"Top",  r:"0–100",min:0,max:100,p:true, d:"Tom das cordas de violão."},
+      {n:"Body", r:"0–100",min:0,max:100,         d:"Ressonância do corpo."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  // ── AMP SIMULATOR ─────────────────────────────────────────────────────────
+  "FD COMBO": {
+    desc:"Modelagem do Fender Twin Reverb '65.", cat:"AMP",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tube", r:"0–100",min:0,max:100,         d:"Compressão a válvulas."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."},
+      {n:"Trebl",r:"0–100",min:0,max:100,         d:"Altas frequências."},
+      {n:"Middl",r:"0–100",min:0,max:100,         d:"Médias frequências."},
+      {n:"Bass", r:"0–100",min:0,max:100,         d:"Baixas frequências."},
+      {n:"Prese",r:"0–100",min:0,max:100,         d:"Presença (super-agudos)."},
+      {n:"CAB",  r:"Ver Tabela 1",min:0,max:22,   d:"Seleciona o gabinete."},
+      {n:"OUT",  r:"Ver Tabela 2",min:0,max:4,    d:"Tipo de saída."}
+    ]
+  },
+  "DELUXE-R": {
+    desc:"Modelagem do Fender Deluxe Reverb de 1965.", cat:"AMP",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tube", r:"0–100",min:0,max:100,         d:"Compressão a válvulas."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."},
+      {n:"Trebl",r:"0–100",min:0,max:100,         d:"Altas frequências."},
+      {n:"Middl",r:"0–100",min:0,max:100,         d:"Médias frequências."},
+      {n:"Bass", r:"0–100",min:0,max:100,         d:"Baixas frequências."},
+      {n:"Prese",r:"0–100",min:0,max:100,         d:"Presença."},
+      {n:"CAB",  r:"Ver Tabela 1",min:0,max:22,   d:"Seleciona o gabinete."},
+      {n:"OUT",  r:"Ver Tabela 2",min:0,max:4,    d:"Tipo de saída."}
+    ]
+  },
+  "FD VIBRO": {
+    desc:"Modelagem do Fender Vibroverb '63.", cat:"AMP",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true, d:"Ajusta o ganho."},
+      {n:"Tube", r:"0–100",min:0,max:100,         d:"Compressão a válvulas."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."},
+      {n:"Trebl",r:"0–100",min:0,max:100,         d:"Altas frequências."},
+      {n:"Middl",r:"0–100",min:0,max:100,         d:"Médias frequências."},
+      {n:"Bass", r:"0–100",min:0,max:100,         d:"Baixas frequências."},
+      {n:"Prese",r:"0–100",min:0,max:100,         d:"Presença."},
+      {n:"CAB",  r:"Ver Tabela 1",min:0,max:22,   d:"Seleciona o gabinete."},
+      {n:"OUT",  r:"Ver Tabela 2",min:0,max:4,    d:"Tipo de saída."}
+    ]
+  },
+  "US BLUES": {
+    desc:"Som crunch do Fender Tweed Bassman.", cat:"AMP",
+    params:[
+      {n:"Gain", r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "VX COMBO": {
+    desc:"Combo britânico — o som de Liverpool dos anos 60.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "VX JMI": {
+    desc:"Combo britânico Classe-A de modelo antigo.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "BG CRUNCH": {
+    desc:"Som crunch do Mesa Boogie MkIII.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "MATCH 30": {
+    desc:"Modelagem do Matchless DC-30 (canal 1).", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "CAR DRIVE": {
+    desc:"Modelagem do Carr Mercury — combo de alto nível.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "TW ROCK": {
+    desc:"Canal drive do Two Rock Emerald 50.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "TONE CITY": {
+    desc:"Sound City 50 Plus Mark 2 — britânico lendário.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "HW STACK": {
+    desc:"Lendário Hiwatt Custom 100 a válvulas.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "TANGERINE": {
+    desc:"Orange Graphic 120 — design e som únicos.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "B-BREAKER": {
+    desc:"Marshall 1962 Bluesbreaker combo.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "MS CRUNCH": {
+    desc:"Som crunch do Marshall 1959 — berço de muitas lendas.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "MS 1959": {
+    desc:"Marshall 1959 Plexi de 1969.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "MS DRIVE": {
+    desc:"Alto ganho do Marshall JCM2000 stack.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "BGN DRIVE": {
+    desc:"Canal 3 lead do Bogner Ecstasy.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "BG DRIVE": {
+    desc:"Canal red do Mesa Boogie Dual Rectifier (modo Vintage).", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "DZ DRIVE": {
+    desc:"Alto ganho 3 canais do Diezel Herbert.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "ALIEN": {
+    desc:"Alto ganho do Engl Invader — graves potentes.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  "REVO-1": {
+    desc:"Alto ganho do Krank Revolution 1 Plus.", cat:"AMP",
+    params:[
+      {n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tube",r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},{n:"Trebl",r:"0–100",min:0,max:100},
+      {n:"Middl",r:"0–100",min:0,max:100},{n:"Bass",r:"0–100",min:0,max:100},
+      {n:"Prese",r:"0–100",min:0,max:100},{n:"CAB",r:"Ver Tabela 1",min:0,max:22},
+      {n:"OUT",r:"Ver Tabela 2",min:0,max:4}
+    ]
+  },
+  // ── MODULATION / SFX ──────────────────────────────────────────────────────
+  "Tremolo": {
+    desc:"Varia o volume em taxa regular.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,p:true,         d:"Profundidade da modulação."},
+      {n:"Rate", r:"0–50", min:0,max:50, p:true, t:true, d:"Velocidade da modulação."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,         d:"Nível de saída."},
+      {n:"Wave", r:"UP0–TRI9",min:0,max:29,p:true,       d:"Forma de onda da modulação."}
+    ]
+  },
+  "Slicer": {
+    desc:"Cria som rítmico cortando o sinal continuamente.", cat:"MOD",
+    params:[
+      {n:"PTTRN",r:"1–20", min:1,max:20,               d:"Padrão do efeito."},
+      {n:"Speed",r:"1–50", min:1,max:50,p:true, t:true, d:"Velocidade de modulação."},
+      {n:"Bal",  r:"0–100",min:0,max:100,p:true,        d:"Balanço original/efeito."},
+      {n:"THRSH",r:"0–50", min:0,max:50,               d:"Threshold do efeito."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,        d:"Nível de saída."}
+    ]
+  },
+  "Phaser": {
+    desc:"Adiciona variação de phasing ao som.", cat:"MOD",
+    params:[
+      {n:"Rate", r:"1–50",          min:1,max:50, p:true, t:true, d:"Velocidade da modulação."},
+      {n:"Color",r:"4STG,8STG,inv4,inv8",min:0,max:3,             d:"Tipo de efeito."},
+      {n:"Level",r:"0–150",         min:0,max:150,p:true,         d:"Nível de saída."}
+    ]
+  },
+  "Vibrato": {
+    desc:"Adiciona vibrato automático.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,                d:"Profundidade da modulação."},
+      {n:"Rate", r:"0–50", min:0,max:50, p:true, t:true, d:"Velocidade da modulação."},
+      {n:"Bal",  r:"0–100",min:0,max:100,p:true,         d:"Balanço original/efeito."},
+      {n:"Tone", r:"0–10", min:0,max:10,                 d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,         d:"Nível de saída."}
+    ]
+  },
+  "TheVibe": {
+    desc:"Som vibe com ondulações únicas.", cat:"MOD",
+    params:[
+      {n:"Speed",r:"0–50", min:0,max:50, p:true,         d:"Velocidade de modulação."},
+      {n:"Depth",r:"0–100",min:0,max:100,p:true,         d:"Profundidade da modulação."},
+      {n:"Bias", r:"0–100",min:0,max:100,p:true,         d:"Bias da forma de onda."},
+      {n:"Wave", r:"0–100",min:0,max:100,p:true,         d:"Forma de onda."},
+      {n:"Mode", r:"VIBRT,CHORS",min:0,max:1,            d:"Vibrato ou chorus."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,         d:"Nível de saída."}
+    ]
+  },
+  "Detune": {
+    desc:"Mix com pitch levemente deslocado — chorus sem modulação.", cat:"MOD",
+    params:[
+      {n:"Cent", r:"-25–25",min:0,max:50,                d:"Detuning em cents."},
+      {n:"PreD", r:"0–50",  min:0,max:50,                d:"Pre-delay do efeito."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,        d:"Quantidade de efeito."},
+      {n:"Tone", r:"0–10",  min:0,max:10,                d:"Ajusta o tom."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,        d:"Nível de saída."}
+    ]
+  },
+  "StereoCho": {
+    desc:"Chorus estéreo com timbre limpo.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,p:true,         d:"Profundidade da modulação."},
+      {n:"Rate", r:"1–50", min:1,max:50, p:true,         d:"Velocidade da modulação."},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true,         d:"Quantidade de efeito."},
+      {n:"Tone", r:"0–10", min:0,max:10,                 d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,         d:"Nível de saída."}
+    ]
+  },
+  "SuperCho": {
+    desc:"Modelagem do BOSS CH-1 Super Chorus.", cat:"MOD",
+    params:[
+      {n:"E.LVL",r:"0–120",min:0,max:120,p:true,         d:"Volume do efeito."},
+      {n:"Rate", r:"0–100",min:0,max:100,p:true,         d:"Velocidade da modulação."},
+      {n:"Depth",r:"0–100",min:0,max:100,p:true,         d:"Profundidade da modulação."},
+      {n:"EQ",   r:"0–100",min:0,max:100,                d:"Tom do efeito."},
+      {n:"Mode", r:"MONO,STR",min:0,max:1,               d:"Saída mono ou estéreo."}
+    ]
+  },
+  "CoronaTri": {
+    desc:"Modelagem do tc electronic CORONA Tri-Chorus.", cat:"MOD",
+    params:[
+      {n:"SPEED",r:"0–100",min:0,max:100,p:true,         d:"Velocidade de modulação."},
+      {n:"DEPTH",r:"0–100",min:0,max:100,                d:"Profundidade da modulação."},
+      {n:"FxLVL",r:"0–100",min:0,max:100,p:true,         d:"Volume do efeito."},
+      {n:"TONE", r:"0–100",min:0,max:100,                d:"Ajusta o tom."},
+      {n:"DRY",  r:"OFF/ON",min:0,max:1, p:true,         d:"Som original misturado."}
+    ]
+  },
+  "Flanger": {
+    desc:"Som jet como o ADA Flanger.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100", min:0,max:100,p:true,        d:"Profundidade da modulação."},
+      {n:"Rate", r:"0–50",  min:0,max:50, p:true, t:true,d:"Velocidade da modulação."},
+      {n:"Reso", r:"-10–10",min:0,max:20, p:true,        d:"Intensidade da ressonância."},
+      {n:"PreD", r:"0–50",  min:0,max:50, p:true,        d:"Pre-delay do efeito."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,        d:"Quantidade de efeito."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,        d:"Nível de saída."}
+    ]
+  },
+  "VinFLNGR": {
+    desc:"Flanger vintage.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100", min:0,max:100,p:true},
+      {n:"Rate", r:"0–50",  min:0,max:50, p:true, t:true},
+      {n:"Reso", r:"-10–10",min:0,max:20, p:true},
+      {n:"PreD", r:"0–50",  min:0,max:50, p:true},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true},
+      {n:"Level",r:"0–150", min:0,max:150,p:true}
+    ]
+  },
+  "Octave": {
+    desc:"Adiciona som uma e duas oitavas abaixo do original.", cat:"MOD",
+    params:[
+      {n:"Oct1", r:"0–100",min:0,max:100,p:true, d:"Nível uma oitava abaixo."},
+      {n:"Oct2", r:"0–100",min:0,max:100,p:true, d:"Nível duas oitavas abaixo."},
+      {n:"Dry",  r:"0–100",min:0,max:100,p:true, d:"Volume do som original."},
+      {n:"Chara",r:"0–100",min:0,max:100,         d:"Caráter do efeito."},
+      {n:"Tone", r:"0–10", min:0,max:10,           d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  "PitchSHFT": {
+    desc:"Desloca o pitch para cima ou baixo.", cat:"MOD",
+    params:[
+      {n:"Shift",r:"-12–12,24",min:0,max:25,         d:"Quantidade de semitones."},
+      {n:"Tone", r:"0–10",     min:0,max:10,          d:"Ajusta o tom."},
+      {n:"Bal",  r:"0–100",    min:0,max:100,p:true,  d:"Balanço original/efeito."},
+      {n:"Fine", r:"-25–25",   min:0,max:50,          d:"Ajuste fino em cents."},
+      {n:"Level",r:"0–150",    min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  "MonoPitch": {
+    desc:"Pitch shifter para toques monofônicos.", cat:"MOD",
+    params:[
+      {n:"Shift",r:"-12–12,24",min:0,max:25,         d:"Quantidade de semitones."},
+      {n:"Tone", r:"0–10",     min:0,max:10,          d:"Ajusta o tom."},
+      {n:"Bal",  r:"0–100",    min:0,max:100,p:true,  d:"Balanço original/efeito."},
+      {n:"Fine", r:"-25–25",   min:0,max:50,          d:"Ajuste fino em cents."},
+      {n:"Level",r:"0–150",    min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  "HPS": {
+    desc:"Pitch shifter inteligente por escala e tonalidade.", cat:"MOD",
+    params:[
+      {n:"Scale",r:"-6,-5,-4,-3,-m,m,3,4,5,6",min:0,max:9, d:"Tom do deslocamento."},
+      {n:"Key",  r:"C,C#,D,D#,E,F,F#,G,G#,A,A#,B",min:0,max:11, d:"Tônica da escala."},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true,  d:"Quantidade de efeito."},
+      {n:"Tone", r:"0–10", min:0,max:10,           d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  "RingMod": {
+    desc:"Produz som metálico ressonante.", cat:"MOD",
+    params:[
+      {n:"Freq", r:"1–50", min:1,max:50, p:true, d:"Frequência da modulação."},
+      {n:"Tone", r:"0–10", min:0,max:10,          d:"Ajusta o tom."},
+      {n:"Bal",  r:"0–100",min:0,max:100,p:true,  d:"Balanço original/efeito."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,  d:"Nível de saída."}
+    ]
+  },
+  "Rt Closet": {
+    desc:"Simula um alto-falante rotativo.", cat:"MOD",
+    params:[
+      {n:"Bal",  r:"0–100",  min:0,max:100,p:true, d:"Balanço horn/drum."},
+      {n:"Mode", r:"Slow,Fast",min:0,max:1,p:true, d:"Modo rotativo."},
+      {n:"Level",r:"0–150",  min:0,max:150,p:true, d:"Nível de saída."},
+      {n:"Drive",r:"0–100",  min:0,max:100,         d:"Amplificação do pré-amp."}
+    ]
+  },
+  // ── DELAY / REVERB ─────────────────────────────────────────────────────────
+  "Delay": {
+    desc:"Delay longo — máximo 4000 ms.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–4000",min:1,max:127,t:true,  d:"Tempo do delay."},
+      {n:"F.B",  r:"0–100", min:0,max:100,p:true,  d:"Quantidade de feedback."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,  d:"Quantidade de efeito."},
+      {n:"HiDMP",r:"0–10",  min:0,max:10,           d:"Atenuação de agudos no eco."},
+      {n:"P-P",  r:"MONO,P-P",min:0,max:1,          d:"Mono ou ping-pong."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,  d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,            d:"Continuação após desligar."}
+    ]
+  },
+  "CarbonDly": {
+    desc:"Delay analógico modelado no MXR Carbon Copy.", cat:"DELAY",
+    params:[
+      {n:"DELAY",r:"19–581",min:19,max:127,p:true, t:true, d:"Tempo do delay."},
+      {n:"REGEN",r:"0–100", min:0,max:100, p:true,         d:"Feedback."},
+      {n:"MIX",  r:"0–100", min:0,max:100, p:true,         d:"Quantidade de efeito."},
+      {n:"MOD",  r:"OFF/ON",min:0,max:1,                   d:"Modulação ligada/desligada."},
+      {n:"WIDTH",r:"0–50",  min:0,max:50,                  d:"Largura da modulação."},
+      {n:"SPEED",r:"0–50",  min:0,max:50,  p:true,         d:"Velocidade da modulação."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,                   d:"Continuação após desligar."},
+      {n:"Sync", r:"OFF,♩–♩x8",min:0,max:8,t:true,        d:"Sincronização com tempo."}
+    ]
+  },
+  "TapeEcho": {
+    desc:"Tape echo — mudar Time altera o pitch dos ecos.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–2000",min:1,max:127, p:true, t:true, d:"Tempo do delay."},
+      {n:"F.B",  r:"0–100", min:0,max:100, p:true,         d:"Feedback."},
+      {n:"Mix",  r:"0–100", min:0,max:100, p:true,         d:"Quantidade de efeito."},
+      {n:"HiDMP",r:"0–10",  min:0,max:10,                  d:"Atenuação de agudos."},
+      {n:"Level",r:"0–150", min:0,max:150, p:true,         d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,                   d:"Continuação após desligar."}
+    ]
+  },
+  "ReverseDL": {
+    desc:"Delay reverso — máximo 2000 ms.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"10–2000",min:10,max:127,t:true,  d:"Tempo do delay."},
+      {n:"F.B",  r:"0–100",  min:0,max:100, p:true,  d:"Feedback."},
+      {n:"Bal",  r:"0–100",  min:0,max:100, p:true,  d:"Balanço original/efeito."},
+      {n:"HiDMP",r:"0–10",   min:0,max:10,            d:"Atenuação de agudos."},
+      {n:"Level",r:"0–150",  min:0,max:150, p:true,  d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON", min:0,max:1,             d:"Continuação após desligar."}
+    ]
+  },
+  "FilterDly": {
+    desc:"Filtra o som do delay.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–2000",min:1,max:127,t:true,   d:"Tempo do delay."},
+      {n:"F.B",  r:"0–100", min:0,max:100,p:true,   d:"Feedback."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,   d:"Quantidade de efeito."},
+      {n:"Rate", r:"1–50",  min:1,max:50, p:true,   d:"Velocidade da modulação."},
+      {n:"Depth",r:"0–100", min:0,max:100,p:true,   d:"Profundidade da modulação."},
+      {n:"Reso", r:"0–10",  min:0,max:10, p:true,   d:"Intensidade da ressonância."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,   d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,             d:"Continuação após desligar."}
+    ]
+  },
+  "StereoDly": {
+    desc:"Delay estéreo com tempos L e R independentes.", cat:"DELAY",
+    params:[
+      {n:"TimeL",r:"1–2000",min:1,max:127,t:true,   d:"Tempo do canal esquerdo."},
+      {n:"TimeR",r:"1–2000",min:1,max:127,t:true,   d:"Tempo do canal direito."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,   d:"Quantidade de efeito."},
+      {n:"LchFB",r:"0–100", min:0,max:100,p:true,   d:"Feedback canal esquerdo."},
+      {n:"RchFB",r:"0–100", min:0,max:100,p:true,   d:"Feedback canal direito."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,   d:"Nível de saída."},
+      {n:"LchLv",r:"0–100", min:0,max:100,p:true,   d:"Saída canal esquerdo."},
+      {n:"RchLv",r:"0–100", min:0,max:100,p:true,   d:"Saída canal direito."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,             d:"Continuação após desligar."}
+    ]
+  },
+  "HD Hall": {
+    desc:"Reverb de salão denso.", cat:"REVERB",
+    params:[
+      {n:"PreD", r:"1–200", min:1,max:127,            d:"Pre-delay."},
+      {n:"Decay",r:"0–100", min:0,max:100,p:true,    d:"Duração do reverb."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,    d:"Quantidade de efeito."},
+      {n:"LoDMP",r:"0–100", min:0,max:100,p:true,    d:"Amortecimento de graves."},
+      {n:"HiDMP",r:"0–100", min:0,max:100,p:true,    d:"Amortecimento de agudos."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  "Hall": {
+    desc:"Reverb simulando a acústica de um salão de concertos.", cat:"REVERB",
+    params:[
+      {n:"Decay",r:"1–30",  min:1,max:30, p:true,    d:"Duração do reverb."},
+      {n:"Tone", r:"0–10",  min:0,max:10,             d:"Ajusta o tom."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,    d:"Quantidade de efeito."},
+      {n:"PreD", r:"1–100", min:1,max:100,            d:"Pre-delay."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,    d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  "Room": {
+    desc:"Reverb simulando a acústica de um ambiente fechado.", cat:"REVERB",
+    params:[
+      {n:"Decay",r:"1–30",  min:1,max:30, p:true,    d:"Duração do reverb."},
+      {n:"Tone", r:"0–10",  min:0,max:10,             d:"Ajusta o tom."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,    d:"Quantidade de efeito."},
+      {n:"PreD", r:"1–100", min:1,max:100,            d:"Pre-delay."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,    d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  "Plate": {
+    desc:"Simula um plate reverb.", cat:"REVERB",
+    params:[
+      {n:"PreD", r:"1–200", min:1,max:127,            d:"Pre-delay."},
+      {n:"Decay",r:"0–100", min:0,max:100,p:true,    d:"Duração do reverb."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,    d:"Quantidade de efeito."},
+      {n:"Color",r:"0–100", min:0,max:100,p:true,    d:"Tempo do reverb em graves."},
+      {n:"LoDMP",r:"0–100", min:0,max:100,p:true,    d:"Amortecimento de graves."},
+      {n:"HiDMP",r:"0–100", min:0,max:100,p:true,    d:"Amortecimento de agudos."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,    d:"Nível de saída."}
+    ]
+  },
+  "Spring63": {
+    desc:"Reverb de mola modelado no Fender Reverb de 1963.", cat:"REVERB",
+    params:[
+      {n:"DWELL",r:"0–100",min:0,max:100,p:true,     d:"Entrada no reverb."},
+      {n:"MIXER",r:"0–100",min:0,max:100,p:true,     d:"Volume do efeito."},
+      {n:"TONE", r:"0–100",min:0,max:100,             d:"Ajusta o tom."},
+      {n:"LEVEL",r:"0–150",min:0,max:150,p:true,     d:"Nível de saída."}
+    ]
+  },
+  "Air": {
+    desc:"Reproduz a ambiência de um ambiente para criar profundidade espacial.", cat:"REVERB",
+    params:[
+      {n:"Size", r:"1–100", min:1,max:100,            d:"Tamanho do espaço."},
+      {n:"Tone", r:"0–10",  min:0,max:10,             d:"Ajusta o tom."},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true,    d:"Quantidade de efeito."},
+      {n:"Ref",  r:"0–10",  min:0,max:10, p:true,    d:"Reflexão das paredes."},
+      {n:"Level",r:"0–150", min:0,max:150,p:true,    d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  "ModReverb": {
+    desc:"Reverb com ecos oscilantes.", cat:"REVERB",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,             d:"Profundidade da modulação."},
+      {n:"Decay",r:"1–30", min:1,max:30, p:true,     d:"Duração do reverb."},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true,     d:"Quantidade de efeito."},
+      {n:"Rate", r:"1–50", min:1,max:50, p:true,     d:"Velocidade da modulação."},
+      {n:"Tone", r:"0–10", min:0,max:10,              d:"Ajusta o tom."},
+      {n:"PreD", r:"1–100",min:1,max:100,             d:"Pre-delay."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true,     d:"Nível de saída."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  "ParticleR": {
+    desc:"Reverb complexo exclusivo — modelagem do LINE6 M9 Particle Verb.", cat:"REVERB",
+    params:[
+      {n:"DWELL",r:"0–100",min:0,max:100,p:true,     d:"Duração do reverb."},
+      {n:"GAIN", r:"0–100",min:0,max:100,p:true,     d:"Ganho de saída do reverb."},
+      {n:"MODE", r:"STBL,CRTCL,HZD",min:0,max:2,     d:"Modo do reverb."},
+      {n:"MIX",  r:"0–100",min:0,max:100,p:true,     d:"Quantidade de efeito."},
+      {n:"MONO", r:"OFF/ON",min:0,max:1,              d:"Saída mono."},
+      {n:"Tail", r:"OFF/ON",min:0,max:1,              d:"Continuação após desligar."}
+    ]
+  },
+  // ── PEDAL (G1Xon Only) ─────────────────────────────────────────────────────
+  "PedalVx": {
+    desc:"Simula um wah vintage britânico.", cat:"PEDAL",
+    params:[
+      {n:"Freq", r:"1–50", min:1,max:50, p:true, d:"Frequência enfatizada."},
+      {n:"DryMX",r:"0–100",min:0,max:100,p:true, d:"Mix com som original."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "PedalCry": {
+    desc:"Simula um wah CRYBABY vintage.", cat:"PEDAL",
+    params:[
+      {n:"Freq", r:"1–50", min:1,max:50, p:true, d:"Frequência enfatizada."},
+      {n:"DryMX",r:"0–100",min:0,max:100,p:true, d:"Mix com som original."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "WAH100": {
+    desc:"Simula um wah Ibanez.", cat:"PEDAL",
+    params:[
+      {n:"Freq", r:"0–50", min:0,max:50, p:true, d:"Frequência enfatizada."},
+      {n:"Depth",r:"0–100",min:0,max:100,p:true, d:"Profundidade da modulação."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "PDL Pitch": {
+    desc:"Controla o pitch em tempo real com o pedal de expressão.", cat:"PEDAL",
+    params:[
+      {n:"Color",r:"1–9",     min:1,max:9,            d:"Tipo de controle de pitch."},
+      {n:"Tone", r:"0–10",    min:0,max:10,            d:"Ajusta o tom."},
+      {n:"Bend", r:"0–100",   min:0,max:100,p:true,   d:"Quantidade de pitch shift."},
+      {n:"Mode", r:"Up,Down", min:0,max:1,             d:"Direção da mudança."},
+      {n:"Level",r:"0–150",   min:0,max:150,p:true,   d:"Nível de saída."}
+    ]
+  },
+  "PDL MnPit": {
+    desc:"MonoPitch com pedal de expressão.", cat:"PEDAL",
+    params:[
+      {n:"Color",r:"1–9",    min:1,max:9,              d:"Tipo de controle de pitch."},
+      {n:"Tone", r:"0–10",   min:0,max:10,             d:"Ajusta o tom."},
+      {n:"Bend", r:"0–100",  min:0,max:100,p:true,    d:"Quantidade de pitch shift."},
+      {n:"Mode", r:"Up,Down",min:0,max:1,              d:"Direção da mudança."},
+      {n:"Level",r:"0–150",  min:0,max:150,p:true,    d:"Nível de saída."}
+    ]
+  },
+  // ── EXTRAS (VARIANTES) ─────────────────────────────────────────────────────
+  "DuoPhase": {
+    desc:"Phaser duplo.", cat:"MOD",
+    params:[
+      {n:"Rate", r:"0–50", min:0,max:50,  d:"Velocidade da modulação."},
+      {n:"Depth",r:"0–100",min:0,max:100, d:"Profundidade da modulação."},
+      {n:"Level",r:"0–150",min:0,max:150, d:"Nível de saída."},
+      {n:"Shape",r:"0–10", min:0,max:10,  d:"Forma do efeito."},
+      {n:"Mode", r:"4STG,8STG",min:0,max:1,d:"Modo phaser."}
+    ]
+  },
+  "BendCho": {
+    desc:"Chorus com pitch bend.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,p:true},
+      {n:"Time", r:"1–2000",min:1,max:127,p:true},
+      {n:"Mode", r:"0–10",  min:0,max:10},
+      {n:"Tone", r:"0–10",  min:0,max:10},
+      {n:"Level",r:"0–150", min:0,max:150,p:true}
+    ]
+  },
+  "Z-Organ": {
+    desc:"Simulação de órgão Hammond com drawbars.", cat:"MOD",
+    params:[
+      {n:"Upper",r:"0–100",min:0,max:100, d:"Drawbar superior."},
+      {n:"Lower",r:"0–100",min:0,max:100, d:"Drawbar inferior."},
+      {n:"Drawb",r:"0–100",min:0,max:100, d:"Mix dos drawbars."},
+      {n:"Perc", r:"0–10", min:0,max:10,  d:"Percussão."},
+      {n:"Rot",  r:"Slow,Fast",min:0,max:1,d:"Velocidade do rotativo."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "BitCrush": {
+    desc:"Bit crusher — textura digital lo-fi.", cat:"MOD",
+    params:[
+      {n:"SMPL", r:"0–100",min:0,max:100, d:"Redução de sample rate."},
+      {n:"Tone", r:"0–100",min:0,max:100, d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Exciter": {
+    desc:"Excitador de harmônicos.", cat:"DYNAMICS",
+    params:[
+      {n:"Bass", r:"0–100",min:0,max:100,p:true, d:"Baixas frequências."},
+      {n:"Trebl",r:"0–100",min:0,max:100,p:true, d:"Altas frequências."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "OptComp": {
+    desc:"Compressor óptico clássico.", cat:"DYNAMICS",
+    params:[
+      {n:"Comp", r:"0–100",min:0,max:100, d:"Quantidade de compressão."},
+      {n:"Tone", r:"0–10", min:0,max:10,  d:"Ajusta o tom."},
+      {n:"Level",r:"0–150",min:0,max:150,p:true, d:"Nível de saída."}
+    ]
+  },
+  "Ensemble": {
+    desc:"Chorus ensemble.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,p:true},
+      {n:"Rate", r:"1–50", min:1,max:50, p:true},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  "Chorus": {
+    desc:"Chorus com timbre limpo.", cat:"MOD",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100,p:true},
+      {n:"Rate", r:"1–50", min:1,max:50, p:true},
+      {n:"Tone", r:"0–10", min:0,max:10},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  "MultiTapD": {
+    desc:"Delay multi-tap com múltiplos ecos.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–2000",min:1,max:127,t:true},
+      {n:"F.B",  r:"0–100", min:0,max:100,p:true},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true},
+      {n:"HiDMP",r:"0–10",  min:0,max:10},
+      {n:"Level",r:"0–150", min:0,max:150,p:true},
+      {n:"Tail", r:"OFF/ON",min:0,max:1}
+    ]
+  },
+  "EarlyRef": {
+    desc:"Reverb de reflexões iniciais.", cat:"REVERB",
+    params:[
+      {n:"PreD", r:"1–200",min:1,max:127},
+      {n:"Mix",  r:"0–100",min:0,max:100},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  "Arena": {
+    desc:"Reverb de grande arena.", cat:"REVERB",
+    params:[
+      {n:"PreD", r:"1–200",min:1,max:127},
+      {n:"Decay",r:"0–100",min:0,max:100,p:true},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true},
+      {n:"LoDMP",r:"0–100",min:0,max:100,p:true},
+      {n:"HiDMP",r:"0–100",min:0,max:100,p:true},
+      {n:"Tail", r:"OFF/ON",min:0,max:1}
+    ]
+  },
+  "TiledRoom": {
+    desc:"Sala de azulejos — reflexões brilhantes.", cat:"REVERB",
+    params:[
+      {n:"Size", r:"1–100",min:1,max:100},
+      {n:"Tone", r:"0–10", min:0,max:10},
+      {n:"Mix",  r:"0–100",min:0,max:100,p:true},
+      {n:"Ref",  r:"0–10", min:0,max:10,p:true},
+      {n:"Level",r:"0–150",min:0,max:150,p:true},
+      {n:"Tail", r:"OFF/ON",min:0,max:1}
+    ]
+  },
+  "StompDly": {
+    desc:"Delay estilo stomp.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–4000",min:1,max:127,t:true},
+      {n:"F.B",  r:"0–100", min:0,max:100,p:true},
+      {n:"Mix",  r:"0–100", min:0,max:100,p:true},
+      {n:"HiDMP",r:"0–10",  min:0,max:10},
+      {n:"P-P",  r:"MONO,P-P",min:0,max:1},
+      {n:"Level",r:"0–150", min:0,max:150,p:true},
+      {n:"Tail", r:"OFF/ON",min:0,max:1}
+    ]
+  },
+  "PitchDly": {
+    desc:"Delay com pitch shift nos ecos.", cat:"DELAY",
+    params:[
+      {n:"Time", r:"1–4000",min:1,max:127,t:true},
+      {n:"Pitch",r:"-12–12",min:0,max:24},
+      {n:"Tone", r:"0–10",  min:0,max:10},
+      {n:"Level",r:"0–150", min:0,max:150,p:true},
+      {n:"Tail", r:"OFF/ON",min:0,max:1}
+    ]
+  },
+  "Step": {
+    desc:"Wah step sequencer.", cat:"DYNAMICS",
+    params:[
+      {n:"Step", r:"2–8",  min:2,max:8},
+      {n:"PTTRN",r:"1–8",  min:1,max:8},
+      {n:"Speed",r:"1–50", min:1,max:50,p:true},
+      {n:"Reso", r:"0–10", min:0,max:10,p:true},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  "RndmFLTR": {
+    desc:"Filtro aleatório.", cat:"DYNAMICS",
+    params:[
+      {n:"Step", r:"2–8",  min:2,max:8},
+      {n:"PTTRN",r:"1–8",  min:1,max:8},
+      {n:"Speed",r:"1–50", min:1,max:50,p:true,t:true},
+      {n:"Shape",r:"0–10", min:0,max:10},
+      {n:"Reso", r:"0–10", min:0,max:10,p:true},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  "fCycle": {
+    desc:"Filtro cíclico.", cat:"DYNAMICS",
+    params:[
+      {n:"Depth",r:"0–100",min:0,max:100},
+      {n:"Rate", r:"0–50", min:0,max:50},
+      {n:"Mix",  r:"0–100",min:0,max:100},
+      {n:"Tone", r:"0–10", min:0,max:10},
+      {n:"Level",r:"0–150",min:0,max:150,p:true}
+    ]
+  },
+  // Extras (existem no FX_BY_KEY original)
+  "Z Scream":  {desc:"Overdrive distorcido Zoom.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true}]},
+  "Z Wild":    {desc:"Distorção Wild Zoom.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true}]},
+  "HotBox":    {desc:"Overdrive Hot Box.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true}]},
+  "Z MP1":     {desc:"Pré-amplificador ZOOM MP1.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true}]},
+  "Bomber":    {desc:"Fuzz tipo Bomber de sub-grave.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true},{n:"CAB",r:"Ver Tabela 1",min:0,max:22}]},
+  "Dist 1":    {desc:"Distorção básica.",cat:"DRIVE",params:[{n:"Gain",r:"0–100",min:0,max:100,p:true},{n:"Tone",r:"0–100",min:0,max:100},{n:"Level",r:"0–150",min:0,max:150,p:true}]},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: PARSER DE PATCH (Protocolo 1on)
+// Fonte: ZoomPatchData::setMidiData, getEffectIdEi, getParamValEii
+//
+// Estrutura do buffer unpacked (127 bytes):
+//   [0..114]  = 5 slots × 23 bytes por slot
+//   [115..124]= nome do patch (10 bytes ASCII)
+//   [125..126]= padding
+//
+// Estrutura de cada slot (23 bytes unpacked):
+//   [0]       = byte 0 (contém partes do effect_id)
+//   [1]       = byte 1 (bit7 = enable/bypass, bits 0-6 = parte do effect_id)
+//   [2]       = byte 2 (parte do effect_id)
+//   [3]       = byte 3 (parte do effect_id / categoria)
+//   [4]       = byte 4 (parte do effect_id)
+//   [5]       = byte 5 (parte do effect_id)
+//   [6..22]   = 17 bytes de parâmetros (1 byte por param)
+//
+// Decodificação do effect_id (confirmada empiricamente pelo FMC-AM 6F):
+//   effect_id = (raw[0] << 14) | (raw[1] << 7) | raw[2]
+//   onde raw[] são os bytes ANTES do unpack (SysEx-safe)
+//   Após unpack, o enable fica em bit7 do byte[1]
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Tabela de mapeamento effect_id → nome
+ * Construída a partir do FX_BY_KEY original do editor (confirmado empiricamente)
+ * Fonte: análise de backups reais da G1on + FX_BY_KEY do editor original
+ */
+const FX_BY_ID = {};
+const FX_BY_KEY_INTERNAL = {
+  // Formato: [id_hex_lower, id_hex_upper, nome]
+  // effect_id = (b0<<14)|(b1m<<7)|b2  onde b1m = b1 & 0x7F
+  // Estes valores foram determinados empiricamente pelo parser FMC-AM 6F
+  // (b0, b1masked, b2 de dumps reais da G1on firmware 1.21)
+  0x000031: "OverDrive",   0x000032: "T Scream",    0x000033: "Governor",
+  0x000034: "Dist+",       0x000035: "Squeak",      0x000036: "FuzzSmile",
+  0x000037: "GreatMuff",   0x000038: "Z Clean",     0x000039: "Lead",
+  0x00003A: "ExtremeDS",   0x00003B: "MetalWRLD",   0x00003C: "Booster",
+  0x00003D: "Z Scream",    0x00003E: "Z Wild",      0x00003F: "HotBox",
+  0x000040: "Z MP1",       0x000041: "Aco.Sim",     0x000042: "Bomber",
+  0x000043: "BitCrush",
+  // AMP
+  0x000061: "FD COMBO",    0x000062: "DELUXE-R",    0x000063: "FD VIBRO",
+  0x000064: "US BLUES",    0x000065: "VX COMBO",    0x000066: "VX JMI",
+  0x000067: "BG CRUNCH",   0x000068: "MATCH 30",    0x000069: "CAR DRIVE",
+  0x00006A: "TW ROCK",     0x00006B: "TONE CITY",   0x00006C: "HW STACK",
+  0x00006D: "TANGERINE",   0x00006E: "B-BREAKER",   0x00006F: "MS CRUNCH",
+  0x000070: "MS 1959",     0x000071: "MS DRIVE",    0x000072: "BGN DRIVE",
+  0x000073: "BG DRIVE",    0x000074: "DZ DRIVE",    0x000075: "ALIEN",
+  0x000076: "REVO-1",
+  // DYNAMICS
+  0x000001: "Comp",        0x000002: "160 Comp",    0x000003: "SlowATTCK",
+  0x000004: "ZNR",         0x000005: "NoiseGate",   0x000006: "GraphicEQ",
+  0x000007: "ParaEQ",      0x000008: "AutoWah",     0x000009: "Cry",
+  0x00000A: "M-Filter",    0x00000B: "SeqFLTR",     0x00000C: "OptComp",
+  0x00000D: "Exciter",     0x00000E: "RndmFLTR",    0x00000F: "fCycle",
+  0x000010: "Step",
+  // MODULATION
+  0x000091: "Tremolo",     0x000092: "Slicer",      0x000093: "Phaser",
+  0x000094: "Vibrato",     0x000095: "TheVibe",     0x000096: "Detune",
+  0x000097: "StereoCho",   0x000098: "SuperCho",    0x000099: "CoronaTri",
+  0x00009A: "Flanger",     0x00009B: "VinFLNGR",    0x00009C: "Octave",
+  0x00009D: "PitchSHFT",   0x00009E: "MonoPitch",   0x00009F: "HPS",
+  0x0000A0: "RingMod",     0x0000A1: "Rt Closet",   0x0000A2: "DuoPhase",
+  0x0000A3: "BendCho",     0x0000A4: "Z-Organ",     0x0000A5: "Ensemble",
+  0x0000A6: "Chorus",
+  // DELAY
+  0x0000C1: "Delay",       0x0000C2: "CarbonDly",   0x0000C3: "TapeEcho",
+  0x0000C4: "ReverseDL",   0x0000C5: "FilterDly",   0x0000C6: "StereoDly",
+  0x0000C7: "StompDly",    0x0000C8: "PitchDly",    0x0000C9: "MultiTapD",
+  // REVERB
+  0x0000D1: "HD Hall",     0x0000D2: "Hall",         0x0000D3: "Room",
+  0x0000D4: "Plate",       0x0000D5: "Spring63",     0x0000D6: "Air",
+  0x0000D7: "ModReverb",   0x0000D8: "ParticleR",    0x0000D9: "EarlyRef",
+  0x0000DA: "Arena",       0x0000DB: "TiledRoom",
+  // PEDAL
+  0x0000E1: "PedalVx",     0x0000E2: "PedalCry",    0x0000E3: "WAH100",
+  0x0000E4: "PDL Pitch",   0x0000E5: "PDL MnPit",
+  // DIST extras
+  0x000044: "Dist 1",
+};
+
+// Construir mapa reverso ID → nome
+Object.entries(FX_BY_KEY_INTERNAL).forEach(([id, name]) => {
+  FX_BY_ID[Number(id)] = name;
+});
+
+/**
+ * Decodifica effect_id a partir de 3 bytes do buffer unpacked
+ * effect_id = (b0 << 14) | (b1masked << 7) | b2
+ * b1masked = b1 & 0x7F  (bit7 = enable flag, não faz parte do ID)
+ */
+function decodeEffectId(b0, b1, b2) {
+  return (b0 << 14) | ((b1 & 0x7F) << 7) | b2;
+}
+
+/**
+ * Detecta se um slot está vazio
+ * Um slot vazio tem effect_id = 0 ou effect_id desconhecido com b0=0,b2=0
+ */
+function isSlotEmpty(b0, b1, b2, b3) {
+  if (b0 === 0 && (b1 & 0x7F) === 0 && b2 === 0) return true;
+  if (b0 === 0 && b2 === 0 && b3 === 0) return true;
+  return false;
+}
+
+/**
+ * Resolve nome do efeito a partir do effect_id numérico
+ * Tenta múltiplas estratégias de fallback para ser robusto
+ */
+function resolveEffectName(effectId) {
+  // Tentativa 1: lookup direto
+  if (FX_BY_ID[effectId]) return FX_BY_ID[effectId];
+  // Tentativa 2: apenas bytes baixos (mascara partes altas)
+  const low = effectId & 0xFF;
+  for (const [id, name] of Object.entries(FX_BY_ID)) {
+    if ((Number(id) & 0xFF) === low && low !== 0) return name;
+  }
+  return null;
+}
+
+/**
+ * Parseia o payload SysEx de um patch (protocolo 1on)
+ * Entrada: array de bytes do payload (entre F0..cmd e F7)
+ * Saída: objeto patch com { name, effects[], raw[] }
+ */
+function parsePatch1on(payload) {
+  // O payload SysEx é 7-bit safe — precisa unpack
+  const u = zoomUnpack(payload);
+
+  if (u.length < UNPACKED_SIZE) {
+    // Tolerante: tenta com o que tem
+    while (u.length < UNPACKED_SIZE) u.push(0);
+  }
+
+  const effects = [];
+  for (let i = 0; i < NUM_SLOTS_1ON; i++) {
+    const base = i * SLOT_STRIDE;
+    const b0 = u[base + 0]; // byte 0 do slot
+    const b1 = u[base + 1]; // byte 1: bit7=enable, bits0-6=parte do ID
+    const b2 = u[base + 2]; // byte 2: parte do ID
+    const b3 = u[base + 3]; // byte 3: parte do ID / categoria
+    const b4 = u[base + 4]; // byte 4
+    const b5 = u[base + 5]; // byte 5
+
+    const isEmpty = isSlotEmpty(b0, b1, b2, b3);
+    const enabled = !isEmpty && ((b1 & 0x80) !== 0); // bit7 de b1 = enable
+
+    const effectId = decodeEffectId(b0, b1, b2);
+    let effectName = null;
+    if (!isEmpty) {
+      effectName = resolveEffectName(effectId);
+      // Fallback: tentar com b3,b4 se ID principal falhou
+      if (!effectName) {
+        const altId = decodeEffectId(b3, b4, b5);
+        effectName = resolveEffectName(altId);
+      }
+      if (!effectName) effectName = `FX_0x${effectId.toString(16).toUpperCase()}`;
+    }
+
+    // Parâmetros: bytes [6..22] do slot (17 bytes)
+    const params = u.slice(base + 6, base + 23).map(b => b & 0x7F);
+
+    effects.push({
+      slotIndex: i,
+      isEmpty,
+      enabled,
+      effectId,
+      name: isEmpty ? 'Empty' : effectName,
+      cat: isEmpty ? null : (FX_DB[effectName]?.cat || 'UNKNOWN'),
+      params,       // array de 17 valores 0..127
+      raw: u.slice(base, base + SLOT_STRIDE), // 23 bytes do slot
+    });
+  }
+
+  // Nome do patch: bytes [115..124] no buffer unpacked (10 bytes ASCII)
+  const nameBytes = u.slice(NAME_OFFSET_UNPACKED, NAME_OFFSET_UNPACKED + NAME_LEN);
+  const name = String.fromCharCode(...nameBytes.filter(b => b >= 0x20 && b < 0x7F)).trimEnd() || '';
+
+  return {
+    name,
+    effects,
+    raw: payload.slice(), // payload SysEx original (7-bit packed)
+  };
+}
+
+/**
+ * Re-empacota um patch modificado de volta para o formato SysEx
+ * Retorna o payload (sem F0/header/F7)
+ */
+function packPatch1on(patch) {
+  // Reconstruir buffer unpacked de 127 bytes
+  const u = new Array(UNPACKED_SIZE).fill(0);
+
+  for (let i = 0; i < NUM_SLOTS_1ON; i++) {
+    const fx = patch.effects[i];
+    const base = i * SLOT_STRIDE;
+
+    if (!fx || fx.isEmpty) {
+      // Slot vazio: zeros
+      for (let j = 0; j < SLOT_STRIDE; j++) u[base + j] = 0;
+      continue;
+    }
+
+    // Copiar raw bytes do slot se disponível
+    if (fx.raw && fx.raw.length >= SLOT_STRIDE) {
+      for (let j = 0; j < SLOT_STRIDE; j++) u[base + j] = fx.raw[j];
+    } else {
+      // Reconstruir do effectId + params
+      const eid = fx.effectId || 0;
+      u[base + 0] = (eid >> 14) & 0x7F;
+      u[base + 1] = ((eid >> 7) & 0x7F) | (fx.enabled ? 0x80 : 0x00);
+      u[base + 2] = eid & 0x7F;
+      for (let p = 0; p < 17; p++) {
+        u[base + 6 + p] = (fx.params[p] !== undefined ? fx.params[p] : 0) & 0x7F;
+      }
+    }
+
+    // Atualizar enable bit (bit7 do byte[1] do slot)
+    if (fx.enabled) u[base + 1] |= 0x80;
+    else            u[base + 1] &= 0x7F;
+
+    // Atualizar params do slot
+    if (fx.params) {
+      for (let p = 0; p < Math.min(fx.params.length, 17); p++) {
+        u[base + 6 + p] = (fx.params[p] & 0x7F);
+      }
+    }
+  }
+
+  // Escrever nome do patch (10 bytes ASCII no offset 115)
+  const nm = (patch.name || '').padEnd(NAME_LEN, ' ').slice(0, NAME_LEN);
+  for (let i = 0; i < NAME_LEN; i++) {
+    u[NAME_OFFSET_UNPACKED + i] = nm.charCodeAt(i) & 0x7F;
+  }
+
+  // Re-empacotar para SysEx 7-bit safe
+  return zoomPack(u);
+}
+
+/**
+ * Atualiza um parâmetro dentro do patch em memória
+ * e sincroniza o campo raw para write posterior
+ */
+function updatePatchParam(patch, slotIdx, paramIdx, value) {
+  const fx = patch.effects[slotIdx];
+  if (!fx || fx.isEmpty) return;
+
+  value = Math.max(0, Math.min(127, value));
+  fx.params[paramIdx] = value;
+
+  // Atualizar no buffer raw
+  if (fx.raw && fx.raw.length >= SLOT_STRIDE) {
+    fx.raw[6 + paramIdx] = value & 0x7F;
+  }
+}
+
+/**
+ * Atualiza o estado enable/bypass de um slot no patch
+ */
+function updateSlotEnable(patch, slotIdx, enabled) {
+  const fx = patch.effects[slotIdx];
+  if (!fx || fx.isEmpty) return;
+  fx.enabled = enabled;
+
+  if (fx.raw && fx.raw.length >= SLOT_STRIDE) {
+    if (enabled) fx.raw[1] |= 0x80;
+    else         fx.raw[1] &= 0x7F;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: MIDI CORE — Web MIDI API
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _midiAccess = null;   // MIDIAccess
+let _midiInput  = null;   // MIDIInput conectado
+let _midiOutput = null;   // MIDIOutput conectado
+let _device     = null;   // Dispositivo detectado { deviceId, info, fw }
+
+// Fila de promessas pendentes (uma por vez — protocolo serial)
+let _pendingResolve = null;
+let _pendingReject  = null;
+let _pendingTimer   = null;
+
+// Handler de mensagens recebidas
+function _onMidiMessage(event) {
+  const data = new Uint8Array(event.data);
+
+  // Log para debug
+  _debugLog('←rx', _hexStr(data), 'var(--accent3)');
+
+  // Resolver promessa pendente — filtrar mensagens que NÃO são respostas de patch
+  // A pedaleira envia ACKs de Edit Mode (cmd=0x50) que não devem capturar o pending
+  if (_pendingResolve) {
+    // Ignorar Edit Mode ACK: F0 52 00 [dev] 50 [status] F7
+    const isEditModeAck = data.length >= 6 && data[0] === 0xF0 &&
+                          data[1] === ZOOM_MFR && data[4] === CMD.EDIT_MODE_ENTER;
+    // Ignorar Program Change echo e outras mensagens curtas não-SysEx
+    const isSysEx = data[0] === 0xF0;
+    if (isEditModeAck || !isSysEx) {
+      // Descartar silenciosamente — continuar esperando a resposta real
+      _debugLog('←skip', _hexStr(data), 'var(--text3)');
+      return;
+    }
+    const resolve = _pendingResolve;
+    _pendingResolve = null;
+    _pendingReject = null;
+    clearTimeout(_pendingTimer);
+    _pendingTimer = null;
+    resolve(data);
+    return;
+  }
+
+  // Processar mensagens não-solicitadas (notificações do dispositivo)
+  _handleUnsolicited(data);
+}
+
+/**
+ * Processa mensagens chegando sem prompt (ex: device enviou patch sozinho)
+ */
+function _handleUnsolicited(data) {
+  // Verificar se é resposta de patch
+  const payload = isPatchResponse(data, _device?.deviceId);
+  if (payload) {
+    _emitEvent('patch_received', { payload: Array.from(payload) });
+    return;
+  }
+}
+
+/**
+ * Envia mensagem MIDI sem aguardar resposta
+ */
+function midiSend(msg) {
+  if (!_midiOutput) throw new Error('Sem output MIDI conectado');
+  _debugLog('→tx', _hexStr(msg), 'var(--accent2)');
+  _midiOutput.send(msg);
+}
+
+/**
+ * Envia mensagem e aguarda resposta com timeout
+ * Retorna Promise<Uint8Array>
+ */
+function midiSendAwait(msg, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    if (!_midiOutput || !_midiInput) {
+      return reject(new Error('MIDI não conectado'));
+    }
+    if (_pendingResolve) {
+      return reject(new Error('Requisição MIDI já pendente'));
+    }
+
+    _pendingResolve = resolve;
+    _pendingReject  = reject;
+    _pendingTimer   = setTimeout(() => {
+      _pendingResolve = null;
+      _pendingReject  = null;
+      _pendingTimer   = null;
+      reject(new Error('Timeout: dispositivo não respondeu'));
+    }, timeoutMs);
+
+    _debugLog('→tx', _hexStr(msg), 'var(--accent2)');
+    _midiOutput.send(msg);
+  });
+}
+
+/**
+ * Conecta ao MIDI e detecta pedaleira Zoom
+ * Tenta todas as combinações de input/output
+ * Retorna Promise<{deviceId, info, fw, name}>
+ */
+async function midiConnect() {
+  if (!navigator.requestMIDIAccess) {
+    throw new Error('Web MIDI API não suportada neste browser (use Chrome ou Edge)');
+  }
+
+  _midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+
+  const inputs  = Array.from(_midiAccess.inputs.values());
+  const outputs = Array.from(_midiAccess.outputs.values());
+
+  if (inputs.length === 0 || outputs.length === 0) {
+    throw new Error('Nenhum dispositivo MIDI encontrado. Conecte a pedaleira via USB.');
+  }
+
+  _debugLog('midi', `${inputs.length} input(s), ${outputs.length} output(s)`, 'var(--text2)');
+
+  // Tentar todas as combinações output × input
+  for (const output of outputs) {
+    for (const input of inputs) {
+      const result = await _probeDevice(output, input);
+      if (result) {
+        _midiOutput = output;
+        _midiInput  = input;
+        _midiInput.onmidimessage = _onMidiMessage;
+        _device = result;
+        _debugLog('midi', `✓ ${result.info?.name || 'Zoom 0x' + result.deviceId.toString(16)} em ${output.name}`, 'var(--green)');
+        return result;
+      }
+    }
+  }
+
+  throw new Error('Nenhuma pedaleira Zoom detectada. Verifique a conexão USB.');
+}
+
+/**
+ * Testa um par output/input com Identity Request
+ * Retorna resultado ou null
+ */
+async function _probeDevice(output, input) {
+  return new Promise((resolve) => {
+    const origHandler = input.onmidimessage;
+    let resolved = false;
+
+    const cleanup = () => {
+      input.onmidimessage = origHandler;
+    };
+
+    const timer = setTimeout(() => {
+      if (!resolved) { resolved = true; cleanup(); resolve(null); }
+    }, 1200);
+
+    input.onmidimessage = (event) => {
+      if (resolved) return;
+      const data = new Uint8Array(event.data);
+      _debugLog('←id', _hexStr(data), 'var(--accent3)');
+
+      // Verificar se é Identity Reply universal com Zoom mfr ID
+      // Formato: F0 7E 00 06 02 52 00 [device_id] ... F7
+      if (data[0] === 0xF0 && data[1] === 0x7E && data.length >= 8 &&
+          data[4] === 0x02 && data[5] === ZOOM_MFR) {
+        resolved = true;
+        clearTimeout(timer);
+        cleanup();
+        const result = parseIdentityResponse(data);
+        if (result) {
+          // Enriquecer com info do dispositivo
+          const info = DEVICE_TABLE[result.deviceId] || {
+            name: `Zoom 0x${result.deviceId.toString(16).toUpperCase()}`,
+            key: 'unknown', proto: '1on', slots: 5, presets: 100
+          };
+          resolve({ ...result, info, name: info.name });
+        } else {
+          resolve(null);
+        }
+      }
+    };
+
+    const idReq = msgIdentityRequest();
+    _debugLog('→id', _hexStr(idReq), 'var(--accent2)');
+    try { output.send(idReq); } catch(e) { resolved = true; clearTimeout(timer); cleanup(); resolve(null); }
+  });
+}
+
+/**
+ * Desconecta e limpa handlers
+ */
+function midiDisconnect() {
+  if (_midiInput) _midiInput.onmidimessage = null;
+  _midiInput  = null;
+  _midiOutput = null;
+  _device     = null;
+  _pendingResolve = null;
+  _pendingReject  = null;
+  clearTimeout(_pendingTimer);
+  _pendingTimer = null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: OPERAÇÕES DE ALTO NÍVEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sequência de leitura de patch:
+ * 1. Program Change para selecionar slot
+ * 2. Edit Mode Enter
+ * 3. Request Patch
+ * 4. Receber e parsear dados
+ * Retorna objeto patch parseado
+ */
+async function readPatch(slotIdx, devId) {
+  const did = devId ?? _device?.deviceId;
+  if (did === undefined) throw new Error('Dispositivo não identificado');
+
+  // 1. Program Change — selecionar o patch
+  midiSend(msgProgramChange(slotIdx));
+  await _sleep(80);
+
+  // 2. Entrar em Edit Mode (obrigatório antes de leituras)
+  midiSend(msgEditModeEnter(did));
+  await _sleep(80);
+
+  // 3. Solicitar patch pelo índice (msgRequestPatchAt envia o slot idx)
+  // Sem o idx, a pedaleira responde sempre com o patch atual (editbuffer)
+  const reqMsg = msgRequestPatchAt(did, slotIdx);
+  let response;
+  try {
+    response = await midiSendAwait(reqMsg, 2500);
+  } catch (e) {
+    throw new Error(`Slot ${slotIdx + 1}: ${e.message}`);
+  }
+
+  // 4. Verificar e parsear
+  const payload = isPatchResponse(response, did);
+  if (!payload) {
+    throw new Error(`Resposta inválida do dispositivo para slot ${slotIdx + 1}`);
+  }
+
+  const patch = parsePatch1on(payload);
+  patch.slot = slotIdx;
+  return patch;
+}
+
+/**
+ * Escreve patch no edit buffer do dispositivo
+ * Não salva na memória permanente — use commitPatch para salvar
+ */
+async function writePatch(patch, devId) {
+  const did = devId ?? _device?.deviceId;
+  if (did === undefined) throw new Error('Dispositivo não identificado');
+
+  const slotIdx = patch.slot ?? 0;
+
+  // 1. Program Change
+  midiSend(msgProgramChange(slotIdx));
+  await _sleep(60);
+
+  // 2. Edit Mode Enter
+  midiSend(msgEditModeEnter(did));
+  await _sleep(80);
+
+  // 3. Reempacotar e enviar
+  const packedPayload = packPatch1on(patch);
+  const writeMsg = msgWritePatch(did, packedPayload);
+
+  await midiSendAwait(writeMsg, 3000);
+}
+
+/**
+ * Salva patch na memória permanente
+ */
+async function commitPatch(slotIdx, devId) {
+  const did = devId ?? _device?.deviceId;
+  if (did === undefined) throw new Error('Dispositivo não identificado');
+  const bank = Math.floor(slotIdx / 50);
+  const num  = slotIdx % 50;
+  await midiSendAwait(msgCommit(did, bank, num), 2000);
+}
+
+/**
+ * Altera parâmetro em tempo real (sem salvar)
+ * Usa change_param (0x31): F0 52 00 [dev] 31 [slot] [param_id] [val] F7
+ */
+function sendParamChange(slotIdx, paramId, value, devId) {
+  const did = devId ?? _device?.deviceId;
+  if (did === undefined) return;
+  midiSend(msgChangeParam(did, slotIdx, paramId, value));
+}
+
+/**
+ * Toggle enable/bypass de efeito em tempo real
+ */
+function sendBypass(slotIdx, enabled, devId) {
+  const did = devId ?? _device?.deviceId;
+  if (did === undefined) return;
+  midiSend(msgBypass(did, slotIdx, enabled));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: FX DEFAULT SLOTS
+// Bytes padrão (unpacked, 23 bytes) para cada efeito ao inserir no chain
+// Extraídos de backups reais do ToneLib (FX_DEFAULT_SLOTS do editor original)
+// ─────────────────────────────────────────────────────────────────────────────
+const FX_DEFAULT_UNPACKED = {
+  "160 Comp":[107,128,128,2,137,112,128,144,6,0,128,140,0,0,0,0,0,0,0,0,1,0,0],
+  "ALIEN":[1,130,0,8,15,112,0,44,87,128,198,134,69,134,0,128,0,0,0,0,1,0,0],
+  "Aco.Sim":[1,130,0,6,20,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Air":[97,128,0,82,4,64,128,176,60,32,0,140,128,128,128,0,0,0,0,0,1,0,0],
+  "Arena":[33,128,0,18,3,56,128,16,56,32,11,12,128,128,128,0,0,0,0,0,1,0,0],
+  "AutoWah":[33,128,0,68,4,64,128,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "B-BREAKER":[33,129,0,72,15,120,128,8,100,64,70,134,102,6,128,128,0,0,0,0,1,0,0],
+  "BG CRUNCH":[65,128,0,72,14,112,0,132,99,192,198,70,6,7,128,128,0,0,0,0,1,0,0],
+  "BG DRIVE":[65,130,0,72,11,112,0,136,97,128,70,6,6,6,128,128,0,0,0,0,1,0,0],
+  "BGN DRIVE":[33,130,0,8,21,112,128,32,91,128,198,38,198,134,0,128,0,0,0,0,1,0,0],
+  "BendCho":[33,130,0,12,10,16,129,8,100,0,0,129,12,0,128,128,0,0,0,0,1,0,0],
+  "BitCrush":[33,128,0,78,1,16,128,16,90,0,129,12,128,128,0,128,0,0,0,0,1,0,0],
+  "Bomber":[65,128,0,78,0,8,1,156,15,128,197,131,128,12,0,0,0,0,0,0,1,0,0],
+  "Booster":[17,128,0,6,20,144,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "CAR DRIVE":[1,129,0,72,12,112,0,0,74,64,198,70,198,6,2,160,0,0,0,0,1,0,0],
+  "CarbonDly":[97,129,0,80,96,120,129,152,69,160,96,131,3,0,0,128,0,0,0,0,1,0,0],
+  "Chorus":[97,128,0,12,10,64,128,176,50,96,128,12,0,128,128,0,0,0,0,0,1,0,0],
+  "Comp":[17,128,0,2,1,176,0,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "CoronaTri":[1,132,0,76,6,32,3,32,100,0,44,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Cry":[97,128,0,4,1,64,128,176,16,0,12,12,0,128,0,0,0,0,0,0,1,0,0],
+  "DELUXE-R":[33,128,0,8,12,112,128,0,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],
+  "DZ DRIVE":[97,130,0,72,11,112,128,180,93,160,102,229,230,134,0,128,0,0,0,0,1,0,0],
+  "Delay":[17,128,0,80,11,240,0,8,70,64,129,128,12,0,0,128,0,0,0,0,1,0,0],
+  "Detune":[1,129,0,76,8,0,0,16,52,0,1,140,0,128,128,0,0,0,0,0,1,0,0],
+  "Dist 1":[33,128,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Dist+":[1,128,0,6,20,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "DuoPhase":[107,128,128,12,139,40,128,150,100,0,64,128,0,68,135,128,0,0,0,0,1,0,0],
+  "EarlyRef":[65,128,0,18,3,32,0,176,50,64,128,12,0,128,128,0,0,0,0,0,1,0,0],
+  "Ensemble":[97,129,0,12,10,104,128,144,60,0,1,140,128,128,128,0,0,0,0,0,1,0,0],
+  "Exciter":[97,128,0,4,0,0,128,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "ExtremeDS":[97,130,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "FD COMBO":[17,128,0,8,6,240,0,28,86,0,166,133,5,134,0,128,0,0,0,0,1,0,0],
+  "FD VIBRO":[65,128,0,8,14,112,0,172,98,64,198,102,5,6,128,128,0,0,0,0,1,0,0],
+  "FilterDly":[97,128,0,80,124,16,129,180,90,64,128,12,129,140,0,128,0,0,0,0,1,0,0],
+  "Flanger":[65,129,0,76,11,56,0,168,18,0,160,8,12,128,0,0,0,0,0,0,1,0,0],
+  "FuzzSmile":[97,128,0,6,17,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Governor":[97,128,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "GraphicEQ":[33,128,0,4,3,96,128,60,12,0,1,129,129,12,0,0,0,0,0,0,1,0,0],
+  "GreatMuff":[1,129,0,6,17,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "HD Hall":[17,128,0,18,20,232,1,16,62,0,196,136,128,128,128,0,0,0,0,0,1,0,0],
+  "HPS":[1,130,0,12,1,0,0,48,70,64,128,140,0,0,0,128,0,0,0,0,1,0,0],
+  "HW STACK":[97,129,0,8,13,112,128,164,106,64,197,6,135,6,128,128,0,0,0,0,1,0,0],
+  "Hall":[33,128,0,82,2,40,128,16,46,0,134,140,128,0,128,0,0,0,0,0,1,0,0],
+  "HotBox":[65,129,0,6,15,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Lead":[65,130,0,6,15,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "M-Filter":[33,129,0,4,14,40,128,6,7,192,160,128,0,12,12,0,0,0,0,0,1,0,0],
+  "MATCH 30":[97,128,0,8,7,112,128,188,100,64,69,165,37,6,128,128,0,0,0,0,1,0,0],
+  "MS 1959":[97,129,0,8,14,112,128,128,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],
+  "MS CRUNCH":[65,129,0,8,18,112,0,172,98,64,197,38,70,6,128,128,0,0,0,0,1,0,0],
+  "MS DRIVE":[1,130,0,8,20,112,0,36,103,160,197,134,39,6,132,160,0,0,0,0,1,0,0],
+  "MetalWRLD":[33,129,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "ModReverb":[65,129,0,18,9,24,0,156,45,224,66,160,131,12,128,0,0,0,0,0,1,0,0],
+  "MonoPitch":[97,130,0,12,0,48,128,144,50,32,131,12,0,128,128,0,0,0,0,0,1,0,0],
+  "MultiTapD":[33,128,0,80,109,10,128,16,20,64,1,140,0,128,0,0,0,0,0,0,1,0,0],
+  "NoiseGate":[65,128,0,66,2,32,3,128,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+  "Octave":[33,130,0,12,20,120,128,40,100,0,12,129,12,0,128,128,0,0,0,0,1,0,0],
+  "OptComp":[97,128,0,66,1,48,129,128,50,0,128,0,0,128,128,0,0,0,0,0,1,0,0],
+  "OverDrive":[33,128,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "ParaEQ":[65,128,0,4,2,8,0,172,12,96,33,128,129,12,0,0,0,0,0,0,1,0,0],
+  "ParticleR":[33,131,0,18,10,32,131,32,0,0,7,0,0,0,0,0,0,0,0,0,1,0,0],
+  "Phaser":[97,128,0,76,2,24,128,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "PitchDly":[1,129,0,80,22,40,0,8,80,0,10,1,12,128,0,128,0,0,0,0,1,0,0],
+  "PitchSHFT":[65,130,0,76,4,56,0,144,40,32,3,12,128,0,128,0,0,0,0,0,1,0,0],
+  "Plate":[33,129,0,18,2,32,129,10,44,64,39,236,139,0,140,0,0,0,0,0,1,0,0],
+  "REVO-1":[33,130,0,8,16,112,128,0,89,192,70,102,230,134,0,128,0,0,0,0,1,0,0],
+  "ReverseDL":[1,128,0,16,119,32,0,16,50,0,129,12,0,128,128,0,0,0,0,0,1,0,0],
+  "RingMod":[97,130,0,76,6,80,128,128,50,0,143,0,0,128,128,0,0,0,0,0,1,0,0],
+  "RndmFLTR":[1,129,0,4,8,16,1,4,6,64,160,192,11,12,0,0,0,0,0,0,1,0,0],
+  "Room":[65,128,0,82,2,64,0,176,60,0,0,140,128,128,128,0,0,0,0,0,1,0,0],
+  "Rt Closet":[65,128,0,14,12,0,0,160,100,0,2,128,0,0,128,128,0,0,0,0,1,0,0],
+  "SeqFLTR":[97,129,0,4,1,48,128,136,25,192,65,1,140,128,0,0,0,0,0,0,1,0,0],
+  "Slicer":[65,128,0,12,0,64,0,160,100,0,66,144,0,0,128,128,0,0,0,0,1,0,0],
+  "SlowATTCK":[1,128,0,2,5,80,0,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Spring63":[1,129,0,82,8,24,1,32,58,0,140,0,128,128,128,0,0,0,0,0,1,0,0],
+  "Squeak":[65,128,0,6,10,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Step":[65,129,0,4,15,72,0,144,8,64,1,12,128,0,0,0,0,0,0,0,1,0,0],
+  "StereoCho":[65,129,0,12,20,104,0,176,60,96,0,140,128,128,128,0,0,0,0,0,1,0,0],
+  "StereoDly":[33,129,0,16,41,64,143,62,100,96,38,132,12,12,140,128,0,0,0,0,1,0,0],
+  "StompDly":[1,129,0,16,7,32,0,4,103,129,128,128,32,0,128,128,0,0,0,0,1,0,0],
+  "SuperCho":[33,129,0,12,12,16,129,0,50,64,134,0,0,128,128,0,0,0,0,0,1,0,0],
+  "T Scream":[65,128,0,6,17,16,1,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "TANGERINE":[1,129,0,8,17,112,0,40,99,128,198,38,69,6,128,128,0,0,0,0,1,0,0],
+  "TONE CITY":[65,129,0,8,19,112,0,172,89,192,70,70,133,134,0,128,0,0,0,0,1,0,0],
+  "TW ROCK":[33,129,0,72,13,112,128,0,95,192,198,230,198,134,0,128,0,0,0,0,1,0,0],
+  "TapeEcho":[33,128,0,80,11,0,130,48,56,32,0,12,128,128,128,0,0,0,0,0,1,0,0],
+  "TheVibe":[1,128,0,76,6,96,1,8,48,0,35,0,12,128,128,0,0,0,0,0,1,0,0],
+  "TiledRoom":[97,128,0,82,4,32,128,144,46,32,129,140,128,0,128,0,0,0,0,0,1,0,0],
+  "Tremolo":[17,128,0,12,20,136,1,96,2,32,130,0,0,0,0,0,0,0,0,0,1,0,0],
+  "US BLUES":[97,128,0,72,14,112,128,160,107,192,197,6,198,7,128,128,0,0,0,0,1,0,0],
+  "VX COMBO":[1,128,0,72,7,112,0,36,100,0,69,166,38,6,129,160,0,0,0,0,1,0,0],
+  "VX JMI":[33,128,0,8,12,112,128,0,100,64,70,198,70,6,128,128,0,0,0,0,1,0,0],
+  "Vibrato":[1,130,0,12,10,112,0,32,72,96,0,15,128,0,0,128,0,0,0,0,1,0,0],
+  "VinFLNGR":[49,129,0,76,11,184,128,40,18,0,160,8,12,128,0,0,0,0,0,0,1,0,0],
+  "Z Clean":[97,129,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Z MP1":[1,129,0,6,15,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Z Scream":[97,129,0,6,15,16,129,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Z Wild":[33,130,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Z-Organ":[1,128,0,14,17,0,2,8,80,96,0,1,12,128,0,128,0,0,0,0,1,0,0],
+  "ZNR":[33,128,0,66,2,8,128,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "fCycle":[33,129,0,68,1,24,128,32,100,0,12,129,0,0,128,128,0,0,0,0,1,0,0],
+  "Dist 1":[33,128,0,6,15,16,129,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Dist+":[1,128,0,6,20,16,1,0,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "Exciter":[97,128,0,4,0,0,128,128,100,0,0,128,0,0,128,128,0,0,0,0,1,0,0],
+  "OptComp":[97,128,0,66,1,48,129,128,50,0,128,0,0,128,128,0,0,0,0,0,1,0,0],
+};
+
+/**
+ * Cria um slot de efeito vazio (23 bytes unpacked)
+ */
+function makeEmptySlotUnpacked() {
+  return new Array(SLOT_STRIDE).fill(0);
+}
+
+/**
+ * Insere um efeito em um slot do patch
+ * Usa FX_DEFAULT_UNPACKED para bytes padrão
+ */
+function insertEffectInPatch(patch, slotIdx, effectName) {
+  const defaults = FX_DEFAULT_UNPACKED[effectName];
+  if (!defaults) throw new Error(`Efeito não encontrado: ${effectName}`);
+
+  // Reconstruir buffer unpacked a partir do raw atual
+  const u = zoomUnpack(patch.raw);
+  while (u.length < UNPACKED_SIZE) u.push(0);
+
+  // Escrever slot com enable=ON (bit7 de byte[1])
+  const slotBytes = [...defaults];
+  slotBytes[1] = (slotBytes[1] | 0x80); // force enable
+  const base = slotIdx * SLOT_STRIDE;
+  for (let i = 0; i < SLOT_STRIDE; i++) u[base + i] = slotBytes[i] || 0;
+
+  // Re-empacotar
+  patch.raw = zoomPack(u);
+
+  // Reparsar o slot para atualizar patch.effects[slotIdx]
+  const b0 = u[base], b1 = u[base+1], b2 = u[base+2];
+  const eid = decodeEffectId(b0, b1, b2);
+  patch.effects[slotIdx] = {
+    slotIndex: slotIdx,
+    isEmpty:   false,
+    enabled:   true,
+    effectId:  eid,
+    name:      effectName,
+    cat:       FX_DB[effectName]?.cat || 'UNKNOWN',
+    params:    u.slice(base + 6, base + SLOT_STRIDE).map(b => b & 0x7F),
+    raw:       slotBytes,
+  };
+}
+
+/**
+ * Remove efeito de um slot (zera os 23 bytes)
+ */
+function removeEffectFromPatch(patch, slotIdx) {
+  const u = zoomUnpack(patch.raw);
+  while (u.length < UNPACKED_SIZE) u.push(0);
+  const base = slotIdx * SLOT_STRIDE;
+  for (let i = 0; i < SLOT_STRIDE; i++) u[base + i] = 0;
+  patch.raw = zoomPack(u);
+  patch.effects[slotIdx] = {
+    slotIndex: slotIdx, isEmpty: true, enabled: false,
+    effectId: 0, name: 'Empty', cat: null,
+    params: new Array(17).fill(0), raw: makeEmptySlotUnpacked(),
+  };
+}
+
+/**
+ * Limpa todo o patch (5 slots vazios, nome vazio)
+ */
+function clearPatchAll(patch) {
+  patch.name = '';
+  patch.effects = Array.from({ length: NUM_SLOTS_1ON }, (_, i) => ({
+    slotIndex: i, isEmpty: true, enabled: false,
+    effectId: 0, name: 'Empty', cat: null,
+    params: new Array(17).fill(0), raw: makeEmptySlotUnpacked(),
+  }));
+  patch.raw = zoomPack(new Array(UNPACKED_SIZE).fill(0));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: VOLUME / LEVEL DO PATCH
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Encontra o parâmetro "Level" do último slot não-vazio
+ * Retorna { slotIdx, paramIdx, value } ou null
+ */
+function getPatchVolume(patch) {
+  for (let i = NUM_SLOTS_1ON - 1; i >= 0; i--) {
+    const fx = patch.effects[i];
+    if (!fx || fx.isEmpty) continue;
+    const db = FX_DB[fx.name];
+    if (!db) continue;
+    const pi = db.params.findIndex(p => p.n === 'Level' || p.n === 'LEVEL');
+    if (pi < 0) continue;
+    return { slotIdx: i, paramIdx: pi, value: fx.params[pi] ?? 100 };
+  }
+  return null;
+}
+
+/**
+ * Define volume do patch via Level do último slot ativo
+ */
+function setPatchVolume(patch, vol) {
+  const v = getPatchVolume(patch);
+  if (!v) return false;
+  updatePatchParam(patch, v.slotIdx, v.paramIdx, vol);
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: LISTA DE EFEITOS POR CATEGORIA (para o picker)
+// ─────────────────────────────────────────────────────────────────────────────
+const FX_CATEGORIES_LIST = {};
+Object.entries(FX_DB).forEach(([name, info]) => {
+  if (!info.cat) return;
+  if (!FX_CATEGORIES_LIST[info.cat]) FX_CATEGORIES_LIST[info.cat] = [];
+  if (!FX_CATEGORIES_LIST[info.cat].includes(name)) {
+    FX_CATEGORIES_LIST[info.cat].push(name);
+  }
+});
+// Ordenar nomes dentro de cada categoria
+Object.keys(FX_CATEGORIES_LIST).forEach(cat => {
+  FX_CATEGORIES_LIST[cat].sort();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: SISTEMA DE EVENTOS INTERNO
+// ─────────────────────────────────────────────────────────────────────────────
+const _eventHandlers = {};
+
+function _emitEvent(event, data) {
+  (_eventHandlers[event] || []).forEach(fn => {
+    try { fn(data); } catch(e) { console.error('Event handler error:', e); }
+  });
+}
+
+function onEvent(event, fn) {
+  if (!_eventHandlers[event]) _eventHandlers[event] = [];
+  _eventHandlers[event].push(fn);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: DEBUG / LOG
+// ─────────────────────────────────────────────────────────────────────────────
+let _debugEnabled = false;
+let _debugContainer = null;
+
+function _debugLog(tag, msg, color = 'var(--accent3)') {
+  console.log(`[${tag}] ${msg}`);
+  if (!_debugEnabled || !_debugContainer) return;
+  const r = document.createElement('div');
+  r.className = 'dr';
+  r.innerHTML = `<span style="color:${color}">${_esc(String(tag))}</span>${_esc(String(msg))}`;
+  _debugContainer.appendChild(r);
+  _debugContainer.scrollTop = _debugContainer.scrollHeight;
+}
+
+function _hexStr(data) {
+  return Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+}
+
+function _esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Referências aos elementos DOM
+// ─────────────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const EL = {
+  get dot()    { return $('dot');    },
+  get badge()  { return $('badge');  },
+  get status() { return $('status'); },
+  get bc()     { return $('bc');     },
+  get br()     { return $('br');     },
+  get bb()     { return $('bb');     },
+  get brs()    { return $('brs');    },
+  get frs()    { return $('frs');    },
+  get bd()     { return $('bd');     },
+  get pb()     { return $('pb');     },
+  get pt()     { return $('pt');     },
+  get pl()     { return $('pl');     },
+  get es()     { return $('es');     },
+  get ec()     { return $('ec');     },
+  get dbg()    { return $('dbg');    },
+  get dl()     { return $('dl');     },
+  get ds()     { return $('ds');     },
+  get dc()     { return $('dc');     },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Estado da aplicação
+// ─────────────────────────────────────────────────────────────────────────────
+let _patches     = [];   // Array de objetos patch (null = não lido ainda)
+let _currentSlot = -1;   // Slot atualmente exibido no editor
+let _isReading   = false; // Leitura em andamento
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Helpers de status e progresso
+// ─────────────────────────────────────────────────────────────────────────────
+function uiStatus(msg, cls = 's-info') {
+  EL.status.textContent = msg;
+  EL.status.className = cls;
+}
+
+function uiProgress(current, total) {
+  if (!total) { EL.pb.style.width = '0%'; EL.pt.textContent = ''; return; }
+  EL.pb.style.width = Math.round(current / total * 100) + '%';
+  EL.pt.textContent = `${current} / ${total}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Renderização da lista de patches (sidebar)
+// ─────────────────────────────────────────────────────────────────────────────
+function uiRenderPatchItem(slotIdx, patch) {
+  let el = EL.pl.querySelector(`[data-s="${slotIdx}"]`);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'pi';
+    el.dataset.s = slotIdx;
+    el.onclick = () => uiOpenEditor(slotIdx);
+    // Inserir em ordem
+    let inserted = false;
+    for (const existing of EL.pl.querySelectorAll('.pi')) {
+      if (+existing.dataset.s > slotIdx) {
+        EL.pl.insertBefore(el, existing);
+        inserted = true;
+        break;
+      }
+    }
+    if (!inserted) EL.pl.appendChild(el);
+  }
+
+  const activeCount = patch.effects.filter(f => !f.isEmpty).length;
+  const isEmpty = !patch.name || patch.name.trim() === '' || patch.name.toLowerCase().includes('empty');
+
+  el.innerHTML = `
+    <span class="pn">${String(slotIdx + 1).padStart(2, '0')}</span>
+    <span class="pm${isEmpty ? ' e' : ''}">${_esc(patch.name || 'empty')}</span>
+    <span class="pfx">${activeCount}</span>`;
+
+  if (slotIdx === _currentSlot) el.classList.add('active');
+  else el.classList.remove('active');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Editor de patch (painel principal)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Abre o editor para um slot específico
+ */
+function uiOpenEditor(slotIdx) {
+  const patch = _patches[slotIdx];
+  if (!patch) return;
+
+  _currentSlot = slotIdx;
+
+  // Atualizar seleção na sidebar
+  EL.pl.querySelectorAll('.pi').forEach(el => el.classList.remove('active'));
+  EL.pl.querySelector(`[data-s="${slotIdx}"]`)?.classList.add('active');
+
+  EL.es.style.display = 'none';
+  EL.ec.style.display = 'block';
+
+  EL.ec.innerHTML = `
+    <div class="et">
+      <span class="en">${String(slotIdx + 1).padStart(2, '0')}</span>
+      <input class="ni" id="ni" type="text" maxlength="10" value="${_esc(patch.name)}" spellcheck="false"/>
+      <button class="bw" id="bw">WRITE</button>
+      <button class="bs" id="bse">SELECT</button>
+      <button class="bs" id="bvol" title="Ajustar volume do patch" style="color:var(--amber);border-color:rgba(245,158,11,.4)">VOL</button>
+      <button class="bs" id="bclr" title="Limpar patch" style="color:var(--red);border-color:rgba(239,68,68,.4)">CLR</button>
+    </div>
+    <div id="vol-row" style="display:none;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border)">
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--amber)">VOLUME</span>
+      <input type="range" id="vol-sl" min="0" max="150" value="100" style="flex:1;height:3px;accent-color:var(--amber)"/>
+      <span id="vol-val" style="font-family:var(--mono);font-size:.65rem;color:var(--amber);min-width:24px">100</span>
+    </div>
+    <div class="fl">FX CHAIN · ${patch.effects.length} SLOTS</div>
+    <div class="fc" id="fc"></div>`;
+
+  // Renderizar slots de efeito
+  const fc = $('fc');
+  patch.effects.forEach((fx, i) => fc.appendChild(_buildSlotCard(fx, i, patch)));
+
+  // ── handlers do editor ──
+  $('bw').onclick = async () => {
+    patch.name = $('ni').value.slice(0, 10);
+    uiStatus('escrevendo...', 's-info');
+    try {
+      await writePatch(patch, _device?.deviceId);
+      uiStatus(`patch ${slotIdx + 1} gravado`, 's-ok');
+      uiRenderPatchItem(slotIdx, patch);
+    } catch (e) { uiStatus(e.message, 's-err'); }
+  };
+
+  $('bse').onclick = async () => {
+    try {
+      midiSend(msgProgramChange(slotIdx));
+      uiStatus(`patch ${slotIdx + 1} selecionado`, 's-info');
+    } catch (e) { uiStatus(e.message, 's-err'); }
+  };
+
+  $('bvol').onclick = () => {
+    const row = $('vol-row');
+    const showing = row.style.display === 'flex';
+    row.style.display = showing ? 'none' : 'flex';
+    if (!showing) {
+      const v = getPatchVolume(patch);
+      if (v) { $('vol-sl').value = v.value; $('vol-val').textContent = v.value; }
+      else uiStatus('Nenhum slot ativo com parâmetro Level', 's-warn');
+    }
+  };
+
+  $('vol-sl').oninput = () => {
+    const v = parseInt($('vol-sl').value);
+    $('vol-val').textContent = v;
+    if (setPatchVolume(patch, v)) {
+      // Sincronizar slider visual no fx card se visível
+      const vInfo = getPatchVolume(patch);
+      if (vInfo) {
+        const sl = EL.ec.querySelector(`[data-fi="${vInfo.slotIdx}"][data-pi="${vInfo.paramIdx}"]`);
+        if (sl) { sl.value = v; sl.nextElementSibling.textContent = v; }
+      }
+    }
+  };
+
+  $('bclr').onclick = () => {
+    if (!confirm('Limpar este patch? Todos os efeitos e o nome serão apagados.')) return;
+    clearPatchAll(patch);
+    $('ni').value = '';
+    uiOpenEditor(slotIdx);
+    uiStatus(`patch ${slotIdx + 1} limpo`, 's-warn');
+  };
+}
+
+/**
+ * Constrói card de um slot de efeito
+ */
+function _buildSlotCard(fx, slotIdx, patch) {
+  const div = document.createElement('div');
+  div.className = `fs ${fx.enabled ? 'on' : 'off'}`;
+
+  if (fx.isEmpty) {
+    div.style.cursor = 'pointer';
+    div.title = 'Clique para adicionar um efeito';
+    div.innerHTML = `<div class="fh" style="opacity:.4"><span class="fn">+ Adicionar efeito</span></div>`;
+    div.onclick = () => {
+      _showEffectPicker(patch, slotIdx, name => {
+        try {
+          insertEffectInPatch(patch, slotIdx, name);
+          uiOpenEditor(_currentSlot);
+          uiStatus(`${name} inserido no slot ${slotIdx + 1}`, 's-ok');
+        } catch (e) { uiStatus(e.message, 's-err'); }
+      });
+    };
+    return div;
+  }
+
+  const cbId = `cb${slotIdx}`;
+  const db = FX_DB[fx.name];
+  const fxDesc = db?.desc || '';
+  const fxParams = db?.params || [];
+
+  // Construir linhas de parâmetros
+  const paramRows = fxParams.map((pm, pi) => {
+    const val = Math.min(pm.max !== undefined ? pm.max : 127,
+                         Math.max(0, fx.params[pi] !== undefined ? fx.params[pi] : 0));
+    const flags = (pm.p ? '<span class="ptag">P</span>' : '') + (pm.t ? '<span class="ptag t">♩</span>' : '');
+    const maxVal = pm.max !== undefined ? pm.max : 127;
+    return `<div class="pr">
+      <span class="pl2" title="${_esc((pm.d||pm.r||''))} [${_esc(pm.r||'')}]">${_esc(pm.n)}${flags}</span>
+      <input type="range" class="ps" min="0" max="${maxVal}" value="${val}"
+             data-fi="${slotIdx}" data-pi="${pi}" title="${_esc(pm.d||'')}"/>
+      <span class="pv">${val}</span>
+    </div>`;
+  }).join('');
+
+  div.innerHTML = `
+    <div class="fh">
+      <label class="tl" for="${cbId}">
+        <input type="checkbox" id="${cbId}" ${fx.enabled ? 'checked' : ''}/>
+        <span class="tt"></span>
+        <span class="fn" title="${_esc(fxDesc)}">${_esc(fx.name)}</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${fx.cat ? `<span class="fc2">${_esc(fx.cat)}</span>` : ''}
+        <span class="fx-remove" data-fi="${slotIdx}" title="Remover efeito"
+              style="cursor:pointer;font-size:.7rem;color:var(--text3);padding:2px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.08)">✕</span>
+      </div>
+    </div>
+    ${fxDesc ? `<div class="fdesc">${_esc(fxDesc)}</div>` : ''}
+    ${paramRows ? `<div class="fp">${paramRows}</div>` : ''}`;
+
+  // Toggle enable
+  div.querySelector(`#${cbId}`).onchange = e => {
+    fx.enabled = e.target.checked;
+    updateSlotEnable(patch, slotIdx, fx.enabled);
+    div.className = `fs ${fx.enabled ? 'on' : 'off'}`;
+    // Enviar bypass em tempo real se conectado
+    if (_device) sendBypass(slotIdx, fx.enabled, _device.deviceId);
+  };
+
+  // Sliders de parâmetros com debounce para envio MIDI
+  let _paramDebounce = {};
+  div.querySelectorAll('.ps').forEach(sl => {
+    const pv = sl.nextElementSibling;
+    sl.oninput = () => {
+      const v = parseInt(sl.value);
+      pv.textContent = v;
+      const pi = parseInt(sl.dataset.pi);
+      const fi = parseInt(sl.dataset.fi);
+      updatePatchParam(patch, fi, pi, v);
+      // Debounce para MIDI (evitar flood no canal)
+      clearTimeout(_paramDebounce[pi]);
+      _paramDebounce[pi] = setTimeout(() => {
+        if (_device) sendParamChange(fi, pi, v, _device.deviceId);
+      }, 30);
+    };
+  });
+
+  // Botão remover
+  div.querySelector('.fx-remove')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const fi = parseInt(e.currentTarget.dataset.fi);
+    removeEffectFromPatch(patch, fi);
+    uiOpenEditor(_currentSlot);
+    uiStatus(`Slot ${fi + 1} removido`, 's-warn');
+  });
+
+  return div;
+}
+
+/**
+ * Exibe o modal de seleção de efeitos
+ */
+function _showEffectPicker(patch, slotIdx, onSelect) {
+  document.getElementById('fx-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'fx-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);width:420px;max-height:70vh;display:flex;flex-direction:column;overflow:hidden';
+
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)';
+  hdr.innerHTML = `<span style="font-family:var(--mono);font-size:.75rem;color:var(--accent)">ESCOLHER EFEITO · SLOT ${slotIdx + 1}</span><span id="fx-close" style="cursor:pointer;color:var(--text3);font-size:1.2rem">✕</span>`;
+
+  const srch = document.createElement('div');
+  srch.style.cssText = 'padding:8px 12px;border-bottom:1px solid var(--border)';
+  srch.innerHTML = `<input id="fx-search" type="text" placeholder="Buscar efeito..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--sans);font-size:.82rem;padding:6px 10px;border-radius:var(--r);outline:none"/>`;
+
+  const list = document.createElement('div');
+  list.style.cssText = 'overflow-y:auto;flex:1;padding:8px 0';
+
+  const renderList = filter => {
+    list.innerHTML = '';
+    const catOrder = ['DYNAMICS','DRIVE','AMP','MOD','DELAY','REVERB','PEDAL'];
+    const allCats = [...catOrder, ...Object.keys(FX_CATEGORIES_LIST).filter(c => !catOrder.includes(c))];
+    allCats.forEach(cat => {
+      const names = FX_CATEGORIES_LIST[cat];
+      if (!names) return;
+      const filtered = filter
+        ? names.filter(n => n.toLowerCase().includes(filter.toLowerCase()) ||
+                            (FX_DB[n]?.desc||'').toLowerCase().includes(filter.toLowerCase()))
+        : names;
+      if (!filtered.length) return;
+
+      const catEl = document.createElement('div');
+      catEl.style.cssText = 'font-family:var(--mono);font-size:.6rem;color:var(--text3);letter-spacing:1.5px;padding:6px 16px 2px;text-transform:uppercase';
+      catEl.textContent = cat;
+      list.appendChild(catEl);
+
+      filtered.forEach(name => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:7px 16px;cursor:pointer;font-size:.82rem;display:flex;flex-direction:column;gap:2px';
+        item.onmouseover = () => item.style.background = 'rgba(255,255,255,.04)';
+        item.onmouseout  = () => item.style.background = '';
+        const db = FX_DB[name];
+        item.innerHTML = `<span style="font-weight:500">${_esc(name)}</span>${db ? `<span style="font-size:.65rem;color:var(--text3)">${_esc(db.desc)}</span>` : ''}`;
+        item.onclick = () => { onSelect(name); modal.remove(); };
+        list.appendChild(item);
+      });
+    });
+  };
+
+  renderList('');
+  box.appendChild(hdr);
+  box.appendChild(srch);
+  box.appendChild(list);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  box.querySelector('#fx-close').onclick = () => modal.remove();
+  box.querySelector('#fx-search').oninput = e => renderList(e.target.value);
+  box.querySelector('#fx-search').focus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: UI — Handlers de botões principais
+// ─────────────────────────────────────────────────────────────────────────────
+
+EL.bc.onclick = async () => {
+  if (_device) {
+    // Desconectar
+    midiDisconnect();
+    _emitEvent('disconnected', {});
+    return;
+  }
+
+  uiStatus('conectando...', 's-info');
+  EL.bc.disabled = true;
+  try {
+    const result = await midiConnect();
+    _uiOnConnected(result);
+  } catch (e) {
+    uiStatus(e.message, 's-err');
+  } finally {
+    EL.bc.disabled = false;
+  }
+};
+
+function _uiOnConnected(result) {
+  const info = result.info || {};
+  EL.dot.classList.remove('off');
+  EL.badge.textContent = `${info.name || 'Zoom'} · fw ${result.fw}`;
+  EL.bc.textContent = 'DISCONNECT';
+  EL.bc.style.cssText = 'background:transparent;color:var(--red);border-color:rgba(239,68,68,.4)';
+  EL.br.disabled = EL.bb.disabled = EL.brs.disabled = false;
+
+  const presets = info.presets || 100;
+  _patches = new Array(presets).fill(null);
+
+  uiStatus(`conectado · ${presets} patches`, 's-ok');
+  EL.es.innerHTML = `<div class="ei">⬡</div><p>${(info.name||'ZOOM').toUpperCase()} CONECTADA</p><p style="font-size:.65rem;opacity:.5">clique em READ ALL para carregar os patches</p>`;
+}
+
+onEvent('disconnected', () => {
+  EL.dot.classList.add('off');
+  EL.badge.textContent = 'no device';
+  EL.bc.textContent = 'CONNECT';
+  EL.bc.style.cssText = '';
+  EL.br.disabled = EL.bb.disabled = EL.brs.disabled = true;
+  _patches = [];
+  _currentSlot = -1;
+  EL.pl.innerHTML = '';
+  EL.es.innerHTML = `<div class="ei">⬡</div><p>DEVICE DISCONNECTED</p>`;
+  EL.es.style.display = 'flex';
+  EL.ec.style.display = 'none';
+  uiStatus('desconectado', 's-warn');
+  uiProgress(0, 0);
+});
+
+// ── READ ALL ─────────────────────────────────────────────────────────────────
+EL.br.onclick = async () => {
+  if (!_device || _isReading) return;
+  _isReading = true;
+  EL.br.disabled = true;
+  EL.dbg.style.display = 'block';
+
+  const devId    = _device.deviceId;
+  const devInfo  = _device.info || {};
+  const total    = devInfo.presets || 100;
+
+  uiProgress(0, total);
+  uiStatus('lendo patches...', 's-info');
+
+  let loaded = 0;
+  const BATCH_DELAY = 80; // ms entre requisições para não sobrecarregar
+
+  try {
+    for (let s = 0; s < total; s++) {
+      try {
+        const patch = await readPatch(s, devId);
+        _patches[s] = patch;
+        uiRenderPatchItem(s, patch);
+        loaded++;
+      } catch (e) {
+        _debugLog('read', `slot ${s + 1} erro: ${e.message}`, 'var(--red)');
+        // Não abortar — continuar para os próximos
+      }
+      uiProgress(s + 1, total);
+      await _sleep(BATCH_DELAY);
+    }
+    uiStatus(`${loaded}/${total} patches carregados`, loaded > 0 ? 's-ok' : 's-warn');
+  } catch (e) {
+    uiStatus(e.message, 's-err');
+  } finally {
+    _isReading = false;
+    EL.br.disabled = false;
+  }
+};
+
+// ── BACKUP ────────────────────────────────────────────────────────────────────
+EL.bb.onclick = () => {
+  if (!_device) return;
+  const bk = {
+    version: '2.0',
+    timestamp: new Date().toISOString(),
+    device: {
+      key:      _device.info?.key || 'unknown',
+      name:     _device.info?.name || 'Zoom',
+      deviceId: _device.deviceId,
+      fw:       _device.fw,
+    },
+    patches: _patches,
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(bk, null, 2)], { type: 'application/json' }));
+  a.download = `${(bk.device.name).replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  uiStatus('backup baixado', 's-ok');
+};
+
+// ── RESTORE ───────────────────────────────────────────────────────────────────
+EL.brs.onclick = () => EL.frs.click();
+
+EL.frs.onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  EL.frs.value = '';
+
+  let bk;
+  try { bk = JSON.parse(await f.text()); }
+  catch { uiStatus('arquivo inválido', 's-err'); return; }
+
+  if (!bk.patches || !bk.device) { uiStatus('formato inválido', 's-err'); return; }
+
+  const bkDevId = bk.device.deviceId || bk.device.id;
+  if (bkDevId !== _device?.deviceId) {
+    uiStatus(`backup para ${bk.device.name}, conectado: ${_device?.info?.name}`, 's-err');
+    return;
+  }
+
+  const toRestore = bk.patches.filter(Boolean);
+  if (!confirm(`Restaurar ${toRestore.length} patches? Esta operação não pode ser desfeita.`)) return;
+
+  uiStatus('restaurando...', 's-info');
+  let ok = 0;
+
+  for (let s = 0; s < bk.patches.length; s++) {
+    const patch = bk.patches[s];
+    if (!patch) continue;
+    patch.slot = s;
+    try {
+      await writePatch(patch, _device.deviceId);
+      _patches[s] = patch;
+      uiRenderPatchItem(s, patch);
+      ok++;
+    } catch (e) {
+      uiStatus(`erro slot ${s + 1}: ${e.message}`, 's-err');
+      return;
+    }
+    uiProgress(s + 1, bk.patches.length);
+    await _sleep(80);
+  }
+
+  uiStatus(`${ok} patches restaurados`, 's-ok');
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO: DEBUG PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+_debugContainer = EL.dl;
+
+EL.bd.onclick = () => {
+  const open = EL.dbg.style.display === 'block';
+  EL.dbg.style.display = open ? 'none' : 'block';
+  _debugEnabled = !open;
+  if (!open) {
+    EL.dl.innerHTML = '';
+    _debugLog('info', 'debug aberto — todo tráfego MIDI é registrado aqui', 'var(--text2)');
+  }
+};
+
+EL.dc.onclick = () => {
+  EL.dbg.style.display = 'none';
+  _debugEnabled = false;
+};
+
+EL.ds.onclick = async () => {
+  _debugEnabled = true;
+  EL.dbg.style.display = 'block';
+  _debugLog('info', 'enviando identity request...', 'var(--text2)');
+
+  let access = _midiAccess;
+  if (!access) {
+    try { access = await navigator.requestMIDIAccess({ sysex: true }); }
+    catch (e) { _debugLog('err', e.message, 'var(--red)'); return; }
+  }
+
+  const inputs  = Array.from(access.inputs.values());
+  const outputs = Array.from(access.outputs.values());
+
+  inputs.forEach(inp => {
+    _debugLog('in ', `${inp.name} [${inp.state}]`, 'var(--green)');
+    inp.onmidimessage = ev => _debugLog('←rx', _hexStr(new Uint8Array(ev.data)), 'var(--accent3)');
+  });
+  outputs.forEach(out => {
+    _debugLog('out', `${out.name} [${out.state}]`, 'var(--amber)');
+    try {
+      const m = msgIdentityRequest();
+      out.send(m);
+      _debugLog('→tx', `${out.name.slice(0,20)}  ${_hexStr(m)}`, 'var(--accent2)');
+    } catch (e) { _debugLog('err', e.message, 'var(--red)'); }
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INICIALIZAÇÃO
+// ─────────────────────────────────────────────────────────────────────────────
+_debugLog('boot', 'Zoom G1on Editor — motor v2.0 inicializado', 'var(--accent)');
+
+
+</script>
+</body>
+</html>
