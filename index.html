@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMC · Auto Dump G1On v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    background: #0a0a0a; 
+    color: #0f0; 
+    font-family: 'Courier New', monospace; 
+    padding: 20px;
+    font-size: 14px;
+  }
+  h1 { color: #0ff; margin-bottom: 20px; font-size: 24px; }
+  .panel { 
+    border: 1px solid #333; 
+    padding: 15px; 
+    margin-bottom: 20px; 
+    background: #111;
+  }
+  button { 
+    background: #222; 
+    color: #0f0; 
+    border: 1px solid #0f0; 
+    padding: 10px 20px; 
+    cursor: pointer; 
+    margin: 5px;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  button:hover { background: #0f0; color: #000; }
+  button:disabled { border-color: #555; color: #555; cursor: not-allowed; }
+  button.stop { border-color: #f00; color: #f00; }
+  button.stop:hover { background: #f00; color: #000; }
+  #status { 
+    margin-left: 10px; 
+    color: #888;
+    font-size: 12px;
+  }
+  #log { 
+    height: 500px; 
+    overflow-y: auto; 
+    background: #000; 
+    border: 1px solid #0f0; 
+    padding: 10px; 
+    font-size: 11px;
+    white-space: pre-wrap;
+    font-family: 'Courier New', monospace;
+  }
+  .log-entry { margin-bottom: 2px; }
+  .log-info { color: #0ff; }
+  .log-success { color: #0f0; }
+  .log-error { color: #f00; }
+  .log-warning { color: #ff0; }
+  .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #222;
+    border: 1px solid #0f0;
+    margin: 10px 0;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #0f0;
+    transition: width 0.3s;
+  }
+  .progress-text {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #000;
+    font-weight: bold;
+    line-height: 20px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+  }
+  .stat-box {
+    background: #222;
+    border: 1px solid #333;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 24px;
+    color: #0ff;
+    font-weight: bold;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #888;
+    margin-top: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🎸 FMC · Auto Dump G1On v2</h1>
+
+<div class="panel">
+  <h3>Conexão MIDI</h3>
+  <button id="btnConnect">CONECTAR MIDI</button>
+  <span id="status">Desconectado</span>
+</div>
+
+<div class="panel">
+  <h3>Varredura Automática (A0 → J9)</h3>
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-value" id="statTotal">100</div>
+      <div class="stat-label">TOTAL PATCHES</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statDone">0</div>
+      <div class="stat-label">CONCLUÍDOS</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statFailed">0</div>
+      <div class="stat-label">FALHARAM</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statTime">0s</div>
+      <div class="stat-label">TEMPO DECORRIDO</div>
+    </div>
+  </div>
+  
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    <div class="progress-text" id="progressText">0/100</div>
+  </div>
+  
+  <button id="btnStart">▶ INICIAR VARREDURA</button>
+  <button id="btnStop" class="stop" disabled>■ PARAR</button>
+</div>
+
+<div class="panel">
+  <h3>Exportar Resultados</h3>
+  <button id="btnExportJson" disabled>⬇ SALVAR JSON COMPLETO</button>
+  <button id="btnExportLog" disabled>⬇ SALVAR LOG LEGÍVEL</button>
+  <button id="btnClearLog">🗑 LIMPAR LOG</button>
+</div>
+
+<div class="panel">
+  <h3>Log de Eventos</h3>
+  <div id="log"></div>
+</div>
+
+<script>
+// ============ CONFIGURAÇÃO ============
+const CONFIG = {
+  SETTLE_AFTER_PC: 500,      // ms após Program Change
+  SETTLE_AFTER_EDIT: 200,    // ms após Edit Mode Enter/Exit
+  TIMEOUT_0x28: 2000,        // timeout esperando resposta 0x28
+  DELAY_BETWEEN_PATCHES: 300, // ms entre patches
+  SYSEX_DELAY: 30            // ms mínimo entre comandos SysEx
+};
+
+// ============ ESTADO GLOBAL ============
+let midiAccess = null;
+let inputPort = null;
+let outputPort = null;
+let sysexBuffer = [];
+let pendingResponse = null;
+let isRunning = false;
+let shouldStop = false;
+let patchResults = [];
+let startTime = null;
+let doneCount = 0;
+let failedCount = 0;
+
+// ============ LOG ============
+const logEl = document.getElementById('log');
+
+function log(msg, type = 'info') {
+  const time = new Date().toLocaleTimeString();
+  const div = document.createElement('div');
+  div.className = `log-entry log-${type}`;
+  div.textContent = `[${time}] ${msg}`;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function toHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+}
+
+// ============ MIDI ============
+function sendSysEx(bytes) {
+  if (!outputPort) return;
+  const msg = [0xF0, ...bytes, 0xF7];
+  outputPort.send(msg);
+  log(`OUT: ${toHex(msg)}`, 'info');
+}
+
+function handleMidiMessage(e) {
+  const data = e.data;
+  
+  if (data[0] === 0xF0) {
+    sysexBuffer = Array.from(data);
+  } else if (data[0] === 0xF7 && sysexBuffer.length > 0) {
+    sysexBuffer.push(0xF7);
+    const fullMsg = sysexBuffer;
+    sysexBuffer = [];
+    
+    log(`IN : ${toHex(fullMsg)}`, 'success');
+    
+    // Se estamos esperando uma resposta 0x28
+    if (pendingResponse && fullMsg[4] === 0x28) {
+      pendingResponse(fullMsg);
+      pendingResponse = null;
+    }
+  }
+}
+
+// ============ COMANDOS ZOOM ============
+function sendBankSelect(bank) {
+  // CC#32 (Bank Select LSB)
+  sendSysEx([0x52, 0x00, 0x63, 0x32, bank & 0x7F]);
+}
+
+function sendProgramChange(preset) {
+  // Program Change
+  sendSysEx([0x52, 0x00, 0x63, 0xC0, preset & 0x7F]);
+}
+
+function sendEditMode(on) {
+  sendSysEx([0x52, 0x00, 0x63, 0x50, on ? 0x01 : 0x00]);
+}
+
+function requestPatchData() {
+  sendSysEx([0x52, 0x00, 0x63, 0x29]);
+}
+
+// ============ UTILS ============
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function updateStats() {
+  document.getElementById('statDone').textContent = doneCount;
+  document.getElementById('statFailed').textContent = failedCount;
+  const total = doneCount + failedCount;
+  const pct = (total / 100) * 100;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+  document.getElementById('progressText').textContent = `${total}/100`;
+  
+  if (startTime) {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('statTime').textContent = `${elapsed}s`;
+  }
+}
+
+// ============ VARREDURA ============
+async function dumpPatch(bank, preset) {
+  const patchName = `${String.fromCharCode(65 + bank)}${preset}`;
+  log(`--- Patch ${patchName} ---`, 'info');
+  
+  try {
+    // 1. Bank Select + Program Change
+    sendBankSelect(bank);
+    await sleep(CONFIG.SYSEX_DELAY);
+    sendProgramChange(preset);
+    await sleep(CONFIG.SETTLE_AFTER_PC);
+    
+    // 2. Edit Mode Enter
+    sendEditMode(true);
+    await sleep(CONFIG.SETTLE_AFTER_EDIT);
+    
+    // 3. Request patch data com timeout
+    let responseData = null;
+    const timeoutPromise = sleep(CONFIG.TIMEOUT_0x28);
+    const responsePromise = new Promise(resolve => {
+      pendingResponse = resolve;
+    });
+    
+    requestPatchData();
+    
+    // Aguarda resposta ou timeout
+    responseData = await Promise.race([responsePromise, timeoutPromise.then(() => null)]);
+    
+    if (!responseData) {
+      log(`  ✗ Timeout esperando 0x28`, 'error');
+      failedCount++;
+      patchResults.push({
+        patch: patchName,
+        bank,
+        preset,
+        success: false,
+        error: 'timeout',
+        payload: null
+      });
+    } else {
+      // Extrai payload (entre header e F7)
+      const payload = responseData.slice(5, responseData.length - 1);
+      log(`  ✓ Recebido ${payload.length} bytes`, 'success');
+      
+      patchResults.push({
+        patch: patchName,
+        bank,
+        preset,
+        success: true,
+        payload: Array.from(payload),
+        payloadHex: toHex(payload)
+      });
+      doneCount++;
+    }
+    
+    // 4. Edit Mode Exit
+    sendEditMode(false);
+    await sleep(CONFIG.SETTLE_AFTER_EDIT);
+    
+  } catch (err) {
+    log(`  ✗ Erro: ${err.message}`, 'error');
+    failedCount++;
+    patchResults.push({
+      patch: patchName,
+      bank,
+      preset,
+      success: false,
+      error: err.message,
+      payload: null
+    });
+  }
+  
+  updateStats();
+  await sleep(CONFIG.DELAY_BETWEEN_PATCHES);
+}
+
+async function startDump() {
+  if (!outputPort) {
+    log('Erro: MIDI não conectado', 'error');
+    return;
+  }
+  
+  isRunning = true;
+  shouldStop = false;
+  startTime = Date.now();
+  doneCount = 0;
+  failedCount = 0;
+  patchResults = [];
+  
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('btnExportJson').disabled = true;
+  document.getElementById('btnExportLog').disabled = true;
+  
+  log('=== INICIANDO VARREDURA ===', 'warning');
+  
+  // Varre todos os 100 patches (A0-J9)
+  for (let bank = 0; bank < 10; bank++) {
+    for (let preset = 0; preset < 10; preset++) {
+      if (shouldStop) {
+        log('Varredura interrompida pelo usuário', 'warning');
+        break;
+      }
+      
+      await dumpPatch(bank, preset);
+    }
+    
+    if (shouldStop) break;
+  }
+  
+  isRunning = false;
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('btnExportJson').disabled = false;
+  document.getElementById('btnExportLog').disabled = false;
+  
+  log(`=== VARREDURA CONCLUÍDA ===`, 'warning');
+  log(`Sucesso: ${doneCount} | Falhas: ${failedCount}`, 'warning');
+}
+
+function stopDump() {
+  shouldStop = true;
+  log('Solicitando parada...', 'warning');
+}
+
+// ============ EXPORT ============
+function exportJson() {
+  const data = {
+    timestamp: new Date().toISOString(),
+    config: CONFIG,
+    stats: {
+      total: 100,
+      done: doneCount,
+      failed: failedCount
+    },
+    patches: patchResults
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `g1on-dump-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  log('JSON exportado', 'success');
+}
+
+function exportLog() {
+  let text = `FMC Auto Dump G1On - ${new Date().toISOString()}\n`;
+  text += `Stats: ${doneCount} sucesso, ${failedCount} falhas\n\n`;
+  
+  patchResults.forEach(p => {
+    text += `Patch ${p.patch}: ${p.success ? 'OK' : 'FAIL'}\n`;
+    if (p.success) {
+      text += `  Payload (${p.payload.length} bytes): ${p.payloadHex}\n`;
+    } else {
+      text += `  Erro: ${p.error}\n`;
+    }
+    text += '\n';
+  });
+  
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `g1on-dump-log-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  log('Log exportado', 'success');
+}
+
+// ============ SETUP ============
+document.getElementById('btnConnect').onclick = async () => {
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+    
+    let found = false;
+    for (let input of midiAccess.inputs.values()) {
+      if (input.name.toLowerCase().includes('zoom') || 
+          input.name.toLowerCase().includes('g1')) {
+        inputPort = input;
+        input.onmidimessage = handleMidiMessage;
+        log(`Input: ${input.name}`, 'success');
+        found = true;
+      }
+    }
+    
+    for (let output of midiAccess.outputs.values()) {
+      if (output.name.toLowerCase().includes('zoom') || 
+          output.name.toLowerCase().includes('g1')) {
+        outputPort = output;
+        log(`Output: ${output.name}`, 'success');
+      }
+    }
+    
+    if (inputPort && outputPort) {
+      document.getElementById('status').textContent = 'Conectado';
+      document.getElementById('status').style.color = '#0f0';
+      log('MIDI conectado', 'success');
+    } else {
+      log('Porta Zoom não encontrada', 'error');
+    }
+  } catch (e) {
+    log(`Erro: ${e.message}`, 'error');
+  }
+};
+
+document.getElementById('btnStart').onclick = startDump;
+document.getElementById('btnStop').onclick = stopDump;
+document.getElementById('btnExportJson').onclick = exportJson;
+document.getElementById('btnExportLog').onclick = exportLog;
+document.getElementById('btnClearLog').onclick = () => {
+  logEl.innerHTML = '';
+};
+
+</script>
+</body>
+</html>
