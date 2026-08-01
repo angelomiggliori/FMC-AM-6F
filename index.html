@@ -2,268 +2,621 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Raw Dump A0-A9</title>
+<title>Zoom G1Xon-K — WebMIDI Auto-Dump</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { 
-    background: #0a0a0a; 
-    color: #0f0; 
-    font-family: 'Courier New', monospace; 
-    padding: 20px;
-    font-size: 14px;
+  :root {
+    --bg: #0a0e0a;
+    --panel: #10160f;
+    --border: #234023;
+    --green: #4ce34c;
+    --cyan: #4cd8e3;
+    --yellow: #e3d84c;
+    --red: #e35b4c;
+    --dim: #6a8a6a;
+    --white: #d6f5d6;
   }
-  h1 { color: #0ff; margin-bottom: 20px; font-size: 24px; }
-  .panel { 
-    border: 1px solid #333; 
-    padding: 15px; 
-    margin-bottom: 20px; 
-    background: #111;
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: "Courier New", monospace;
+    margin: 0;
+    padding: 16px;
+    font-size: 13px;
   }
-  button { 
-    background: #222; 
-    color: #0f0; 
-    border: 1px solid #0f0; 
-    padding: 10px 20px; 
-    cursor: pointer; 
-    margin: 5px;
+  h1 {
+    color: var(--cyan);
+    font-size: 18px;
+    margin: 0 0 4px 0;
+  }
+  .subtitle { color: var(--dim); margin-bottom: 16px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  .panel h2 {
+    color: var(--yellow);
+    font-size: 13px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  label { display: block; color: var(--dim); font-size: 11px; margin: 8px 0 2px; }
+  select, input[type=number], input[type=text] {
+    width: 100%;
+    background: #060906;
+    color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
     font-family: inherit;
-    font-size: 14px;
-  }
-  button:hover { background: #0f0; color: #000; }
-  button:disabled { border-color: #555; color: #555; cursor: not-allowed; }
-  button.stop { border-color: #f00; color: #f00; }
-  button.stop:hover { background: #f00; color: #000; }
-  #status { margin-left: 10px; color: #888; font-size: 12px; }
-  #output { 
-    height: 600px; 
-    overflow-y: auto; 
-    background: #000; 
-    border: 1px solid #0f0; 
-    padding: 10px; 
     font-size: 12px;
-    white-space: pre-wrap;
-    font-family: 'Courier New', monospace;
-    line-height: 1.4;
   }
-  .patch-header { color: #0ff; font-weight: bold; margin-top: 15px; }
-  .hex-line { color: #0f0; }
-  .hex-offset { color: #888; }
-  .log-entry { margin-bottom: 2px; }
-  .log-info { color: #0ff; }
-  .log-success { color: #0f0; }
-  .log-error { color: #f00; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  button {
+    background: #16261a;
+    color: var(--green);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+  }
+  button:hover:not(:disabled) { border-color: var(--green); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { color: var(--yellow); border-color: #5a5424; }
+  button.danger { color: var(--red); border-color: #5a2424; }
+  .status-line { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  #connStatus { font-weight: bold; }
+  .ok { color: var(--green); }
+  .bad { color: var(--red); }
+  .progress-wrap { margin-top: 8px; }
+  #progressBar {
+    height: 6px;
+    background: #060906;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #progressBar > div {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    transition: width 0.15s;
+  }
+  #progressLabel { color: var(--dim); font-size: 11px; margin-top: 3px; }
+  #console {
+    background: #050805;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    height: 78vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.35;
+  }
+  .l-info { color: var(--white); }
+  .l-tx { color: var(--dim); }
+  .l-rx { color: var(--green); }
+  .l-hex { color: #7fbf7f; }
+  .l-warn { color: var(--yellow); }
+  .l-err { color: var(--red); }
+  .l-hdr { color: var(--cyan); font-weight: bold; }
+  #results { max-height: 220px; overflow-y: auto; font-size: 11px; }
+  #results table { width: 100%; border-collapse: collapse; }
+  #results td, #results th { padding: 2px 4px; border-bottom: 1px solid var(--border); text-align: left; }
+  #results th { color: var(--dim); }
+  small.hint { color: var(--dim); display:block; margin-top: 4px; }
 </style>
 </head>
 <body>
 
-<h1>🎸 FMC · Raw Dump A0-A9 (134 bytes)</h1>
-
-<div class="panel">
-  <h3>Conexão MIDI</h3>
-  <button id="btnConnect">CONECTAR MIDI</button>
-  <span id="status">Desconectado</span>
+<h1>Zoom G1Xon-K — WebMIDI Auto-Dump</h1>
+<div class="subtitle">
+  Espelha o protocolo da controladora RP2040 (identity, Bank Select+PC, Edit Mode + 0x29/0x28, 0x31)
+  direto do navegador via Web MIDI. Precisa de Chrome/Edge com o pedal ligado por USB no PC.
 </div>
 
-<div class="panel">
-  <h3>Captura A0-A9</h3>
-  <button id="btnStart">▶ CAPTURAR A0-A9</button>
-  <button id="btnStop" class="stop" disabled>■ PARAR</button>
-  <button id="btnExport"> EXPORTAR TXT</button>
-</div>
+<div class="grid">
+  <div>
+    <div class="panel">
+      <h2>1. Conexão</h2>
+      <button id="btnRequestAccess" class="primary">Pedir acesso MIDI (com SysEx)</button>
+      <label>Entrada MIDI (do pedal)</label>
+      <select id="selInput"><option>-- pede acesso primeiro --</option></select>
+      <label>Saída MIDI (pro pedal)</label>
+      <select id="selOutput"><option>-- pede acesso primeiro --</option></select>
+      <div class="status-line">
+        <span>Status:</span>
+        <span id="connStatus" class="bad">desconectado</span>
+      </div>
+      <button id="btnIdentity">Enviar Identity Request</button>
+      <small class="hint">dev_id esperado: 0x63 (config atual da controladora)</small>
+    </div>
 
-<div class="panel">
-  <h3>Output (formato tela SPI)</h3>
-  <div id="output"></div>
+    <div class="panel">
+      <h2>2. Leitura manual (1 patch)</h2>
+      <div class="row">
+        <div>
+          <label>Banco (0-9)</label>
+          <input type="number" id="inBank" value="0" min="0" max="9">
+        </div>
+        <div>
+          <label>Preset (0-9)</label>
+          <input type="number" id="inPreset" value="0" min="0" max="9">
+        </div>
+      </div>
+      <button id="btnSelect">Selecionar (Bank Select + PC)</button>
+      <button id="btnReadOnly" class="primary">Ler patch atual (Edit Mode + 0x29/0x28)</button>
+    </div>
+
+    <div class="panel">
+      <h2>3. Auto-dump (todos os bancos)</h2>
+      <div class="row">
+        <div>
+          <label>Banco inicial</label>
+          <input type="number" id="rangeBankStart" value="0" min="0" max="9">
+        </div>
+        <div>
+          <label>Banco final</label>
+          <input type="number" id="rangeBankEnd" value="9" min="0" max="9">
+        </div>
+      </div>
+      <label>Settle entre passos (ms) — igual ao firmware (150ms)</label>
+      <input type="number" id="inSettle" value="150" min="50" max="2000">
+      <button id="btnAutoDump" class="primary">Rodar auto-dump completo</button>
+      <button id="btnStopDump" class="danger" disabled>Parar</button>
+      <div class="progress-wrap">
+        <div id="progressBar"><div></div></div>
+        <div id="progressLabel">parado</div>
+      </div>
+      <button id="btnExportJson" disabled>Baixar dump.json</button>
+      <small class="hint">100 células (10 bancos x 10 presets) leva uns 2-3 min no ritmo do firmware.</small>
+    </div>
+
+    <div class="panel">
+      <h2>4. Teste ida-e-volta do 0x31 (escrita)</h2>
+      <small class="hint">Pra validar se a curva de escrita bate com a de leitura, tipo o Passo 3 do plano de tap tempo.</small>
+      <div class="row">
+        <div><label>Slot (0-4)</label><input type="number" id="wSlot" value="0" min="0" max="4"></div>
+        <div><label>Param ID</label><input type="number" id="wParam" value="4" min="0" max="127"></div>
+        <div><label>Valor</label><input type="number" id="wVal" value="0" min="0" max="127"></div>
+      </div>
+      <button id="btnWriteParam">Mandar 0x31 (Edit Mode Enter → 31 → Exit)</button>
+      <button id="btnReadAfterWrite" class="primary">Mandar 0x31 e reler na sequência</button>
+    </div>
+
+    <div class="panel">
+      <h2>Resultados (últimos)</h2>
+      <div id="results"><table><thead><tr><th>Banco</th><th>Preset</th><th>Nome</th><th>Bytes</th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin:0;">
+    <h2>Console (estilo log da tela da controladora)</h2>
+    <div id="console"></div>
+  </div>
 </div>
 
 <script>
-const ZOOM_MFR = 0x52;
-let midiAccess = null, inputPort = null, outputPort = null;
-let pendingResponse = null;
-let shouldStop = false;
-let allDumps = [];
+// ============================================================================
+// Constantes do protocolo -- espelham config.h / zoom_protocol.cpp do projeto
+// da controladora RP2040. Se um desses valores mudar lá, muda aqui também.
+// ============================================================================
+const ZOOM_DEVICE_ID   = 0x63;
+const ZOOM_MIDI_CHANNEL = 0x00; // canal 1, 0-indexed
+const PRESETS_PER_BANK = 10;
+const PATCH_NAME_LEN = 8;
+const PATCH_NAME_TRAILING_FIELD_LEN = 4;
+const READ_TIMEOUT_MS = 1500; // generoso; o firmware usa HANDSHAKE_RETRY_MS=1500 pro identity
 
-const outputEl = document.getElementById('output');
+let midiAccess = null;
+let midiInput = null;
+let midiOutput = null;
+let connected = false;
+let stopRequested = false;
+let capturedResults = []; // pro export JSON
 
-function log(msg, type = 'info') {
-  const time = new Date().toLocaleTimeString();
-  const div = document.createElement('div');
-  div.className = `log-entry log-${type}`;
-  div.textContent = `[${time}] ${msg}`;
-  outputEl.appendChild(div);
-  outputEl.scrollTop = outputEl.scrollHeight;
+const $ = (id) => document.getElementById(id);
+const consoleEl = $('console');
+
+function log(msg, cls) {
+  const line = document.createElement('div');
+  line.className = cls || 'l-info';
+  const ts = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+  line.textContent = `[${ts}] ${msg}`;
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
 }
 
-function toHex(bytes) {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+function hex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+}
+
+function logHexDump(bytes, label) {
+  log(`${label}: ${bytes.length} bytes`, 'l-hex');
+  for (let off = 0; off < bytes.length; off += 12) {
+    const chunk = bytes.slice(off, off + 12);
+    log(`  [${String(off).padStart(3, ' ')}] ${hex(chunk)}`, 'l-hex');
+  }
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function sendRaw(msg) {
-  if(!outputPort) return;
-  outputEl.appendChild(document.createElement('div')).textContent = `OUT: ${toHex(msg)}`;
-  outputPort.send(msg);
+// ----------------------------------------------------------------------------
+// Envio de mensagens
+// ----------------------------------------------------------------------------
+function sendRaw(bytes) {
+  if (!midiOutput) { log('sem saída MIDI selecionada', 'l-err'); return; }
+  midiOutput.send(bytes);
+  log(`TX: ${hex(bytes)}`, 'l-tx');
 }
 
-function sendAwait(msg, ms=2000) {
-  return new Promise((res, rej) => {
-    const t = setTimeout(() => { pendingResponse = null; rej(new Error('Timeout')); }, ms);
-    pendingResponse = d => { clearTimeout(t); res(d); };
-    sendRaw(msg);
-  });
+function sendZoomCommand(cmd, extraBytes) {
+  const body = [0xF0, 0x52, ZOOM_MIDI_CHANNEL, ZOOM_DEVICE_ID, cmd, ...(extraBytes || []), 0xF7];
+  sendRaw(body);
 }
 
-function onMidiMsg(e) {
-  const d = new Uint8Array(e.data);
-  if(pendingResponse) { pendingResponse(d); pendingResponse = null; }
+function sendIdentityRequest() {
+  sendRaw([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]);
 }
 
-async function connect() {
-  log('Iniciando conexão MIDI...', 'info');
-  if(!navigator.requestMIDIAccess) throw new Error('Web MIDI não suportado');
-  try { midiAccess = await navigator.requestMIDIAccess({ sysex: true }); }
-  catch { throw new Error('Acesso MIDI negado'); }
-  
-  const ins = [...midiAccess.inputs.values()], outs = [...midiAccess.outputs.values()];
-  if(!ins.length || !outs.length) throw new Error('Nenhuma porta MIDI encontrada');
-  
-  const idReq = new Uint8Array([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]);
-  let found = false;
-  for(const o of outs) {
-    for(const i of ins) {
-      i.onmidimessage = e => {
-        const d = new Uint8Array(e.data);
-        if(d.length>=6 && d[0]===0xF0 && d[1]===0x7E && d[3]===0x06 && d[4]===0x02 && d[5]===ZOOM_MFR) {
-          found = true;
-          inputPort = i; outputPort = o;
-          inputPort.onmidimessage = onMidiMsg;
-          log(`✓ Dispositivo identificado: ID=0x${d[6].toString(16).toUpperCase()}`, 'success');
-        }
-      };
+function sendEditModeEnter() { sendZoomCommand(0x50, [0x01]); }
+function sendEditModeExit()  { sendZoomCommand(0x50, [0x00]); }
+function sendPatchDataRequest() { sendZoomCommand(0x29, []); }
+function sendSetParam(slot, paramId, val) { sendZoomCommand(0x31, [slot, paramId, val]); }
+
+function sendControlChange(cc, value) {
+  sendRaw([0xB0 | ZOOM_MIDI_CHANNEL, cc, value]);
+}
+function sendProgramChange(preset) {
+  sendRaw([0xC0 | ZOOM_MIDI_CHANNEL, preset]);
+}
+function sendBankSelectAndPC(bank, preset) {
+  sendControlChange(0, 0);        // Bank Select MSB, sempre 0
+  sendControlChange(32, bank);    // Bank Select LSB
+  sendProgramChange(preset);      // Program Change dentro do banco
+}
+
+// ----------------------------------------------------------------------------
+// Recepção -- acumula SysEx entre eventos (Web MIDI às vezes entrega em
+// pedaços), igual o feedByte() do midi_host.cpp faz por segurança.
+// ----------------------------------------------------------------------------
+let rxBuf = [];
+let rxWaiters = []; // { predicate, resolve, timeoutId }
+
+function onMidiMessage(event) {
+  const data = event.data;
+  for (const b of data) {
+    if (b === 0xF0) {
+      rxBuf = [b];
+    } else if (rxBuf.length > 0) {
+      rxBuf.push(b);
+      if (b === 0xF7) {
+        const msg = rxBuf;
+        rxBuf = [];
+        handleCompleteSysEx(msg);
+      }
     }
-    sendRaw(idReq);
-    await sleep(500);
-    if(found) break;
+    // Bytes fora de um SysEx (Program Change/CC vindos do painel, etc.)
+    // não são o foco desta ferramenta -- só o dump de patch importa aqui.
   }
-  if(!found) throw new Error('Nenhum dispositivo Zoom respondendo');
 }
 
-function formatPayload(raw134) {
-  // raw134 = F0 52 00 63 28 [128 bytes] F7
-  // Extrai os 128 bytes de payload (índices 5 a 132)
-  const payload = raw134.slice(5, 133);
-  
-  let output = `0x28 recebido (${raw134.length} bytes)\n`;
-  output += `payload: ${payload.length} bytes\n`;
-  
-  // Formata em linhas de 12 bytes igual à tela SPI
-  for(let i = 0; i < payload.length; i += 12) {
-    const offset = `[${i.toString().padStart(3)}]`;
-    const hex = toHex(payload.slice(i, Math.min(i + 12, payload.length)));
-    output += `${offset} ${hex}\n`;
+function handleCompleteSysEx(msg) {
+  log(`RX: ${hex(msg)}`, 'l-rx');
+  // Resolve qualquer esperador cujo predicado bata com esta mensagem.
+  for (let i = rxWaiters.length - 1; i >= 0; i--) {
+    const w = rxWaiters[i];
+    if (w.predicate(msg)) {
+      clearTimeout(w.timeoutId);
+      rxWaiters.splice(i, 1);
+      w.resolve(msg);
+    }
   }
-  
-  return output;
 }
 
-async function capturePatch(slot) {
-  const patchName = `${String.fromCharCode(65 + Math.floor(slot/10))}${slot%10}`;
-  
-  outputEl.appendChild(document.createElement('div')).className = 'patch-header';
-  outputEl.lastChild.textContent = `\n=== Patch ${patchName} (slot ${slot}) ===`;
-  
-  try {
-    // Bank Select + Program Change
-    sendRaw(new Uint8Array([0xB0, 0x00, 0x00]));
-    await sleep(20);
-    sendRaw(new Uint8Array([0xB0, 0x20, Math.floor(slot/10)]));
-    await sleep(20);
-    sendRaw(new Uint8Array([0xC0, slot%10]));
-    await sleep(600);
-    
-    // Edit Mode Enter
-    sendRaw(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x50, 0x01, 0xF7]));
-    await sleep(200);
-    
-    // Request Patch Data
-    const resp = await sendAwait(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x29, 0xF7]), 2000);
-    
-    if(resp[4] !== 0x28) throw new Error('Resposta não é 0x28');
-    
-    // Formata e mostra
-    const formatted = formatPayload(resp);
-    outputEl.appendChild(document.createElement('div')).className = 'hex-line';
-    outputEl.lastChild.textContent = formatted;
-    
-    allDumps.push({ patch: patchName, slot, raw: Array.from(resp) });
-    
-    // Edit Mode Exit
-    sendRaw(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x50, 0x00, 0xF7]));
-    await sleep(100);
-    
-  } catch(err) {
-    outputEl.appendChild(document.createElement('div')).className = 'log-error';
-    outputEl.lastChild.textContent = `✗ Erro: ${err.message}`;
-  }
-  
-  outputEl.scrollTop = outputEl.scrollHeight;
-  await sleep(200);
-}
-
-async function startCapture() {
-  if(!outputPort) { log('MIDI não conectado', 'error'); return; }
-  
-  shouldStop = false;
-  allDumps = [];
-  outputEl.innerHTML = '';
-  
-  document.getElementById('btnStart').disabled = true;
-  document.getElementById('btnStop').disabled = false;
-  document.getElementById('btnExport').disabled = true;
-  
-  log('=== INICIANDO CAPTURA A0-A9 ===', 'info');
-  
-  for(let slot = 0; slot < 10; slot++) {
-    if(shouldStop) break;
-    await capturePatch(slot);
-  }
-  
-  document.getElementById('btnStart').disabled = false;
-  document.getElementById('btnStop').disabled = true;
-  document.getElementById('btnExport').disabled = false;
-  
-  log(`\n=== CAPTURA CONCLUÍDA: ${allDumps.length} patches ===`, 'success');
-}
-
-function exportDumps() {
-  let txt = `FMC Raw Dump A0-A9 - ${new Date().toISOString()}\n\n`;
-  allDumps.forEach(d => {
-    txt += `Patch ${d.patch} (slot ${d.slot}):\n`;
-    txt += formatPayload(new Uint8Array(d.raw));
-    txt += '\n';
+// Espera a próxima SysEx que bate com `predicate`, com timeout.
+function waitForSysEx(predicate, timeoutMs) {
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => {
+      const idx = rxWaiters.findIndex(w => w.timeoutId === timeoutId);
+      if (idx >= 0) rxWaiters.splice(idx, 1);
+      resolve(null); // timeout -- null sinaliza "sem resposta"
+    }, timeoutMs);
+    rxWaiters.push({ predicate, resolve, timeoutId });
   });
-  
-  const blob = new Blob([txt], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `g1on-raw-dump-A0-A9-${Date.now()}.txt`;
-  a.click();
-  log('Exportado!', 'success');
 }
 
-document.getElementById('btnConnect').onclick = async () => {
+function isIdentityReply(msg) {
+  return msg.length >= 7 && msg[1] === 0x7E && msg[3] === 0x06 && msg[4] === 0x02;
+}
+function isPatchDataReply(msg) {
+  return msg.length > 6 && msg[1] === 0x52 && msg[4] === 0x28;
+}
+
+// ----------------------------------------------------------------------------
+// Parsing do nome -- mesma lógica do parsePatchNameFromReply() do firmware:
+// PATCH_NAME_LEN=8 bytes que vêm ANTES de PATCH_NAME_TRAILING_FIELD_LEN=4
+// bytes de campo ainda não mapeado. Pula (não substitui por espaço) bytes
+// fora do range imprimível 32-126, e recorta espaços do fim.
+// ----------------------------------------------------------------------------
+function parsePatchData(msg) {
+  const HEADER_LEN = 5, TRAILER_LEN = 1;
+  const TAIL_BLOCK_LEN = PATCH_NAME_LEN + PATCH_NAME_TRAILING_FIELD_LEN;
+  if (msg.length < HEADER_LEN + TRAILER_LEN + TAIL_BLOCK_LEN) {
+    return { error: 'payload curto demais', raw: msg };
+  }
+  const payload = msg.slice(HEADER_LEN, msg.length - TRAILER_LEN);
+  const nameStart = payload.length - TAIL_BLOCK_LEN;
+  const nameBytes = payload.slice(nameStart, nameStart + PATCH_NAME_LEN);
+  const trailingBytes = payload.slice(nameStart + PATCH_NAME_LEN, nameStart + TAIL_BLOCK_LEN);
+
+  let name = '';
+  for (const c of nameBytes) {
+    if (c >= 32 && c < 127) name += String.fromCharCode(c);
+  }
+  name = name.replace(/ +$/, '');
+
+  return {
+    payload,
+    name,
+    nameBytesHex: hex(nameBytes),
+    trailingBytesHex: hex(trailingBytes),
+    raw: msg,
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Ciclo de leitura read-only: Edit Mode Enter -> settle -> 0x29 -> espera
+// 0x28 -> Edit Mode Exit -> settle. Mesma sequência do startReadOnlySequence()
+// do firmware -- NÃO manda Bank Select/PC (isso é feito à parte, se for o
+// caso, por sendBankSelectAndPC antes de chamar isto).
+// ----------------------------------------------------------------------------
+async function readCurrentPatch(settleMs) {
+  sendEditModeEnter();
+  await sleep(settleMs);
+  sendPatchDataRequest();
+  const reply = await waitForSysEx(isPatchDataReply, READ_TIMEOUT_MS);
+  sendEditModeExit();
+  await sleep(settleMs);
+  if (!reply) {
+    log('0x28 sem resposta (timeout)', 'l-warn');
+    return null;
+  }
+  const parsed = parsePatchData(reply);
+  return parsed;
+}
+
+// ----------------------------------------------------------------------------
+// UI: conexão
+// ----------------------------------------------------------------------------
+$('btnRequestAccess').onclick = async () => {
+  if (!navigator.requestMIDIAccess) {
+    log('Este navegador não suporta Web MIDI. Usa Chrome ou Edge.', 'l-err');
+    return;
+  }
   try {
-    await connect();
-    document.getElementById('status').textContent = 'Conectado';
-    document.getElementById('status').style.color = '#0f0';
-  } catch(e) { log(`Erro: ${e.message}`, 'error'); }
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+    log('Acesso MIDI concedido (com SysEx).', 'l-hdr');
+    populateDeviceLists();
+    midiAccess.onstatechange = populateDeviceLists;
+  } catch (e) {
+    log(`Falhou pedir acesso MIDI: ${e.message}`, 'l-err');
+  }
 };
 
-document.getElementById('btnStart').onclick = startCapture;
-document.getElementById('btnStop').onclick = () => { shouldStop = true; log('Parando...', 'info'); };
-document.getElementById('btnExport').onclick = exportDumps;
+function populateDeviceLists() {
+  const inSel = $('selInput'), outSel = $('selOutput');
+  inSel.innerHTML = '';
+  outSel.innerHTML = '';
+  for (const input of midiAccess.inputs.values()) {
+    const opt = document.createElement('option');
+    opt.value = input.id; opt.textContent = input.name;
+    inSel.appendChild(opt);
+  }
+  for (const output of midiAccess.outputs.values()) {
+    const opt = document.createElement('option');
+    opt.value = output.id; opt.textContent = output.name;
+    outSel.appendChild(opt);
+  }
+  if (inSel.options.length === 0) log('Nenhuma entrada MIDI encontrada -- pedal ligado?', 'l-warn');
+  if (outSel.options.length === 0) log('Nenhuma saída MIDI encontrada -- pedal ligado?', 'l-warn');
+  // Auto-seleciona se só tiver 1 opção de cada
+  if (inSel.options.length >= 1) connectInput(inSel.value);
+  if (outSel.options.length >= 1) connectOutput(outSel.value);
+}
+
+function connectInput(id) {
+  if (midiInput) midiInput.onmidimessage = null;
+  midiInput = midiAccess.inputs.get(id);
+  if (midiInput) midiInput.onmidimessage = onMidiMessage;
+  updateConnStatus();
+}
+function connectOutput(id) {
+  midiOutput = midiAccess.outputs.get(id);
+  updateConnStatus();
+}
+$('selInput').onchange = (e) => connectInput(e.target.value);
+$('selOutput').onchange = (e) => connectOutput(e.target.value);
+
+function updateConnStatus() {
+  connected = !!(midiInput && midiOutput);
+  const el = $('connStatus');
+  el.textContent = connected ? 'conectado' : 'desconectado';
+  el.className = connected ? 'ok' : 'bad';
+}
+
+$('btnIdentity').onclick = async () => {
+  log('enviando identity request...', 'l-hdr');
+  sendIdentityRequest();
+  const reply = await waitForSysEx(isIdentityReply, READ_TIMEOUT_MS);
+  if (!reply) { log('sem resposta de identity (timeout)', 'l-warn'); return; }
+  const reportedId = reply[6];
+  if (reportedId === ZOOM_DEVICE_ID) {
+    log(`identity OK, device id 0x${reportedId.toString(16)} (esperado)`, 'l-hdr');
+  } else {
+    log(`AVISO: device id 0x${reportedId.toString(16)} != esperado 0x${ZOOM_DEVICE_ID.toString(16)}`, 'l-warn');
+  }
+};
+
+// ----------------------------------------------------------------------------
+// UI: leitura manual
+// ----------------------------------------------------------------------------
+$('btnSelect').onclick = () => {
+  const bank = parseInt($('inBank').value, 10);
+  const preset = parseInt($('inPreset').value, 10);
+  log(`select: banco=${bank} preset=${preset} (PC=${preset})`, 'l-hdr');
+  sendBankSelectAndPC(bank, preset);
+};
+
+$('btnReadOnly').onclick = async () => {
+  log('lendo patch atual (Edit Mode + 0x29/0x28)...', 'l-hdr');
+  const parsed = await readCurrentPatch(parseInt($('inSettle').value, 10) || 150);
+  if (!parsed) return;
+  if (parsed.error) { log(parsed.error, 'l-err'); return; }
+  logHexDump(parsed.payload, 'payload');
+  log(`nome bytes: ${parsed.nameBytesHex}  |  trailing: ${parsed.trailingBytesHex}`, 'l-hex');
+  log(`nome decodificado: "${parsed.name}"`, 'l-hdr');
+  addResultRow(parseInt($('inBank').value, 10), parseInt($('inPreset').value, 10), parsed);
+};
+
+function addResultRow(bank, preset, parsed) {
+  const tbody = $('resultsBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${bank}</td><td>${preset}</td><td>${parsed.name || '(erro)'}</td><td>${parsed.payload ? parsed.payload.length : 0}</td>`;
+  tbody.prepend(tr);
+  capturedResults.push({
+    bank, preset,
+    name: parsed.name || null,
+    payload_hex: parsed.payload ? hex(parsed.payload) : null,
+    name_bytes_hex: parsed.nameBytesHex || null,
+    trailing_bytes_hex: parsed.trailingBytesHex || null,
+    raw_sysex_hex: parsed.raw ? hex(parsed.raw) : null,
+    captured_at: new Date().toISOString(),
+    error: parsed.error || null,
+  });
+  $('btnExportJson').disabled = capturedResults.length === 0;
+}
+
+// ----------------------------------------------------------------------------
+// UI: auto-dump completo
+// ----------------------------------------------------------------------------
+$('btnAutoDump').onclick = async () => {
+  if (!connected) { log('conecta entrada e saída MIDI primeiro.', 'l-err'); return; }
+  const bankStart = parseInt($('rangeBankStart').value, 10);
+  const bankEnd = parseInt($('rangeBankEnd').value, 10);
+  const settleMs = parseInt($('inSettle').value, 10) || 150;
+  const total = (bankEnd - bankStart + 1) * PRESETS_PER_BANK;
+  let done = 0;
+  stopRequested = false;
+  $('btnAutoDump').disabled = true;
+  $('btnStopDump').disabled = false;
+  capturedResults = [];
+  $('resultsBody').innerHTML = '';
+  log(`=== auto-dump iniciado: bancos ${bankStart}-${bankEnd}, ${total} células, settle=${settleMs}ms ===`, 'l-hdr');
+
+  outer:
+  for (let bank = bankStart; bank <= bankEnd; bank++) {
+    for (let preset = 0; preset < PRESETS_PER_BANK; preset++) {
+      if (stopRequested) { log('=== auto-dump interrompido pelo usuário ===', 'l-warn'); break outer; }
+      log(`--- banco=${bank} preset=${preset} (PC=${preset}) ---`, 'l-hdr');
+      sendBankSelectAndPC(bank, preset);
+      await sleep(settleMs);
+      const parsed = await readCurrentPatch(settleMs);
+      if (parsed && !parsed.error) {
+        log(`nome: "${parsed.name}"  |  trailing: ${parsed.trailingBytesHex}`, 'l-hex');
+        addResultRow(bank, preset, parsed);
+      } else {
+        log(`falhou ler banco=${bank} preset=${preset}`, 'l-err');
+        capturedResults.push({ bank, preset, error: parsed ? parsed.error : 'timeout', captured_at: new Date().toISOString() });
+      }
+      done++;
+      const pct = Math.round((done / total) * 100);
+      $('progressBar').firstElementChild.style.width = pct + '%';
+      $('progressLabel').textContent = `${done}/${total} (${pct}%)`;
+    }
+  }
+
+  log('=== auto-dump finalizado ===', 'l-hdr');
+  $('btnAutoDump').disabled = false;
+  $('btnStopDump').disabled = true;
+  $('btnExportJson').disabled = capturedResults.length === 0;
+};
+
+$('btnStopDump').onclick = () => { stopRequested = true; };
+
+$('btnExportJson').onclick = () => {
+  const exportObj = {
+    exported_at: new Date().toISOString(),
+    device_id: ZOOM_DEVICE_ID,
+    midi_channel: ZOOM_MIDI_CHANNEL,
+    patch_name_len: PATCH_NAME_LEN,
+    patch_name_trailing_field_len: PATCH_NAME_TRAILING_FIELD_LEN,
+    note: 'payload_hex é o payload de 128 bytes entre o cmd 0x28 e o F7 final (sem F0 52 ch dev cmd nem F7). raw_sysex_hex é a mensagem inteira, se quiser conferir o cabeçalho vc mesmo.',
+    results: capturedResults,
+  };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `zoom_g1xonk_dump_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  log(`JSON exportado: ${capturedResults.length} entradas.`, 'l-hdr');
+};
+
+// ----------------------------------------------------------------------------
+// UI: teste de escrita 0x31 (ida e volta)
+// ----------------------------------------------------------------------------
+$('btnWriteParam').onclick = () => {
+  const slot = parseInt($('wSlot').value, 10);
+  const param = parseInt($('wParam').value, 10);
+  const val = parseInt($('wVal').value, 10);
+  log(`escrevendo: slot=${slot} param=${param} val=${val}`, 'l-hdr');
+  sendEditModeEnter();
+  sendSetParam(slot, param, val);
+  sendEditModeExit();
+};
+
+$('btnReadAfterWrite').onclick = async () => {
+  const slot = parseInt($('wSlot').value, 10);
+  const param = parseInt($('wParam').value, 10);
+  const val = parseInt($('wVal').value, 10);
+  const settleMs = parseInt($('inSettle').value, 10) || 150;
+  log(`=== round-trip: slot=${slot} param=${param} val=${val} ===`, 'l-hdr');
+  sendEditModeEnter();
+  await sleep(settleMs);
+  sendSetParam(slot, param, val);
+  await sleep(settleMs);
+  sendEditModeExit();
+  await sleep(settleMs);
+  log('relendo o patch pra ver o que ficou gravado...', 'l-hdr');
+  const parsed = await readCurrentPatch(settleMs);
+  if (parsed && !parsed.error) {
+    logHexDump(parsed.payload, 'payload pós-escrita');
+    addResultRow(parseInt($('inBank').value, 10), parseInt($('inPreset').value, 10), parsed);
+  }
+};
+
+log('Pronto. Clica em "Pedir acesso MIDI" pra começar.', 'l-hdr');
 </script>
 </body>
 </html>
