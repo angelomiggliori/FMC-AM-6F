@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Auto Dump G1On v2.4</title>
+<title>FMC · Auto Dump G1On v3.0</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
@@ -89,33 +89,25 @@
 </head>
 <body>
 
-<h1>🎸 FMC · Auto Dump G1On v2.4</h1>
+<h1>🎸 FMC · Auto Dump G1On v3.0</h1>
 
 <div class="panel">
   <h3>Conexão MIDI</h3>
   <button id="btnConnect">CONECTAR MIDI</button>
-  <button id="btnHandshake">🔐 HANDSHAKE</button>
   <span id="status">Desconectado</span>
 </div>
 
 <div class="panel">
-  <h3>Teste Manual</h3>
-  <button id="btnTestIdentity">Identity Request</button>
-  <button id="btnTestEditOn">Edit ON</button>
-  <button id="btnTestDump">Dump A0</button>
-</div>
-
-<div class="panel">
-  <h3>Varredura Automática (A0 → J9)</h3>
+  <h3>Varredura Automática (A0 → A9)</h3>
   <div class="stats">
-    <div class="stat-box"><div class="stat-value" id="statTotal">100</div><div class="stat-label">TOTAL</div></div>
+    <div class="stat-box"><div class="stat-value" id="statTotal">10</div><div class="stat-label">TOTAL</div></div>
     <div class="stat-box"><div class="stat-value" id="statDone">0</div><div class="stat-label">SUCESSO</div></div>
     <div class="stat-box"><div class="stat-value" id="statFailed">0</div><div class="stat-label">FALHAS</div></div>
   </div>
   
   <div class="progress-bar">
     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-    <div class="progress-text" id="progressText">0/100</div>
+    <div class="progress-text" id="progressText">0/10</div>
   </div>
   
   <button id="btnStart">▶ INICIAR</button>
@@ -134,21 +126,172 @@
 </div>
 
 <script>
-// ============ CONFIG ============
-const CFG = {
-  SETTLE_PC: 600,
-  SETTLE_EDIT: 300,
-  TIMEOUT: 5000,
-  DELAY_PATCH: 400
+// ═══════════════════════════════════════════════════════════════════════
+// CODEC ZOOM 7-IN-8 (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+function zoomUnpack(pl){
+  const out=[];
+  for(let i=0;i<pl.length;i+=8){
+    const msb=pl[i];
+    out.push(msb&0x7F);
+    for(let j=1;j<8&&i+j<pl.length;j++)
+      out.push(pl[i+j]|(((msb>>(j-1))&1)<<7));
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABELA DE IDENTIFICAÇÃO DE EFEITOS (do fx_data.js)
+// ═══════════════════════════════════════════════════════════════════════
+const FX_BY_KEY = {
+  '1,0,2'  :{n:'SlowATTCK',c:'COMP'},
+  '1,0,6'  :{n:'Dist+',    c:'DRIVE'},
+  '1,0,14' :{n:'Z-Organ',  c:'MOD'},
+  '1,0,16' :{n:'ReverseDL',c:'DELAY'},
+  '1,0,72' :{n:'VX COMBO', c:'AMP'},
+  '1,0,76' :{n:'TheVibe',  c:'MOD'},
+  '1,1,4'  :{n:'RndmFLTR', c:'FILTER'},
+  '1,1,8'  :{n:'TANGERINE',c:'AMP'},
+  '1,1,16' :{n:'StompDly', c:'DELAY'},
+  '1,1,72' :{n:'CAR DRIVE',c:'AMP'},
+  '1,1,76' :{n:'Detune',   c:'PITCH'},
+  '1,1,80' :{n:'PitchDly', c:'DELAY'},
+  '1,1,82' :{n:'Spring63', c:'REVERB'},
+  '1,2,6'  :{n:'Aco.Sim',  c:'OTHER'},
+  '1,4,76' :{n:'CoronaTri',c:'MOD'},
+  '17,0,2' :{n:'Comp',     c:'COMP'},
+  '17,0,6' :{n:'Booster',  c:'DRIVE'},
+  '17,0,8' :{n:'FD COMBO', c:'AMP'},
+  '17,0,12':{n:'Tremolo',  c:'MOD'},
+  '17,0,18':{n:'HD Hall',  c:'REVERB'},
+  '17,0,80':{n:'Delay',    c:'DELAY'},
+  '33,0,4' :{n:'GraphicEQ',c:'EQ'},
+  '33,0,18':{n:'Arena',    c:'REVERB'},
+  '33,0,66':{n:'ZNR',      c:'GATE'},
+  '33,0,68':{n:'AutoWah',  c:'WAH'},
+  '33,0,78':{n:'BitCrush', c:'PITCH'},
+  '33,0,82':{n:'Hall',     c:'REVERB'},
+  '33,1,4' :{n:'M-Filter', c:'FILTER'},
+  '33,1,6' :{n:'MetalWRLD',c:'DRIVE'},
+  '33,1,12':{n:'SuperCho', c:'MOD'},
+  '33,1,16':{n:'StereoDly',c:'DELAY'},
+  '33,1,18':{n:'Plate',    c:'REVERB'},
+  '33,1,68':{n:'fCycle',   c:'FILTER'},
+  '33,2,6' :{n:'Z Wild',   c:'DRIVE'},
+  '33,3,18':{n:'ParticleR',c:'OTHER'},
+  '49,1,76':{n:'VinFLNGR', c:'MOD'},
+  '65,0,4' :{n:'ParaEQ',   c:'EQ'},
+  '65,0,8' :{n:'FD VIBRO', c:'AMP'},
+  '65,0,12':{n:'Slicer',   c:'MOD'},
+  '65,0,14':{n:'Rt Closet',c:'REVERB'},
+  '65,0,18':{n:'EarlyRef', c:'REVERB'},
+  '65,0,66':{n:'NoiseGate',c:'GATE'},
+  '65,0,72':{n:'BG CRUNCH',c:'DRIVE'},
+  '65,0,78':{n:'Bomber',   c:'DRIVE'},
+  '65,0,82':{n:'Room',     c:'REVERB'},
+  '65,1,4' :{n:'Step',     c:'FILTER'},
+  '65,1,6' :{n:'HotBox',   c:'DRIVE'},
+  '65,1,12':{n:'StereoCho',c:'MOD'},
+  '65,1,18':{n:'ModReverb',c:'REVERB'},
+  '65,1,76':{n:'Flanger',  c:'MOD'},
+  '65,2,6' :{n:'Lead',     c:'DRIVE'},
+  '65,2,72':{n:'BG DRIVE', c:'AMP'},
+  '65,2,76':{n:'PitchSHFT',c:'PITCH'},
+  '97,0,8' :{n:'MATCH 30', c:'AMP'},
+  '97,0,12':{n:'Chorus',   c:'MOD'},
+  '97,0,66':{n:'OptComp',  c:'COMP'},
+  '97,0,72':{n:'US BLUES', c:'AMP'},
+  '97,0,76':{n:'Phaser',   c:'MOD'},
+  '97,0,80':{n:'FilterDly',c:'DELAY'},
+  '97,1,4' :{n:'SeqFLTR',  c:'FILTER'},
+  '97,1,12':{n:'Ensemble', c:'MOD'},
+  '97,1,80':{n:'CarbonDly',c:'DELAY'},
+  '97,2,6' :{n:'ExtremeDS',c:'DRIVE'},
+  '97,2,12':{n:'MonoPitch',c:'PITCH'},
+  '97,2,72':{n:'DZ DRIVE', c:'AMP'},
+  '97,2,76':{n:'RingMod',  c:'MOD'},
+  '107,0,2':{n:'160 Comp', c:'COMP'},
+  '107,0,12':{n:'DuoPhase',c:'MOD'},
+  '1,1,6,15' :{n:'Z MP1',    c:'AMP'},
+  '1,1,6,17' :{n:'GreatMuff',c:'DRIVE'},
+  '1,2,8,15' :{n:'ALIEN',    c:'AMP'},
+  '1,2,8,20' :{n:'MS DRIVE', c:'AMP'},
+  '1,2,12,1' :{n:'HPS',      c:'PITCH'},
+  '1,2,12,10':{n:'Vibrato',  c:'MOD'},
+  '33,0,6,15':{n:'OverDrive', c:'DRIVE'},
+  '33,0,8,12':{n:'VX JMI',   c:'AMP'},
+  '33,0,80,11':{n:'TapeEcho',c:'DELAY'},
+  '33,0,80,109':{n:'MultiTapD',c:'DELAY'},
+  '33,1,72,13':{n:'TW ROCK', c:'AMP'},
+  '33,1,72,15':{n:'B-BREAKER',c:'DRIVE'},
+  '33,2,8,16':{n:'REVO-1',   c:'AMP'},
+  '33,2,8,21':{n:'BGN DRIVE',c:'AMP'},
+  '33,2,12,10':{n:'BendCho', c:'MOD'},
+  '33,2,12,20':{n:'Octave',  c:'PITCH'},
+  '65,0,6,10':{n:'Squeak',   c:'DRIVE'},
+  '65,0,6,17':{n:'T Scream', c:'DRIVE'},
+  '65,1,8,18':{n:'MS CRUNCH',c:'AMP'},
+  '65,1,8,19':{n:'TONE CITY',c:'AMP'},
+  '97,0,4,0' :{n:'Exciter',  c:'FILTER'},
+  '97,0,4,1' :{n:'Cry',      c:'WAH'},
+  '97,0,6,15':{n:'Governor', c:'DRIVE'},
+  '97,0,6,17':{n:'FuzzSmile',c:'DRIVE'},
+  '97,1,6,15':{n:'Z Clean',  c:'AMP'},
+  '97,1,8,13':{n:'HW STACK', c:'AMP'},
+  '97,1,8,14':{n:'MS 1959',  c:'AMP'},
+  '97,0,82,4,64':{n:'Air',      c:'REVERB'},
+  '97,0,82,4,32':{n:'TiledRoom',c:'REVERB'},
+  '97,0,82,4'   :{n:'Air',      c:'REVERB'},
 };
 
-// ============ STATE ============
+function gfx(b0,b1,b3,b4,b5){
+  const m=b1&0x7F;
+  return FX_BY_KEY[`${b0},${m},${b3},${b4},${b5}`]
+    || FX_BY_KEY[`${b0},${m},${b3},${b4}`]
+    || FX_BY_KEY[`${b0},${m},${b3}`]
+    || {n:`[${b0}/${m}/${b3}]`,c:'Desconhecido',_unknown:true};
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DECODE DE PATCH (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+function decodePatch(pl, slot){
+  const u = zoomUnpack(pl);
+  const fx = [];
+  
+  for(let i=0; i<5; i++){
+    const s = i*23;
+    const b0=u[s], b1=u[s+1], b3=u[s+3], b4=u[s+4], b5=u[s+5];
+    const b1m = b1 & 0x7F;
+    const en = (b1 & 0x80) !== 0;
+    const isEmpty = (b0===0 && b3===0) || (b0===1 && b1m===0 && b3===0);
+    const params = Array.from(u.slice(s, s+23));
+    const info = isEmpty ? {n:'Empty', c:null} : gfx(b0, b1, b3, b4, b5);
+    
+    fx.push({
+      slot: i,
+      b0, b1, b1m, b3, b4, b5,
+      isEmpty, en, params,
+      name: info.n,
+      cat: info.c
+    });
+  }
+  
+  const nameBytes = u.slice(115, 125);
+  const name = String.fromCharCode(...nameBytes.map(b=>b&0x7F).filter(b=>b!==0)).trimEnd();
+  
+  return { slot, name, effects: fx, raw: Array.from(pl) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MIDI STATE (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+const ZOOM_MFR = 0x52;
 let midiAccess = null, inputPort = null, outputPort = null;
-let sysexBuffer = [], pendingResponse = null;
+let dev = null;
+let pendingResponse = null;
 let isRunning = false, shouldStop = false;
-let patchResults = [], startTime = null;
-let doneCount = 0, failedCount = 0;
-let handshakeDone = false;
+let patchResults = [], doneCount = 0, failedCount = 0;
 
 const logEl = document.getElementById('log');
 
@@ -165,165 +308,215 @@ function toHex(bytes) {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
 }
 
-// ============ MIDI SEND ============
-function sendSysEx(bytes) {
-  if (!outputPort) return;
-  outputPort.send([0xF0, ...bytes, 0xF7]);
-  log(`OUT: F0 ${toHex(bytes)} F7`, 'info');
-}
-
-function sendBankSelectMSB(bank) {
-  if (!outputPort) return;
-  outputPort.send([0xB0, 0x00, 0x00]);
-  log(`OUT: B0 00 00 (MSB)`, 'info');
-}
-
-function sendBankSelectLSB(bank) {
-  if (!outputPort) return;
-  outputPort.send([0xB0, 0x20, bank & 0x7F]);
-  log(`OUT: B0 20 ${bank.toString(16).padStart(2,'0').toUpperCase()} (LSB)`, 'info');
-}
-
-function sendProgramChange(preset) {
-  if (!outputPort) return;
-  outputPort.send([0xC0, preset & 0x7F]);
-  log(`OUT: C0 ${preset.toString(16).padStart(2,'0').toUpperCase()}`, 'info');
-}
-
-function handleMidiMessage(e) {
-  const data = e.data;
-  
-  // Log TODAS as mensagens
-  if (data[0] === 0xF0) {
-    sysexBuffer = Array.from(data);
-  } else if (data[0] === 0xF7 && sysexBuffer.length > 0) {
-    sysexBuffer.push(0xF7);
-    const fullMsg = sysexBuffer;
-    sysexBuffer = [];
-    
-    log(`IN : ${toHex(fullMsg)}`, 'success');
-    
-    // Detecta Identity Reply
-    if (fullMsg[1] === 0x7E && fullMsg[3] === 0x06 && fullMsg[4] === 0x02) {
-      log(`  ✓ Identity Reply! Model ID: 0x${fullMsg[6].toString(16).toUpperCase()}`, 'success');
-      handshakeDone = true;
-    }
-    
-    // Detecta resposta 0x28
-    if (pendingResponse && fullMsg.length > 4 && fullMsg[4] === 0x28) {
-      log(`  ✓ Resposta 0x28 detectada!`, 'success');
-      pendingResponse(fullMsg);
-      pendingResponse = null;
-    }
-  } else if (data[0] !== 0xF0 && data[0] !== 0xF7) {
-    log(`IN : ${toHex([data[0], data[1], data[2]].filter(b => b !== undefined))}`, 'info');
-  }
-}
-
-// ============ ZOOM COMMANDS ============
-function sendIdentityRequest() {
-  sendSysEx([0x7E, 0x00, 0x06, 0x01]);
-}
-
-function sendEditMode(on) {
-  sendSysEx([0x52, 0x00, 0x63, 0x50, on ? 0x01 : 0x00]);
-}
-
-function requestPatchData() {
-  sendSysEx([0x52, 0x00, 0x63, 0x29]);
-}
-
-// ============ UTILS ============
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function updateStats() {
-  document.getElementById('statDone').textContent = doneCount;
-  document.getElementById('statFailed').textContent = failedCount;
-  const total = doneCount + failedCount;
-  document.getElementById('progressFill').style.width = `${(total/100)*100}%`;
-  document.getElementById('progressText').textContent = `${total}/100`;
+// ═══════════════════════════════════════════════════════════════════════
+// SYSEX HELPERS (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+function sx(did, pl) { return new Uint8Array([0xF0, ZOOM_MFR, 0x00, did, ...pl, 0xF7]); }
+function idReq() { return new Uint8Array([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]); }
+function pc(s) { return new Uint8Array([0xC0, s & 0x7F]); }
+
+function parseId(d) {
+  if(d.length<11 || d[0]!==0xF0 || d[1]!==0x7E || d[3]!==0x06 || d[4]!==0x02) return null;
+  if(d[5]!==ZOOM_MFR) return null;
+  return { id: d[6], fw: String.fromCharCode(d[9], d[10], d[11], d[12]) };
 }
 
-// ============ HANDSHAKE ============
-async function doHandshake() {
-  log('=== INICIANDO HANDSHAKE ===', 'warning');
+// ═══════════════════════════════════════════════════════════════════════
+// MIDI MESSAGE HANDLER (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+function onMidiMsg(e) {
+  const d = new Uint8Array(e.data);
+  log(`IN : ${toHex(d)}`, 'success');
   
-  // 1. Identity Request
-  sendIdentityRequest();
-  await sleep(1000);
-  
-  if (!handshakeDone) {
-    log(' Identity Reply não recebido', 'warning');
-  } else {
-    log('✓ Handshake completo', 'success');
+  // Resolver await pendente
+  if(pendingResponse) {
+    pendingResponse(d);
+    pendingResponse = null;
   }
 }
 
-// ============ DUMP LOOP ============
-async function dumpPatch(bank, preset) {
-  const patchName = `${String.fromCharCode(65 + bank)}${preset}`;
-  log(`--- Patch ${patchName} ---`, 'info');
+// ═══════════════════════════════════════════════════════════════════════
+// CONNECT (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+async function probe(ins, outs) {
+  for(const o of outs) {
+    const r = await probeOut(o, ins);
+    if(r) return r;
+  }
+  return null;
+}
+
+async function probeOut(o, ins) {
+  return new Promise(res => {
+    const orig = ins.map(i => i.onmidimessage);
+    const done = r => {
+      ins.forEach((i,x) => { i.onmidimessage = orig[x]; });
+      clearTimeout(t);
+      res(r);
+    };
+    const t = setTimeout(() => done(null), 1200);
+    
+    ins.forEach(i => {
+      i.onmidimessage = e => {
+        const d = new Uint8Array(e.data);
+        log(`IN : ${toHex(d)}`, 'success');
+        if(d.length>=6 && d[0]===0xF0 && d[1]===0x7E && d[3]===0x06 && d[4]===0x02 && d[5]===ZOOM_MFR)
+          done({ i, o, id: parseId(d) });
+      };
+    });
+    
+    try {
+      const m = idReq();
+      log(`OUT: ${toHex(m)}`, 'info');
+      o.send(m);
+    } catch { done(null); }
+  });
+}
+
+async function connect() {
+  log('Iniciando conexão MIDI...', 'info');
+  
+  if(!navigator.requestMIDIAccess) throw new Error('Web MIDI não suportado');
   
   try {
-    // 1. Bank Select + Program Change
-    sendBankSelectMSB(bank);
-    await sleep(30);
-    sendBankSelectLSB(bank);
-    await sleep(30);
-    sendProgramChange(preset);
-    await sleep(CFG.SETTLE_PC);
+    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+  } catch {
+    throw new Error('Acesso MIDI negado');
+  }
+  
+  const ins = [...midiAccess.inputs.values()];
+  const outs = [...midiAccess.outputs.values()];
+  
+  if(!ins.length || !outs.length) throw new Error('Nenhuma porta MIDI encontrada');
+  
+  log('Escaneando dispositivos...', 'info');
+  const f = await probe(ins, outs);
+  
+  if(!f) throw new Error('Nenhum dispositivo Zoom encontrado');
+  
+  inputPort = f.i;
+  outputPort = f.o;
+  inputPort.onmidimessage = onMidiMsg;
+  
+  const id = f.id;
+  dev = { id: id.id, fw: id.fw };
+  
+  log(`✓ Dispositivo identificado: ID=0x${id.id.toString(16).toUpperCase()} FW=${id.fw}`, 'success');
+  return dev;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// READ PATCH (do engine.js)
+// ═══════════════════════════════════════════════════════════════════════
+function sendRaw(msg) {
+  if(!outputPort) return;
+  log(`OUT: ${toHex(msg)}`, 'info');
+  outputPort.send(msg);
+}
+
+function sendAwait(msg, ms=2000) {
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => {
+      pendingResponse = null;
+      rej(new Error('Timeout'));
+    }, ms);
+    pendingResponse = d => {
+      clearTimeout(t);
+      res(d);
+    };
+    sendRaw(msg);
+  });
+}
+
+function paramEditEnable() { sendRaw(sx(dev.id, [0x50])); }
+function paramEditDisable() { sendRaw(sx(dev.id, [0x51])); }
+
+async function readPatch(slot) {
+  log(`Lendo patch slot ${slot+1}...`, 'info');
+  
+  sendRaw(pc(slot));
+  await sleep(60);
+  
+  paramEditEnable();
+  await sleep(80);
+  
+  let resp;
+  try {
+    resp = await sendAwait(sx(dev.id, [0x29]), 2000);
+  } catch(e) {
+    log(`✗ readPatch slot ${slot+1} falhou: ${e.message}`, 'error');
+    paramEditDisable();
+    throw e;
+  }
+  
+  await sleep(40);
+  paramEditDisable();
+  await sleep(40);
+  
+  return resp;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// DUMP LOOP
+// ═══════════════════════════════════════════════════════════════════════
+async function dumpPatch(slot) {
+  const patchName = `${String.fromCharCode(65 + Math.floor(slot/10))}${slot%10}`;
+  log(`\n=== Patch ${patchName} (slot ${slot}) ===`, 'warning');
+  
+  try {
+    const resp = await readPatch(slot);
     
-    // 2. Edit Mode Enter
-    sendEditMode(true);
-    await sleep(CFG.SETTLE_EDIT);
-    
-    // 3. Request with timeout
-    let responseData = null;
-    const timeoutPromise = sleep(CFG.TIMEOUT);
-    const responsePromise = new Promise(resolve => { pendingResponse = resolve; });
-    
-    requestPatchData();
-    responseData = await Promise.race([responsePromise, timeoutPromise.then(() => null)]);
-    
-    if (!responseData) {
-      log(`   Timeout`, 'error');
+    if(resp[4] !== 0x28) {
+      log(`✗ Resposta não é BulkDump (0x28)`, 'error');
       failedCount++;
-      patchResults.push({ patch: patchName, bank, preset, success: false, error: 'timeout', payload: null });
-    } else {
-      const payload = responseData.slice(5, responseData.length - 1);
-      log(`  ✓ ${payload.length} bytes`, 'success');
-      patchResults.push({
-        patch: patchName, bank, preset, success: true,
-        payload: Array.from(payload),
-        payloadHex: toHex(payload)
-      });
-      doneCount++;
+      patchResults.push({ patch: patchName, slot, success: false, error: 'wrong_response' });
+      return;
     }
     
-    // 4. Edit Mode Exit
-    sendEditMode(false);
-    await sleep(CFG.SETTLE_EDIT);
+    const pl = resp.slice(6, -1);
+    if(pl.length < 110) {
+      log(`✗ Payload muito curto: ${pl.length} bytes`, 'error');
+      failedCount++;
+      patchResults.push({ patch: patchName, slot, success: false, error: 'short_payload' });
+      return;
+    }
     
-  } catch (err) {
-    log(`   Erro: ${err.message}`, 'error');
+    const decoded = decodePatch(pl, slot);
+    
+    log(`✓ Nome: "${decoded.name}"`, 'success');
+    log(`✓ Efeitos:`, 'success');
+    decoded.effects.forEach((fx, i) => {
+      if(!fx.isEmpty) {
+        log(`   Slot ${i+1}: ${fx.name} (${fx.cat}) ${fx.en?'ON':'OFF'}`, 'info');
+      }
+    });
+    
+    patchResults.push({
+      patch: patchName,
+      slot,
+      success: true,
+      name: decoded.name,
+      effects: decoded.effects,
+      raw: decoded.raw
+    });
+    doneCount++;
+    
+  } catch(err) {
+    log(`✗ Erro: ${err.message}`, 'error');
     failedCount++;
-    patchResults.push({ patch: patchName, bank, preset, success: false, error: err.message, payload: null });
+    patchResults.push({ patch: patchName, slot, success: false, error: err.message });
   }
   
   updateStats();
-  await sleep(CFG.DELAY_PATCH);
+  await sleep(100);
 }
 
 async function startDump() {
-  if (!outputPort) { log('MIDI não conectado', 'error'); return; }
-  
-  if (!handshakeDone) {
-    log('⚠ Fazendo handshake primeiro...', 'warning');
-    await doHandshake();
-  }
+  if(!outputPort) { log('MIDI não conectado', 'error'); return; }
   
   isRunning = true; shouldStop = false;
-  startTime = Date.now();
   doneCount = 0; failedCount = 0; patchResults = [];
   
   document.getElementById('btnStart').disabled = true;
@@ -331,14 +524,11 @@ async function startDump() {
   document.getElementById('btnExportJson').disabled = true;
   document.getElementById('btnExportLog').disabled = true;
   
-  log('=== INICIANDO ===', 'warning');
+  log('\n=== INICIANDO VARREDURA ===', 'warning');
   
-  for (let bank = 0; bank < 10; bank++) {
-    for (let preset = 0; preset < 10; preset++) {
-      if (shouldStop) break;
-      await dumpPatch(bank, preset);
-    }
-    if (shouldStop) break;
+  for(let slot=0; slot<10; slot++) {
+    if(shouldStop) break;
+    await dumpPatch(slot);
   }
   
   isRunning = false;
@@ -347,12 +537,27 @@ async function startDump() {
   document.getElementById('btnExportJson').disabled = false;
   document.getElementById('btnExportLog').disabled = false;
   
-  log(`=== FIM: ${doneCount} ok, ${failedCount} falhas ===`, 'warning');
+  log(`\n=== FIM: ${doneCount} ok, ${failedCount} falhas ===`, 'warning');
 }
 
-// ============ EXPORT ============
+function updateStats() {
+  document.getElementById('statDone').textContent = doneCount;
+  document.getElementById('statFailed').textContent = failedCount;
+  const total = doneCount + failedCount;
+  document.getElementById('progressFill').style.width = `${(total/10)*100}%`;
+  document.getElementById('progressText').textContent = `${total}/10`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════
 function exportJson() {
-  const data = { timestamp: new Date().toISOString(), stats: { done: doneCount, failed: failedCount }, patches: patchResults };
+  const data = {
+    timestamp: new Date().toISOString(),
+    device: dev,
+    stats: { done: doneCount, failed: failedCount },
+    patches: patchResults
+  };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -364,9 +569,15 @@ function exportJson() {
 function exportLog() {
   let text = `Dump G1On - ${new Date().toISOString()}\n\n`;
   patchResults.forEach(p => {
-    text += `${p.patch}: ${p.success ? 'OK' : 'FAIL'}\n`;
-    if (p.success) text += `  ${p.payloadHex}\n`;
-    else text += `  ${p.error}\n`;
+    text += `${p.patch} (slot ${p.slot}): ${p.success ? 'OK' : 'FAIL'}\n`;
+    if(p.success) {
+      text += `  Nome: ${p.name}\n`;
+      p.effects.forEach((fx, i) => {
+        if(!fx.isEmpty) text += `  Slot ${i+1}: ${fx.name} (${fx.cat}) ${fx.en?'ON':'OFF'}\n`;
+      });
+    } else {
+      text += `  Erro: ${p.error}\n`;
+    }
     text += '\n';
   });
   const blob = new Blob([text], { type: 'text/plain' });
@@ -377,37 +588,19 @@ function exportLog() {
   log('Log exportado', 'success');
 }
 
-// ============ SETUP ============
+// ═══════════════════════════════════════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════════════════════════════════════
 document.getElementById('btnConnect').onclick = async () => {
   try {
-    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
-    for (let input of midiAccess.inputs.values()) {
-      if (input.name.toLowerCase().includes('zoom') || input.name.toLowerCase().includes('g1')) {
-        inputPort = input;
-        input.onmidimessage = handleMidiMessage;
-        log(`Input: ${input.name}`, 'success');
-      }
-    }
-    for (let output of midiAccess.outputs.values()) {
-      if (output.name.toLowerCase().includes('zoom') || output.name.toLowerCase().includes('g1')) {
-        outputPort = output;
-        log(`Output: ${output.name}`, 'success');
-      }
-    }
-    if (inputPort && outputPort) {
-      document.getElementById('status').textContent = 'Conectado';
-      document.getElementById('status').style.color = '#0f0';
-      log('MIDI pronto', 'success');
-    } else {
-      log('Porta Zoom não encontrada', 'error');
-    }
-  } catch (e) { log(`Erro: ${e.message}`, 'error'); }
+    await connect();
+    document.getElementById('status').textContent = 'Conectado';
+    document.getElementById('status').style.color = '#0f0';
+  } catch(e) {
+    log(`Erro: ${e.message}`, 'error');
+  }
 };
 
-document.getElementById('btnHandshake').onclick = doHandshake;
-document.getElementById('btnTestIdentity').onclick = sendIdentityRequest;
-document.getElementById('btnTestEditOn').onclick = () => sendEditMode(true);
-document.getElementById('btnTestDump').onclick = () => dumpPatch(0, 0);
 document.getElementById('btnStart').onclick = startDump;
 document.getElementById('btnStop').onclick = () => { shouldStop = true; log('Parando...', 'warning'); };
 document.getElementById('btnExportJson').onclick = exportJson;
