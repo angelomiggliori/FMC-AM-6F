@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Auto Dump G1On (Minimal)</title>
+<title>FMC · Raw Dump A0-A9</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
@@ -35,61 +35,29 @@
   button.stop { border-color: #f00; color: #f00; }
   button.stop:hover { background: #f00; color: #000; }
   #status { margin-left: 10px; color: #888; font-size: 12px; }
-  #log { 
-    height: 400px; 
+  #output { 
+    height: 600px; 
     overflow-y: auto; 
     background: #000; 
     border: 1px solid #0f0; 
     padding: 10px; 
-    font-size: 11px;
+    font-size: 12px;
     white-space: pre-wrap;
     font-family: 'Courier New', monospace;
+    line-height: 1.4;
   }
+  .patch-header { color: #0ff; font-weight: bold; margin-top: 15px; }
+  .hex-line { color: #0f0; }
+  .hex-offset { color: #888; }
   .log-entry { margin-bottom: 2px; }
   .log-info { color: #0ff; }
   .log-success { color: #0f0; }
   .log-error { color: #f00; }
-  .log-warning { color: #ff0; }
-  .progress-bar {
-    width: 100%;
-    height: 20px;
-    background: #222;
-    border: 1px solid #0f0;
-    margin: 10px 0;
-    position: relative;
-  }
-  .progress-fill {
-    height: 100%;
-    background: #0f0;
-    transition: width 0.3s;
-  }
-  .progress-text {
-    position: absolute;
-    top: 0; left: 50%;
-    transform: translateX(-50%);
-    color: #000;
-    font-weight: bold;
-    line-height: 20px;
-  }
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    margin: 10px 0;
-  }
-  .stat-box {
-    background: #222;
-    border: 1px solid #333;
-    padding: 10px;
-    text-align: center;
-  }
-  .stat-value { font-size: 24px; color: #0ff; font-weight: bold; }
-  .stat-label { font-size: 11px; color: #888; margin-top: 5px; }
 </style>
 </head>
 <body>
 
-<h1>🎸 FMC · Auto Dump G1On (Minimal)</h1>
+<h1>🎸 FMC · Raw Dump A0-A9 (134 bytes)</h1>
 
 <div class="panel">
   <h3>Conexão MIDI</h3>
@@ -98,53 +66,33 @@
 </div>
 
 <div class="panel">
-  <h3>Varredura A0 → A9 (10 patches)</h3>
-  <div class="stats">
-    <div class="stat-box"><div class="stat-value" id="statTotal">10</div><div class="stat-label">TOTAL</div></div>
-    <div class="stat-box"><div class="stat-value" id="statDone">0</div><div class="stat-label">SUCESSO</div></div>
-    <div class="stat-box"><div class="stat-value" id="statFailed">0</div><div class="stat-label">FALHAS</div></div>
-  </div>
-  
-  <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-    <div class="progress-text" id="progressText">0/10</div>
-  </div>
-  
-  <button id="btnStart">▶ INICIAR</button>
+  <h3>Captura A0-A9</h3>
+  <button id="btnStart">▶ CAPTURAR A0-A9</button>
   <button id="btnStop" class="stop" disabled>■ PARAR</button>
+  <button id="btnExport"> EXPORTAR TXT</button>
 </div>
 
 <div class="panel">
-  <h3>Exportar</h3>
-  <button id="btnExportJson" disabled>⬇ JSON</button>
-  <button id="btnExportLog" disabled>⬇ LOG TXT</button>
-</div>
-
-<div class="panel">
-  <h3>Log</h3>
-  <div id="log"></div>
+  <h3>Output (formato tela SPI)</h3>
+  <div id="output"></div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════
-// HANDSHAKE DO ENGINE.JS (FUNCIONA)
-// ═══════════════════════════════════════════════════════════════════════
 const ZOOM_MFR = 0x52;
 let midiAccess = null, inputPort = null, outputPort = null;
-let dev = null;
 let pendingResponse = null;
-let isRunning = false, shouldStop = false;
-let patchResults = [], doneCount = 0, failedCount = 0;
+let shouldStop = false;
+let allDumps = [];
 
-const logEl = document.getElementById('log');
+const outputEl = document.getElementById('output');
 
 function log(msg, type = 'info') {
   const time = new Date().toLocaleTimeString();
   const div = document.createElement('div');
   div.className = `log-entry log-${type}`;
   div.textContent = `[${time}] ${msg}`;
-  logEl.appendChild(div);
-  logEl.scrollTop = logEl.scrollHeight;
+  outputEl.appendChild(div);
+  outputEl.scrollTop = outputEl.scrollHeight;
 }
 
 function toHex(bytes) {
@@ -153,289 +101,169 @@ function toHex(bytes) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ═══════════════════════════════════════════════════════════════════════
-// SYSEX HELPERS (do engine.js)
-// ═══════════════════════════════════════════════════════════════════════
-function sx(did, pl) { return new Uint8Array([0xF0, ZOOM_MFR, 0x00, did, ...pl, 0xF7]); }
-function idReq() { return new Uint8Array([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]); }
-function pc(s) { return new Uint8Array([0xC0, s & 0x7F]); }
-
-function parseId(d) {
-  if(d.length<11 || d[0]!==0xF0 || d[1]!==0x7E || d[3]!==0x06 || d[4]!==0x02) return null;
-  if(d[5]!==ZOOM_MFR) return null;
-  return { id: d[6], fw: String.fromCharCode(d[9], d[10], d[11], d[12]) };
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// MIDI MESSAGE HANDLER
-// ═══════════════════════════════════════════════════════════════════════
-function onMidiMsg(e) {
-  const d = new Uint8Array(e.data);
-  log(`IN : ${toHex(d)}`, 'success');
-  
-  if(pendingResponse) {
-    pendingResponse(d);
-    pendingResponse = null;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// CONNECT (do engine.js)
-// ═══════════════════════════════════════════════════════════════════════
-async function probe(ins, outs) {
-  for(const o of outs) {
-    const r = await probeOut(o, ins);
-    if(r) return r;
-  }
-  return null;
-}
-
-async function probeOut(o, ins) {
-  return new Promise(res => {
-    const orig = ins.map(i => i.onmidimessage);
-    const done = r => {
-      ins.forEach((i,x) => { i.onmidimessage = orig[x]; });
-      clearTimeout(t);
-      res(r);
-    };
-    const t = setTimeout(() => done(null), 1200);
-    
-    ins.forEach(i => {
-      i.onmidimessage = e => {
-        const d = new Uint8Array(e.data);
-        log(`IN : ${toHex(d)}`, 'success');
-        if(d.length>=6 && d[0]===0xF0 && d[1]===0x7E && d[3]===0x06 && d[4]===0x02 && d[5]===ZOOM_MFR)
-          done({ i, o, id: parseId(d) });
-      };
-    });
-    
-    try {
-      const m = idReq();
-      log(`OUT: ${toHex(m)}`, 'info');
-      o.send(m);
-    } catch { done(null); }
-  });
-}
-
-async function connect() {
-  log('Iniciando conexão MIDI...', 'info');
-  
-  if(!navigator.requestMIDIAccess) throw new Error('Web MIDI não suportado');
-  
-  try {
-    midiAccess = await navigator.requestMIDIAccess({ sysex: true });
-  } catch {
-    throw new Error('Acesso MIDI negado');
-  }
-  
-  const ins = [...midiAccess.inputs.values()];
-  const outs = [...midiAccess.outputs.values()];
-  
-  if(!ins.length || !outs.length) throw new Error('Nenhuma porta MIDI encontrada');
-  
-  log('Escaneando dispositivos...', 'info');
-  const f = await probe(ins, outs);
-  
-  if(!f) throw new Error('Nenhum dispositivo Zoom encontrado');
-  
-  inputPort = f.i;
-  outputPort = f.o;
-  inputPort.onmidimessage = onMidiMsg;
-  
-  const id = f.id;
-  dev = { id: id.id, fw: id.fw };
-  
-  log(`✓ Dispositivo identificado: ID=0x${id.id.toString(16).toUpperCase()} FW=${id.fw}`, 'success');
-  return dev;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// READ PATCH (do engine.js)
-// ═══════════════════════════════════════════════════════════════════════
 function sendRaw(msg) {
   if(!outputPort) return;
-  log(`OUT: ${toHex(msg)}`, 'info');
+  outputEl.appendChild(document.createElement('div')).textContent = `OUT: ${toHex(msg)}`;
   outputPort.send(msg);
 }
 
 function sendAwait(msg, ms=2000) {
   return new Promise((res, rej) => {
-    const t = setTimeout(() => {
-      pendingResponse = null;
-      rej(new Error('Timeout'));
-    }, ms);
-    pendingResponse = d => {
-      clearTimeout(t);
-      res(d);
-    };
+    const t = setTimeout(() => { pendingResponse = null; rej(new Error('Timeout')); }, ms);
+    pendingResponse = d => { clearTimeout(t); res(d); };
     sendRaw(msg);
   });
 }
 
-function paramEditEnable()  { sendRaw(sx(dev.id, [0x50])); }
-function paramEditDisable() { sendRaw(sx(dev.id, [0x51])); }
-
-async function readPatch(slot) {
-  log(`Lendo patch slot ${slot+1}...`, 'info');
-  
-  sendRaw(pc(slot));
-  await sleep(60);
-  
-  paramEditEnable();
-  await sleep(80);
-  
-  let resp;
-  try {
-    resp = await sendAwait(sx(dev.id, [0x29]), 2000);
-  } catch(e) {
-    log(`✗ readPatch slot ${slot+1} falhou: ${e.message}`, 'error');
-    paramEditDisable();
-    throw e;
-  }
-  
-  await sleep(40);
-  paramEditDisable();
-  await sleep(40);
-  
-  return resp;
+function onMidiMsg(e) {
+  const d = new Uint8Array(e.data);
+  if(pendingResponse) { pendingResponse(d); pendingResponse = null; }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// DUMP LOOP
-// ═══════════════════════════════════════════════════════════════════════
-async function dumpPatch(slot) {
+async function connect() {
+  log('Iniciando conexão MIDI...', 'info');
+  if(!navigator.requestMIDIAccess) throw new Error('Web MIDI não suportado');
+  try { midiAccess = await navigator.requestMIDIAccess({ sysex: true }); }
+  catch { throw new Error('Acesso MIDI negado'); }
+  
+  const ins = [...midiAccess.inputs.values()], outs = [...midiAccess.outputs.values()];
+  if(!ins.length || !outs.length) throw new Error('Nenhuma porta MIDI encontrada');
+  
+  const idReq = new Uint8Array([0xF0, 0x7E, 0x00, 0x06, 0x01, 0xF7]);
+  let found = false;
+  for(const o of outs) {
+    for(const i of ins) {
+      i.onmidimessage = e => {
+        const d = new Uint8Array(e.data);
+        if(d.length>=6 && d[0]===0xF0 && d[1]===0x7E && d[3]===0x06 && d[4]===0x02 && d[5]===ZOOM_MFR) {
+          found = true;
+          inputPort = i; outputPort = o;
+          inputPort.onmidimessage = onMidiMsg;
+          log(`✓ Dispositivo identificado: ID=0x${d[6].toString(16).toUpperCase()}`, 'success');
+        }
+      };
+    }
+    sendRaw(idReq);
+    await sleep(500);
+    if(found) break;
+  }
+  if(!found) throw new Error('Nenhum dispositivo Zoom respondendo');
+}
+
+function formatPayload(raw134) {
+  // raw134 = F0 52 00 63 28 [128 bytes] F7
+  // Extrai os 128 bytes de payload (índices 5 a 132)
+  const payload = raw134.slice(5, 133);
+  
+  let output = `0x28 recebido (${raw134.length} bytes)\n`;
+  output += `payload: ${payload.length} bytes\n`;
+  
+  // Formata em linhas de 12 bytes igual à tela SPI
+  for(let i = 0; i < payload.length; i += 12) {
+    const offset = `[${i.toString().padStart(3)}]`;
+    const hex = toHex(payload.slice(i, Math.min(i + 12, payload.length)));
+    output += `${offset} ${hex}\n`;
+  }
+  
+  return output;
+}
+
+async function capturePatch(slot) {
   const patchName = `${String.fromCharCode(65 + Math.floor(slot/10))}${slot%10}`;
-  log(`\n=== Patch ${patchName} (slot ${slot}) ===`, 'warning');
+  
+  outputEl.appendChild(document.createElement('div')).className = 'patch-header';
+  outputEl.lastChild.textContent = `\n=== Patch ${patchName} (slot ${slot}) ===`;
   
   try {
-    const resp = await readPatch(slot);
+    // Bank Select + Program Change
+    sendRaw(new Uint8Array([0xB0, 0x00, 0x00]));
+    await sleep(20);
+    sendRaw(new Uint8Array([0xB0, 0x20, Math.floor(slot/10)]));
+    await sleep(20);
+    sendRaw(new Uint8Array([0xC0, slot%10]));
+    await sleep(600);
     
-    if(resp[4] !== 0x28) {
-      log(`✗ Resposta não é BulkDump (0x28)`, 'error');
-      failedCount++;
-      patchResults.push({ patch: patchName, slot, success: false, error: 'wrong_response' });
-      return;
-    }
+    // Edit Mode Enter
+    sendRaw(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x50, 0x01, 0xF7]));
+    await sleep(200);
     
-    const pl = resp.slice(6, -1);
-    if(pl.length < 110) {
-      log(`✗ Payload muito curto: ${pl.length} bytes`, 'error');
-      failedCount++;
-      patchResults.push({ patch: patchName, slot, success: false, error: 'short_payload' });
-      return;
-    }
+    // Request Patch Data
+    const resp = await sendAwait(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x29, 0xF7]), 2000);
     
-    log(`✓ Recebido ${pl.length} bytes`, 'success');
+    if(resp[4] !== 0x28) throw new Error('Resposta não é 0x28');
     
-    patchResults.push({
-      patch: patchName,
-      slot,
-      success: true,
-      raw: Array.from(pl),
-      rawHex: toHex(pl)
-    });
-    doneCount++;
+    // Formata e mostra
+    const formatted = formatPayload(resp);
+    outputEl.appendChild(document.createElement('div')).className = 'hex-line';
+    outputEl.lastChild.textContent = formatted;
+    
+    allDumps.push({ patch: patchName, slot, raw: Array.from(resp) });
+    
+    // Edit Mode Exit
+    sendRaw(new Uint8Array([0xF0, ZOOM_MFR, 0x00, 0x63, 0x50, 0x00, 0xF7]));
+    await sleep(100);
     
   } catch(err) {
-    log(`✗ Erro: ${err.message}`, 'error');
-    failedCount++;
-    patchResults.push({ patch: patchName, slot, success: false, error: err.message });
+    outputEl.appendChild(document.createElement('div')).className = 'log-error';
+    outputEl.lastChild.textContent = `✗ Erro: ${err.message}`;
   }
   
-  updateStats();
-  await sleep(100);
+  outputEl.scrollTop = outputEl.scrollHeight;
+  await sleep(200);
 }
 
-async function startDump() {
+async function startCapture() {
   if(!outputPort) { log('MIDI não conectado', 'error'); return; }
   
-  isRunning = true; shouldStop = false;
-  doneCount = 0; failedCount = 0; patchResults = [];
+  shouldStop = false;
+  allDumps = [];
+  outputEl.innerHTML = '';
   
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnStop').disabled = false;
-  document.getElementById('btnExportJson').disabled = true;
-  document.getElementById('btnExportLog').disabled = true;
+  document.getElementById('btnExport').disabled = true;
   
-  log('\n=== INICIANDO VARREDURA ===', 'warning');
+  log('=== INICIANDO CAPTURA A0-A9 ===', 'info');
   
-  for(let slot=0; slot<10; slot++) {
+  for(let slot = 0; slot < 10; slot++) {
     if(shouldStop) break;
-    await dumpPatch(slot);
+    await capturePatch(slot);
   }
   
-  isRunning = false;
   document.getElementById('btnStart').disabled = false;
   document.getElementById('btnStop').disabled = true;
-  document.getElementById('btnExportJson').disabled = false;
-  document.getElementById('btnExportLog').disabled = false;
+  document.getElementById('btnExport').disabled = false;
   
-  log(`\n=== FIM: ${doneCount} ok, ${failedCount} falhas ===`, 'warning');
+  log(`\n=== CAPTURA CONCLUÍDA: ${allDumps.length} patches ===`, 'success');
 }
 
-function updateStats() {
-  document.getElementById('statDone').textContent = doneCount;
-  document.getElementById('statFailed').textContent = failedCount;
-  const total = doneCount + failedCount;
-  document.getElementById('progressFill').style.width = `${(total/10)*100}%`;
-  document.getElementById('progressText').textContent = `${total}/10`;
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════════
-function exportJson() {
-  const data = {
-    timestamp: new Date().toISOString(),
-    device: dev,
-    stats: { done: doneCount, failed: failedCount },
-    patches: patchResults
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `g1on-dump-${Date.now()}.json`;
-  a.click();
-  log('JSON exportado', 'success');
-}
-
-function exportLog() {
-  let text = `Dump G1On - ${new Date().toISOString()}\n\n`;
-  patchResults.forEach(p => {
-    text += `${p.patch} (slot ${p.slot}): ${p.success ? 'OK' : 'FAIL'}\n`;
-    if(p.success) {
-      text += `  ${p.rawHex}\n`;
-    } else {
-      text += `  Erro: ${p.error}\n`;
-    }
-    text += '\n';
+function exportDumps() {
+  let txt = `FMC Raw Dump A0-A9 - ${new Date().toISOString()}\n\n`;
+  allDumps.forEach(d => {
+    txt += `Patch ${d.patch} (slot ${d.slot}):\n`;
+    txt += formatPayload(new Uint8Array(d.raw));
+    txt += '\n';
   });
-  const blob = new Blob([text], { type: 'text/plain' });
+  
+  const blob = new Blob([txt], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `g1on-dump-${Date.now()}.txt`;
+  a.download = `g1on-raw-dump-A0-A9-${Date.now()}.txt`;
   a.click();
-  log('Log exportado', 'success');
+  log('Exportado!', 'success');
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// SETUP
-// ══════════════════════════════════════════════════════════════════════
 document.getElementById('btnConnect').onclick = async () => {
   try {
     await connect();
     document.getElementById('status').textContent = 'Conectado';
     document.getElementById('status').style.color = '#0f0';
-  } catch(e) {
-    log(`Erro: ${e.message}`, 'error');
-  }
+  } catch(e) { log(`Erro: ${e.message}`, 'error'); }
 };
 
-document.getElementById('btnStart').onclick = startDump;
-document.getElementById('btnStop').onclick = () => { shouldStop = true; log('Parando...', 'warning'); };
-document.getElementById('btnExportJson').onclick = exportJson;
-document.getElementById('btnExportLog').onclick = exportLog;
-
+document.getElementById('btnStart').onclick = startCapture;
+document.getElementById('btnStop').onclick = () => { shouldStop = true; log('Parando...', 'info'); };
+document.getElementById('btnExport').onclick = exportDumps;
 </script>
 </body>
 </html>
