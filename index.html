@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Auto Dump G1On (Clean)</title>
+<title>FMC · Auto Dump G1On v2.3</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
@@ -89,7 +89,7 @@
 </head>
 <body>
 
-<h1> FMC · Auto Dump G1On (Clean)</h1>
+<h1>🎸 FMC · Auto Dump G1On v2.3</h1>
 
 <div class="panel">
   <h3>Conexão MIDI</h3>
@@ -117,7 +117,7 @@
 <div class="panel">
   <h3>Exportar</h3>
   <button id="btnExportJson" disabled>⬇ JSON</button>
-  <button id="btnExportLog" disabled>⬇ LOG TXT</button>
+  <button id="btnExportLog" disabled> LOG TXT</button>
 </div>
 
 <div class="panel">
@@ -128,10 +128,10 @@
 <script>
 // ============ CONFIG ============
 const CFG = {
-  SETTLE_PC: 500,
-  SETTLE_EDIT: 200,
-  TIMEOUT: 2000,
-  DELAY_PATCH: 300
+  SETTLE_PC: 600,        // Aumentado de 500 para 600
+  SETTLE_EDIT: 250,      // Aumentado de 200 para 250
+  TIMEOUT: 2500,         // Aumentado de 2000 para 2500
+  DELAY_PATCH: 350       // Aumentado de 300 para 350
 };
 
 // ============ STATE ============
@@ -163,11 +163,18 @@ function sendSysEx(bytes) {
   log(`OUT: F0 ${toHex(bytes)} F7`, 'info');
 }
 
-function sendBankSelect(bank) {
+function sendBankSelectMSB(bank) {
   if (!outputPort) return;
-  // CC#32 (Bank Select LSB) - Channel 1
+  // CC#0 (Bank Select MSB) - sempre 0 para G1On
+  outputPort.send([0xB0, 0x00, 0x00]);
+  log(`OUT: B0 00 00 (MSB)`, 'info');
+}
+
+function sendBankSelectLSB(bank) {
+  if (!outputPort) return;
+  // CC#32 (Bank Select LSB)
   outputPort.send([0xB0, 0x20, bank & 0x7F]);
-  log(`OUT: B0 20 ${bank.toString(16).padStart(2,'0').toUpperCase()}`, 'info');
+  log(`OUT: B0 20 ${bank.toString(16).padStart(2,'0').toUpperCase()} (LSB)`, 'info');
 }
 
 function sendProgramChange(preset) {
@@ -179,6 +186,8 @@ function sendProgramChange(preset) {
 
 function handleMidiMessage(e) {
   const data = e.data;
+  
+  // Log TODAS as mensagens recebidas para debug
   if (data[0] === 0xF0) {
     sysexBuffer = Array.from(data);
   } else if (data[0] === 0xF7 && sysexBuffer.length > 0) {
@@ -186,10 +195,17 @@ function handleMidiMessage(e) {
     const fullMsg = sysexBuffer;
     sysexBuffer = [];
     
-    if (pendingResponse && fullMsg[4] === 0x28) {
+    log(`IN : ${toHex(fullMsg)}`, 'success');
+    
+    // Verifica se é resposta 0x28
+    if (pendingResponse && fullMsg.length > 4 && fullMsg[4] === 0x28) {
+      log(`  ✓ Resposta 0x28 detectada!`, 'success');
       pendingResponse(fullMsg);
       pendingResponse = null;
     }
+  } else if (data[0] !== 0xF0 && data[0] !== 0xF7) {
+    // Mensagens channel-voice (CC, PC, etc)
+    log(`IN : ${toHex([data[0], data[1], data[2]].filter(b => b !== undefined))}`, 'info');
   }
 }
 
@@ -219,9 +235,11 @@ async function dumpPatch(bank, preset) {
   log(`--- Patch ${patchName} ---`, 'info');
   
   try {
-    // 1. Bank Select + Program Change
-    sendBankSelect(bank);
-    await sleep(30);
+    // 1. Bank Select (CC#0 MSB + CC#32 LSB) + Program Change
+    sendBankSelectMSB(bank);
+    await sleep(20);
+    sendBankSelectLSB(bank);
+    await sleep(20);
     sendProgramChange(preset);
     await sleep(CFG.SETTLE_PC);
     
