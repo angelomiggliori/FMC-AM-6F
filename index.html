@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Auto Dump G1On v2.3</title>
+<title>FMC · Auto Dump G1On v2.4</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
@@ -89,12 +89,20 @@
 </head>
 <body>
 
-<h1>🎸 FMC · Auto Dump G1On v2.3</h1>
+<h1>🎸 FMC · Auto Dump G1On v2.4</h1>
 
 <div class="panel">
   <h3>Conexão MIDI</h3>
   <button id="btnConnect">CONECTAR MIDI</button>
+  <button id="btnHandshake">🔐 HANDSHAKE</button>
   <span id="status">Desconectado</span>
+</div>
+
+<div class="panel">
+  <h3>Teste Manual</h3>
+  <button id="btnTestIdentity">Identity Request</button>
+  <button id="btnTestEditOn">Edit ON</button>
+  <button id="btnTestDump">Dump A0</button>
 </div>
 
 <div class="panel">
@@ -128,10 +136,10 @@
 <script>
 // ============ CONFIG ============
 const CFG = {
-  SETTLE_PC: 600,        // Aumentado de 500 para 600
-  SETTLE_EDIT: 250,      // Aumentado de 200 para 250
-  TIMEOUT: 2500,         // Aumentado de 2000 para 2500
-  DELAY_PATCH: 350       // Aumentado de 300 para 350
+  SETTLE_PC: 600,
+  SETTLE_EDIT: 300,
+  TIMEOUT: 5000,
+  DELAY_PATCH: 400
 };
 
 // ============ STATE ============
@@ -140,6 +148,7 @@ let sysexBuffer = [], pendingResponse = null;
 let isRunning = false, shouldStop = false;
 let patchResults = [], startTime = null;
 let doneCount = 0, failedCount = 0;
+let handshakeDone = false;
 
 const logEl = document.getElementById('log');
 
@@ -165,21 +174,18 @@ function sendSysEx(bytes) {
 
 function sendBankSelectMSB(bank) {
   if (!outputPort) return;
-  // CC#0 (Bank Select MSB) - sempre 0 para G1On
   outputPort.send([0xB0, 0x00, 0x00]);
   log(`OUT: B0 00 00 (MSB)`, 'info');
 }
 
 function sendBankSelectLSB(bank) {
   if (!outputPort) return;
-  // CC#32 (Bank Select LSB)
   outputPort.send([0xB0, 0x20, bank & 0x7F]);
   log(`OUT: B0 20 ${bank.toString(16).padStart(2,'0').toUpperCase()} (LSB)`, 'info');
 }
 
 function sendProgramChange(preset) {
   if (!outputPort) return;
-  // Program Change - Channel 1
   outputPort.send([0xC0, preset & 0x7F]);
   log(`OUT: C0 ${preset.toString(16).padStart(2,'0').toUpperCase()}`, 'info');
 }
@@ -187,7 +193,7 @@ function sendProgramChange(preset) {
 function handleMidiMessage(e) {
   const data = e.data;
   
-  // Log TODAS as mensagens recebidas para debug
+  // Log TODAS as mensagens
   if (data[0] === 0xF0) {
     sysexBuffer = Array.from(data);
   } else if (data[0] === 0xF7 && sysexBuffer.length > 0) {
@@ -197,19 +203,28 @@ function handleMidiMessage(e) {
     
     log(`IN : ${toHex(fullMsg)}`, 'success');
     
-    // Verifica se é resposta 0x28
+    // Detecta Identity Reply
+    if (fullMsg[1] === 0x7E && fullMsg[3] === 0x06 && fullMsg[4] === 0x02) {
+      log(`  ✓ Identity Reply! Model ID: 0x${fullMsg[6].toString(16).toUpperCase()}`, 'success');
+      handshakeDone = true;
+    }
+    
+    // Detecta resposta 0x28
     if (pendingResponse && fullMsg.length > 4 && fullMsg[4] === 0x28) {
       log(`  ✓ Resposta 0x28 detectada!`, 'success');
       pendingResponse(fullMsg);
       pendingResponse = null;
     }
   } else if (data[0] !== 0xF0 && data[0] !== 0xF7) {
-    // Mensagens channel-voice (CC, PC, etc)
     log(`IN : ${toHex([data[0], data[1], data[2]].filter(b => b !== undefined))}`, 'info');
   }
 }
 
 // ============ ZOOM COMMANDS ============
+function sendIdentityRequest() {
+  sendSysEx([0x7E, 0x00, 0x06, 0x01]);
+}
+
 function sendEditMode(on) {
   sendSysEx([0x52, 0x00, 0x63, 0x50, on ? 0x01 : 0x00]);
 }
@@ -229,17 +244,32 @@ function updateStats() {
   document.getElementById('progressText').textContent = `${total}/100`;
 }
 
+// ============ HANDSHAKE ============
+async function doHandshake() {
+  log('=== INICIANDO HANDSHAKE ===', 'warning');
+  
+  // 1. Identity Request
+  sendIdentityRequest();
+  await sleep(1000);
+  
+  if (!handshakeDone) {
+    log(' Identity Reply não recebido', 'warning');
+  } else {
+    log('✓ Handshake completo', 'success');
+  }
+}
+
 // ============ DUMP LOOP ============
 async function dumpPatch(bank, preset) {
   const patchName = `${String.fromCharCode(65 + bank)}${preset}`;
   log(`--- Patch ${patchName} ---`, 'info');
   
   try {
-    // 1. Bank Select (CC#0 MSB + CC#32 LSB) + Program Change
+    // 1. Bank Select + Program Change
     sendBankSelectMSB(bank);
-    await sleep(20);
+    await sleep(30);
     sendBankSelectLSB(bank);
-    await sleep(20);
+    await sleep(30);
     sendProgramChange(preset);
     await sleep(CFG.SETTLE_PC);
     
@@ -256,7 +286,7 @@ async function dumpPatch(bank, preset) {
     responseData = await Promise.race([responsePromise, timeoutPromise.then(() => null)]);
     
     if (!responseData) {
-      log(`  ✗ Timeout`, 'error');
+      log(`   Timeout`, 'error');
       failedCount++;
       patchResults.push({ patch: patchName, bank, preset, success: false, error: 'timeout', payload: null });
     } else {
@@ -275,7 +305,7 @@ async function dumpPatch(bank, preset) {
     await sleep(CFG.SETTLE_EDIT);
     
   } catch (err) {
-    log(`  ✗ Erro: ${err.message}`, 'error');
+    log(`   Erro: ${err.message}`, 'error');
     failedCount++;
     patchResults.push({ patch: patchName, bank, preset, success: false, error: err.message, payload: null });
   }
@@ -286,6 +316,11 @@ async function dumpPatch(bank, preset) {
 
 async function startDump() {
   if (!outputPort) { log('MIDI não conectado', 'error'); return; }
+  
+  if (!handshakeDone) {
+    log('⚠ Fazendo handshake primeiro...', 'warning');
+    await doHandshake();
+  }
   
   isRunning = true; shouldStop = false;
   startTime = Date.now();
@@ -369,6 +404,10 @@ document.getElementById('btnConnect').onclick = async () => {
   } catch (e) { log(`Erro: ${e.message}`, 'error'); }
 };
 
+document.getElementById('btnHandshake').onclick = doHandshake;
+document.getElementById('btnTestIdentity').onclick = sendIdentityRequest;
+document.getElementById('btnTestEditOn').onclick = () => sendEditMode(true);
+document.getElementById('btnTestDump').onclick = () => dumpPatch(0, 0);
 document.getElementById('btnStart').onclick = startDump;
 document.getElementById('btnStop').onclick = () => { shouldStop = true; log('Parando...', 'warning'); };
 document.getElementById('btnExportJson').onclick = exportJson;
