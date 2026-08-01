@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FMC · Auto Dump G1On v2</title>
+<title>FMC · Auto Dump G1On v2.1</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { 
@@ -102,7 +102,7 @@
 </head>
 <body>
 
-<h1>🎸 FMC · Auto Dump G1On v2</h1>
+<h1>🎸 FMC · Auto Dump G1On v2.1</h1>
 
 <div class="panel">
   <h3>Conexão MIDI</h3>
@@ -199,6 +199,14 @@ function sendSysEx(bytes) {
   log(`OUT: ${toHex(msg)}`, 'info');
 }
 
+// ✅ CORREÇÃO: Program Change como mensagem channel-voice separada
+function sendProgramChange(preset) {
+  if (!outputPort) return;
+  const msg = [0xC0, preset & 0x7F];
+  outputPort.send(msg);
+  log(`OUT: C0 ${preset.toString(16).padStart(2,'0').toUpperCase()}`, 'info');
+}
+
 function handleMidiMessage(e) {
   const data = e.data;
   
@@ -211,7 +219,6 @@ function handleMidiMessage(e) {
     
     log(`IN : ${toHex(fullMsg)}`, 'success');
     
-    // Se estamos esperando uma resposta 0x28
     if (pendingResponse && fullMsg[4] === 0x28) {
       pendingResponse(fullMsg);
       pendingResponse = null;
@@ -221,13 +228,8 @@ function handleMidiMessage(e) {
 
 // ============ COMANDOS ZOOM ============
 function sendBankSelect(bank) {
-  // CC#32 (Bank Select LSB)
+  // CC#32 via SysEx Zoom: F0 52 00 63 32 [bank] F7
   sendSysEx([0x52, 0x00, 0x63, 0x32, bank & 0x7F]);
-}
-
-function sendProgramChange(preset) {
-  // Program Change
-  sendSysEx([0x52, 0x00, 0x63, 0xC0, preset & 0x7F]);
 }
 
 function sendEditMode(on) {
@@ -263,10 +265,10 @@ async function dumpPatch(bank, preset) {
   log(`--- Patch ${patchName} ---`, 'info');
   
   try {
-    // 1. Bank Select + Program Change
+    // 1. Bank Select (SysEx) + Program Change (channel-voice separado)
     sendBankSelect(bank);
     await sleep(CONFIG.SYSEX_DELAY);
-    sendProgramChange(preset);
+    sendProgramChange(preset);  // ✅ Agora separado
     await sleep(CONFIG.SETTLE_AFTER_PC);
     
     // 2. Edit Mode Enter
@@ -282,7 +284,6 @@ async function dumpPatch(bank, preset) {
     
     requestPatchData();
     
-    // Aguarda resposta ou timeout
     responseData = await Promise.race([responsePromise, timeoutPromise.then(() => null)]);
     
     if (!responseData) {
@@ -297,7 +298,6 @@ async function dumpPatch(bank, preset) {
         payload: null
       });
     } else {
-      // Extrai payload (entre header e F7)
       const payload = responseData.slice(5, responseData.length - 1);
       log(`  ✓ Recebido ${payload.length} bytes`, 'success');
       
@@ -353,7 +353,6 @@ async function startDump() {
   
   log('=== INICIANDO VARREDURA ===', 'warning');
   
-  // Varre todos os 100 patches (A0-J9)
   for (let bank = 0; bank < 10; bank++) {
     for (let preset = 0; preset < 10; preset++) {
       if (shouldStop) {
